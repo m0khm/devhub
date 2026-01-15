@@ -58,6 +58,18 @@ services:
       mc anonymous set public myminio/devhub;
       exit 0;
       "
+      
+  migrate:
+    image: golang:1.23
+    working_dir: /app/backend
+    volumes:
+      - .:/app
+    env_file:
+      - backend/.env
+    depends_on:
+      - postgres
+    command: ["go", "run", "cmd/migrate/main.go", "-command=up"]
+
     
 volumes:
   postgres_data:
