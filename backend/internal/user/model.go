@@ -7,15 +7,15 @@ import (
 )
 
 type User struct {
-	ID             uuid.UUID  `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
-	Email          string     `json:"email" gorm:"uniqueIndex;not null"`
-	PasswordHash   *string    `json:"-" gorm:"column:password_hash"`
-	Name           string     `json:"name" gorm:"not null"`
-	AvatarURL      *string    `json:"avatar_url"`
-	GitHubID       *string    `json:"github_id" gorm:"uniqueIndex"`
-	GitHubUsername *string    `json:"github_username"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ID             uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
+	Email          string    `json:"email" gorm:"uniqueIndex;not null"`
+	PasswordHash   *string   `json:"-" gorm:"column:password_hash"`
+	Name           string    `json:"name" gorm:"not null"`
+	AvatarURL      *string   `json:"avatar_url"`
+	GitHubID       *string   `json:"github_id" gorm:"uniqueIndex"`
+	GitHubUsername *string   `json:"github_username"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // Request/Response DTOs

@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/YOUR_USERNAME/devhub/backend/internal/auth"
+	"github.com/m0khm/devhub/backend/internal/auth"
 )
 
 func Auth(jwtManager *auth.JWTManager) fiber.Handler {

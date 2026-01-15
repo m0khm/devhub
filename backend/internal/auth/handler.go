@@ -5,7 +5,9 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/YOUR_USERNAME/devhub/backend/internal/user"
+	"github.com/google/uuid"
+
+	"github.com/m0khm/devhub/backend/internal/user"
 )
 
 type Handler struct {
@@ -85,7 +87,22 @@ func (h *Handler) GetMe(c *fiber.Ctx) error {
 		})
 	}
 
-	foundUser, err := h.service.GetUserByID(userID.(string))
+	// Locals обычно хранит string, но проверим тип безопасно
+	idStr, ok := userID.(string)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid user id type",
+		})
+	}
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid user id",
+		})
+	}
+
+	foundUser, err := h.service.GetUserByID(id)
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{

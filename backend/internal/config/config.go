@@ -1,140 +1,140 @@
 package config
 
 import (
- "fmt"
- "os"
- "strconv"
- "strings"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
 
- "github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
- Server   ServerConfig
- Database DatabaseConfig
- Redis    RedisConfig
- JWT      JWTConfig
- S3       S3Config
- GitHub   GitHubConfig
+	Server   ServerConfig
+	Database DatabaseConfig
+	Redis    RedisConfig
+	JWT      JWTConfig
+	S3       S3Config
+	GitHub   GitHubConfig
 }
 
 type ServerConfig struct {
- Port         int
- Environment  string
- AllowOrigins []string
+	Port         int
+	Environment  string
+	AllowOrigins []string
 }
 
 type DatabaseConfig struct {
- Host     string
- Port     int
- User     string
- Password string
- DBName   string
- SSLMode  string
+	Host     string
+	Port     int
+	User     string
+	Password string
+	DBName   string
+	SSLMode  string
 }
 
 type RedisConfig struct {
- Host     string
- Port     int
- Password string
- DB       int
+	Host     string
+	Port     int
+	Password string
+	DB       int
 }
 
 type JWTConfig struct {
- Secret      string
- ExpireHours int
+	Secret      string
+	ExpireHours int
 }
 
 type S3Config struct {
- Endpoint  string
- AccessKey string
- SecretKey string
- Bucket    string
- UseSSL    bool
+	Endpoint  string
+	AccessKey string
+	SecretKey string
+	Bucket    string
+	UseSSL    bool
 }
 
 type GitHubConfig struct {
- ClientID     string
- ClientSecret string
- CallbackURL  string
+	ClientID     string
+	ClientSecret string
+	CallbackURL  string
 }
 
 func Load() (*Config, error) {
- // Load .env file if exists (for local development)
- _ = godotenv.Load()
+	// Load .env file if exists (for local development)
+	_ = godotenv.Load()
 
- cfg := &Config{
-  Server: ServerConfig{
-   Port:         getEnvAsInt("PORT", 8080),
-   Environment:  getEnv("ENVIRONMENT", "development"),
-   AllowOrigins: strings.Split(getEnv("CORS_ORIGIN", "http://localhost:3000"), ","),
-  },
-  Database: DatabaseConfig{
-   Host:     getEnv("DB_HOST", "localhost"),
-   Port:     getEnvAsInt("DB_PORT", 5432),
-   User:     getEnv("DB_USER", "devhub"),
-   Password: getEnv("DB_PASSWORD", "devhub"),
-   DBName:   getEnv("DB_NAME", "devhub"),
-   SSLMode:  getEnv("DB_SSLMODE", "disable"),
-  },
-  Redis: RedisConfig{
-   Host:     getEnv("REDIS_HOST", "localhost"),
-   Port:     getEnvAsInt("REDIS_PORT", 6379),
-   Password: getEnv("REDIS_PASSWORD", ""),
-   DB:       getEnvAsInt("REDIS_DB", 0),
-  },
-  JWT: JWTConfig{
-   Secret:      getEnv("JWT_SECRET", "change-me-in-production"),
-   ExpireHours: getEnvAsInt("JWT_EXPIRE_HOURS", 168), // 7 days
-  },
-  S3: S3Config{
-   Endpoint:  getEnv("S3_ENDPOINT", "localhost:9000"),
-   AccessKey: getEnv("S3_ACCESS_KEY", "minioadmin"),
-   SecretKey: getEnv("S3_SECRET_KEY", "minioadmin"),
-   Bucket:    getEnv("S3_BUCKET", "devhub"),
-   UseSSL:    getEnvAsBool("S3_USE_SSL", false),
-  },
-  GitHub: GitHubConfig{
-   ClientID:     getEnv("GITHUB_CLIENT_ID", ""),
-   ClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
-   CallbackURL:  getEnv("GITHUB_CALLBACK_URL", "http://localhost:8080/api/auth/github/callback"),
-  },
- }
+	cfg := &Config{
+		Server: ServerConfig{
+			Port:         getEnvAsInt("PORT", 8080),
+			Environment:  getEnv("ENVIRONMENT", "development"),
+			AllowOrigins: strings.Split(getEnv("CORS_ORIGIN", "http://localhost:3000"), ","),
+		},
+		Database: DatabaseConfig{
+			Host:     getEnv("DB_HOST", "localhost"),
+			Port:     getEnvAsInt("DB_PORT", 5432),
+			User:     getEnv("DB_USER", "devhub"),
+			Password: getEnv("DB_PASSWORD", "devhub"),
+			DBName:   getEnv("DB_NAME", "devhub"),
+			SSLMode:  getEnv("DB_SSLMODE", "disable"),
+		},
+		Redis: RedisConfig{
+			Host:     getEnv("REDIS_HOST", "localhost"),
+			Port:     getEnvAsInt("REDIS_PORT", 6379),
+			Password: getEnv("REDIS_PASSWORD", ""),
+			DB:       getEnvAsInt("REDIS_DB", 0),
+		},
+		JWT: JWTConfig{
+			Secret:      getEnv("JWT_SECRET", "change-me-in-production"),
+			ExpireHours: getEnvAsInt("JWT_EXPIRE_HOURS", 168), // 7 days
+		},
+		S3: S3Config{
+			Endpoint:  getEnv("S3_ENDPOINT", "localhost:9000"),
+			AccessKey: getEnv("S3_ACCESS_KEY", "minioadmin"),
+			SecretKey: getEnv("S3_SECRET_KEY", "minioadmin"),
+			Bucket:    getEnv("S3_BUCKET", "devhub"),
+			UseSSL:    getEnvAsBool("S3_USE_SSL", false),
+		},
+		GitHub: GitHubConfig{
+			ClientID:     getEnv("GITHUB_CLIENT_ID", ""),
+			ClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
+			CallbackURL:  getEnv("GITHUB_CALLBACK_URL", "http://localhost:8080/api/auth/github/callback"),
+		},
+	}
 
- // Validate required fields
- if cfg.JWT.Secret == "change-me-in-production" && cfg.Server.Environment == "production" {
-  return nil, fmt.Errorf("JWT_SECRET must be set in production")
- }
+	// Validate required fields
+	if cfg.JWT.Secret == "change-me-in-production" && cfg.Server.Environment == "production" {
+		return nil, fmt.Errorf("JWT_SECRET must be set in production")
+	}
 
- return cfg, nil
+	return cfg, nil
 }
 
 func (c *DatabaseConfig) DSN() string {
- return fmt.Sprintf(
-  "host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-  c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode,
- )
+	return fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode,
+	)
 }
 
 func getEnv(key, defaultValue string) string {
- if value := os.Getenv(key); value != "" {
-  return value
- }
- return defaultValue
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
 
 func getEnvAsInt(key string, defaultValue int) int {
- valueStr := getEnv(key, "")
- if value, err := strconv.Atoi(valueStr); err == nil {
-  return value
- }
- return defaultValue
+	valueStr := getEnv(key, "")
+	if value, err := strconv.Atoi(valueStr); err == nil {
+		return value
+	}
+	return defaultValue
 }
 
 func getEnvAsBool(key string, defaultValue bool) bool {
- valueStr := getEnv(key, "")
- if value, err := strconv.ParseBool(valueStr); err == nil {
-  return value
- }
- return defaultValue
+	valueStr := getEnv(key, "")
+	if value, err := strconv.ParseBool(valueStr); err == nil {
+		return value
+	}
+	return defaultValue
 }

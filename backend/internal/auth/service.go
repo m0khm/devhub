@@ -8,7 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	"github.com/YOUR_USERNAME/devhub/backend/internal/user"
+	"github.com/m0khm/devhub/backend/internal/user"
 )
 
 var (
