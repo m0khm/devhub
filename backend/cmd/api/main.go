@@ -11,6 +11,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/config"
 	"github.com/m0khm/devhub/backend/internal/database"
 	"github.com/m0khm/devhub/backend/internal/middleware"
+	"github.com/m0khm/devhub/backend/internal/project" // NEW
 )
 
 func main() {
@@ -36,11 +37,16 @@ func main() {
 	// Initialize JWT manager
 	jwtManager := auth.NewJWTManager(cfg.JWT.Secret, cfg.JWT.ExpireHours)
 
+	// Initialize repositories
+	projectRepo := project.NewRepository(db) // NEW
+
 	// Initialize services
 	authService := auth.NewService(db, jwtManager)
+	projectService := project.NewService(projectRepo) // NEW
 
 	// Initialize handlers
 	authHandler := auth.NewHandler(authService)
+	projectHandler := project.NewHandler(projectService) // NEW
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -71,9 +77,16 @@ func main() {
 	authRoutes.Post("/login", authHandler.Login)
 	authRoutes.Get("/me", middleware.Auth(jwtManager), authHandler.GetMe)
 
-	// Protected routes example
-	// protected := api.Group("/", middleware.Auth(jwtManager))
-	// We'll add more routes here later
+	// Protected routes
+	protected := api.Group("/", middleware.Auth(jwtManager))
+
+	// Project routes (NEW)
+	projectRoutes := protected.Group("/projects")
+	projectRoutes.Post("/", projectHandler.Create)
+	projectRoutes.Get("/", projectHandler.GetUserProjects)
+	projectRoutes.Get("/:id", projectHandler.GetByID)
+	projectRoutes.Put("/:id", projectHandler.Update)
+	projectRoutes.Delete("/:id", projectHandler.Delete)
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
@@ -83,7 +96,6 @@ func main() {
 	}
 }
 
-// Custom error handler
 func customErrorHandler(c *fiber.Ctx, err error) error {
 	code := fiber.StatusInternalServerError
 	message := "Internal Server Error"
