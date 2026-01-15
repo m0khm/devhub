@@ -9,8 +9,6 @@ services:
       POSTGRES_USER: devhub
       POSTGRES_PASSWORD: devhub
       POSTGRES_DB: devhub
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck: 
