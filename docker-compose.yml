@@ -70,6 +70,21 @@ services:
       - postgres
     command: ["go", "run", "cmd/migrate/main.go", "-command=up"]
 
+  api:
+    image: golang:1.24
+    working_dir: /app/backend
+    volumes:
+      - .:/app
+    env_file:
+      - backend/.env
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    command: ["go", "run", "cmd/api/main.go"]
+    ports:
+      - "8080:8080"
+
     
 volumes:
   postgres_data:
