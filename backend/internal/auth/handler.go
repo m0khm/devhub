@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/m0khm/devhub/backend/internal/user"
+	"github.com/m0khm/devhub/backend/pkg/validator"
 )
 
 type Handler struct {
@@ -28,7 +29,13 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 		})
 	}
 
-	// TODO: Add validation here (we'll do this next)
+	// Validate request
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Validation failed",
+			"details": errs,
+		})
+	}
 
 	newUser, token, err := h.service.Register(req)
 	if err != nil {
@@ -58,6 +65,14 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 		})
 	}
 
+	// Validate request
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Validation failed",
+			"details": errs,
+		})
+	}
+
 	foundUser, token, err := h.service.Login(req)
 	if err != nil {
 		if errors.Is(err, ErrInvalidCredentials) {
@@ -79,7 +94,6 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 // GetMe handler - returns current authenticated user
 // GET /api/auth/me
 func (h *Handler) GetMe(c *fiber.Ctx) error {
-	// Get user ID from context (set by auth middleware)
 	userID := c.Locals("userID")
 	if userID == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -87,22 +101,21 @@ func (h *Handler) GetMe(c *fiber.Ctx) error {
 		})
 	}
 
-	// Locals обычно хранит string, но проверим тип безопасно
-	idStr, ok := userID.(string)
+	userIDStr, ok := userID.(string)
 	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid user id type",
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid user ID format",
 		})
 	}
 
-	id, err := uuid.Parse(idStr)
+	userUUID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid user id",
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid user ID",
 		})
 	}
 
-	foundUser, err := h.service.GetUserByID(id)
+	foundUser, err := h.service.GetUserByID(userUUID)
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -115,20 +128,4 @@ func (h *Handler) GetMe(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(foundUser)
-}
-
-// Helper to extract token from Authorization header
-func extractToken(c *fiber.Ctx) string {
-	authHeader := c.Get("Authorization")
-	if authHeader == "" {
-		return ""
-	}
-
-	// Format: "Bearer <token>"
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		return ""
-	}
-
-	return parts[1]
 }

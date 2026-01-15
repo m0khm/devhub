@@ -12,12 +12,10 @@ type User struct {
 	PasswordHash   *string   `json:"-" gorm:"column:password_hash"`
 	Name           string    `json:"name" gorm:"not null"`
 	AvatarURL      *string   `json:"avatar_url"`
-	GitHubID       *string   `json:"github_id" gorm:"column:github_id;uniqueIndex"`
-	GitHubUsername *string   `json:"github_username" gorm:"column:github_username"`
+	GitHubID       *string   `json:"github_id" gorm:"uniqueIndex"`
+	GitHubUsername *string   `json:"github_username"`
 	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
 }
-
 
 // Request/Response DTOs
 type RegisterRequest struct {

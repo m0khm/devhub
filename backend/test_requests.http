@@ -1,0 +1,26 @@
+# Health check
+curl http://localhost:8080/health
+
+# Register
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@devhub.com",
+    "password": "password123",
+    "name": "Test User"
+  }'
+
+# Должен вернуть JSON с token и user
+# Скопируй token из ответа
+
+# Login
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@devhub.com",
+    "password": "password123"
+  }'
+
+# Get Me (замени YOUR_TOKEN на реальный токен)
+curl http://localhost:8080/api/auth/me \
+  -H "Authorization: Bearer YOUR_TOKEN"
