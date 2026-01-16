@@ -91,30 +91,32 @@ func main() {
 	authRoutes.Post("/login", authHandler.Login)
 	authRoutes.Get("/me", middleware.Auth(jwtManager), authHandler.GetMe)
 
-	// Protected routes
-	protected := api.Group("/", middleware.Auth(jwtManager))
+	// Protected routes (ВАЖНО: без "/")
+	protected := api.Group("", middleware.Auth(jwtManager))
 
-	// Project routes
+	// Project routes (ВАЖНО: без "/" в конце)
 	projectRoutes := protected.Group("/projects")
-	projectRoutes.Post("/", projectHandler.Create)
-	projectRoutes.Get("/", projectHandler.GetUserProjects)
+	projectRoutes.Post("", projectHandler.Create)
+	projectRoutes.Get("", projectHandler.GetUserProjects)
 	projectRoutes.Get("/:id", projectHandler.GetByID)
 	projectRoutes.Put("/:id", projectHandler.Update)
 	projectRoutes.Delete("/:id", projectHandler.Delete)
 
-	// Topic routes
+	// Topic routes (на проекте)
 	projectRoutes.Post("/:projectId/topics", topicHandler.Create)
 	projectRoutes.Get("/:projectId/topics", topicHandler.GetByProjectID)
-	
+
+	// Topic routes (по id топика)
 	topicRoutes := protected.Group("/topics")
 	topicRoutes.Get("/:id", topicHandler.GetByID)
 	topicRoutes.Put("/:id", topicHandler.Update)
 	topicRoutes.Delete("/:id", topicHandler.Delete)
 
-	// Message routes
+	// Message routes (на топике)
 	topicRoutes.Post("/:topicId/messages", messageHandler.Create)
 	topicRoutes.Get("/:topicId/messages", messageHandler.GetByTopicID)
-	
+
+	// Message routes (по id сообщения)
 	messageRoutes := protected.Group("/messages")
 	messageRoutes.Put("/:id", messageHandler.Update)
 	messageRoutes.Delete("/:id", messageHandler.Delete)

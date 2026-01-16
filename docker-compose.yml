@@ -84,7 +84,7 @@ services:
     command: ["go", "run", "cmd/api/main.go"]
     ports:
       - "8080:8080"
-
+    restart: unless-stopped
     
 volumes:
   postgres_data:
