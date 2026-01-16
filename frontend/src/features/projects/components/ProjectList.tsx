@@ -1,0 +1,189 @@
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { apiClient } from '../../../api/client';
+import { useProjectStore } from '../../../store/projectStore';
+import { Project } from '../../../shared/types';
+import toast from 'react-hot-toast';
+import { PlusIcon, FolderIcon } from '@heroicons/react/24/outline';
+
+export const ProjectList: React.FC = () => {
+  const { projects, setProjects } = useProjectStore();
+  const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const loadProjects = async () => {
+    try {
+      const response = await apiClient.get<Project[]>('/projects');
+      setProjects(response.data);
+    } catch (error) {
+      toast.error('Failed to load projects');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-gray-500">Loading projects...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Your Projects</h1>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            <PlusIcon className="w-5 h-5" />
+            New Project
+          </button>
+        </div>
+
+        {projects.length === 0 ? (
+          <div className="text-center py-12">
+            <FolderIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+            <h2 className="text-xl font-semibold text-gray-700 mb-2">
+              No projects yet
+            </h2>
+            <p className="text-gray-500 mb-6">
+              Create your first project to get started
+            </p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+            >
+              <PlusIcon className="w-5 h-5" />
+              Create Project
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projects.map((project) => (
+              <Link
+                key={project.id}
+                to={`/projects/${project.id}`}
+                className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition border border-gray-200"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FolderIcon className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 truncate mb-1">
+                      {project.name}
+                    </h3>
+                    {project.description && (
+                      <p className="text-sm text-gray-600 line-clamp-2">
+                        {project.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {showCreateModal && (
+          <CreateProjectModal
+            onClose={() => setShowCreateModal(false)}
+            onCreated={loadProjects}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Create Project Modal Component
+interface CreateProjectModalProps {
+  onClose: () => void;
+  onCreated: () => void;
+}
+
+const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
+  onClose,
+  onCreated,
+}) => {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await apiClient.post('/projects', {
+        name,
+        description: description || undefined,
+      });
+      toast.success('Project created!');
+      onCreated();
+      onClose();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to create project');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <h2 className="text-2xl font-bold mb-4">Create New Project</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Project Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="My Awesome Project"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description (optional)
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              rows={3}
+              placeholder="What's this project about?"
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+            >
+              {loading ? 'Creating...' : 'Create'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
