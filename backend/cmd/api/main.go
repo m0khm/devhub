@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -91,63 +92,70 @@ func main() {
 	authRoutes.Post("/login", authHandler.Login)
 	authRoutes.Get("/me", middleware.Auth(jwtManager), authHandler.GetMe)
 
-	// Protected routes (ВАЖНО: без "/")
-	protected := api.Group("", middleware.Auth(jwtManager))
+	// ---- WebSocket routes (ВАЖНО: НЕ через protected!) ----
+	// ws://host:8080/api/topics/:topicId/ws?token=JWT
+	// или с заголовком Authorization: Bearer JWT
+	wsRoutes := api.Group("/topics")
 
-	// Project routes (ВАЖНО: без "/" в конце)
+	wsRoutes.Use("/:topicId/ws", func(c *fiber.Ctx) error {
+		if !websocket.IsWebSocketUpgrade(c) {
+			return fiber.ErrUpgradeRequired
+		}
+
+		// token from query or header
+		token := c.Query("token")
+		if token == "" {
+			authHeader := c.Get("Authorization")
+			if strings.HasPrefix(authHeader, "Bearer ") {
+				token = strings.TrimPrefix(authHeader, "Bearer ")
+			}
+		}
+
+		if token == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing token"})
+		}
+
+		claims, err := jwtManager.Verify(token)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token"})
+		}
+
+		c.Locals("userID", claims.UserID.String())
+		return c.Next()
+	})
+
+	wsRoutes.Get("/:topicId/ws", websocket.New(wsHandler.HandleWebSocket))
+
+	// ---- Protected routes (JWT middleware) ----
+	protected := api.Group("/", middleware.Auth(jwtManager))
+
+	// Project routes
 	projectRoutes := protected.Group("/projects")
-	projectRoutes.Post("", projectHandler.Create)
-	projectRoutes.Get("", projectHandler.GetUserProjects)
+	projectRoutes.Post("/", projectHandler.Create)
+	projectRoutes.Get("/", projectHandler.GetUserProjects)
 	projectRoutes.Get("/:id", projectHandler.GetByID)
 	projectRoutes.Put("/:id", projectHandler.Update)
 	projectRoutes.Delete("/:id", projectHandler.Delete)
 
-	// Topic routes (на проекте)
+	// Topic routes (внутри проекта)
 	projectRoutes.Post("/:projectId/topics", topicHandler.Create)
 	projectRoutes.Get("/:projectId/topics", topicHandler.GetByProjectID)
 
-	// Topic routes (по id топика)
+	// Topic routes (по id)
 	topicRoutes := protected.Group("/topics")
 	topicRoutes.Get("/:id", topicHandler.GetByID)
 	topicRoutes.Put("/:id", topicHandler.Update)
 	topicRoutes.Delete("/:id", topicHandler.Delete)
 
-	// Message routes (на топике)
+	// Message routes (внутри топика)
 	topicRoutes.Post("/:topicId/messages", messageHandler.Create)
 	topicRoutes.Get("/:topicId/messages", messageHandler.GetByTopicID)
 
-	// Message routes (по id сообщения)
+	// Message routes (по id)
 	messageRoutes := protected.Group("/messages")
 	messageRoutes.Put("/:id", messageHandler.Update)
 	messageRoutes.Delete("/:id", messageHandler.Delete)
 	messageRoutes.Post("/:id/reactions", messageHandler.ToggleReaction)
-
-	// WebSocket routes
-	app.Use("/api/topics/:topicId/ws", func(c *fiber.Ctx) error {
-		// Upgrade WebSocket only if it's a WebSocket request
-		if websocket.IsWebSocketUpgrade(c) {
-			// Extract token and validate
-			token := c.Query("token")
-			if token == "" {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-					"error": "Missing token",
-				})
-			}
-
-			claims, err := jwtManager.Verify(token)
-			if err != nil {
-				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-					"error": "Invalid token",
-				})
-			}
-
-			c.Locals("userID", claims.UserID.String())
-			return c.Next()
-		}
-		return fiber.ErrUpgradeRequired
-	})
-
-	app.Get("/api/topics/:topicId/ws", websocket.New(wsHandler.HandleWebSocket))
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)

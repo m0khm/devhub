@@ -11,11 +11,19 @@ import (
 )
 
 type Handler struct {
-	service *Service
+	service   *Service
+	wsHandler *WSHandler // NEW (optional)
 }
 
 func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+	return &Handler{
+		service: service,
+	}
+}
+
+// SetWSHandler sets the WebSocket handler (called from main.go)
+func (h *Handler) SetWSHandler(wsHandler *WSHandler) {
+	h.wsHandler = wsHandler
 }
 
 // Create message
@@ -60,6 +68,11 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to create message",
 		})
+	}
+
+	// Broadcast new message
+	if h.wsHandler != nil {
+		h.wsHandler.BroadcastNewMessage(message)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(message)
@@ -168,6 +181,11 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 		})
 	}
 
+	// Broadcast message update
+	if h.wsHandler != nil {
+		h.wsHandler.BroadcastMessageUpdate(message)
+	}
+
 	return c.JSON(message)
 }
 
@@ -188,6 +206,15 @@ func (h *Handler) Delete(c *fiber.Ctx) error {
 		})
 	}
 
+	// If we want to broadcast deletion we need topicID.
+	// We try to read it before deleting.
+	var topicID uuid.UUID
+	if h.wsHandler != nil {
+		if msg, err := h.service.repo.GetByID(messageID); err == nil {
+			topicID = msg.TopicID
+		}
+	}
+
 	if err := h.service.Delete(messageID, userID); err != nil {
 		if errors.Is(err, ErrMessageNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -202,6 +229,11 @@ func (h *Handler) Delete(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to delete message",
 		})
+	}
+
+	// Broadcast message deletion
+	if h.wsHandler != nil && topicID != uuid.Nil {
+		h.wsHandler.BroadcastMessageDelete(topicID, messageID)
 	}
 
 	return c.Status(fiber.StatusNoContent).Send(nil)
@@ -234,6 +266,18 @@ func (h *Handler) ToggleReaction(c *fiber.Ctx) error {
 		})
 	}
 
+	// Need topicID for ws broadcast
+	var topicID uuid.UUID
+	if h.wsHandler != nil {
+		msg, err := h.service.repo.GetByID(messageID)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Message not found",
+			})
+		}
+		topicID = msg.TopicID
+	}
+
 	if err := h.service.ToggleReaction(messageID, userID, req.Emoji); err != nil {
 		if errors.Is(err, ErrMessageNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -248,6 +292,15 @@ func (h *Handler) ToggleReaction(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to toggle reaction",
 		})
+	}
+
+	// Broadcast reaction update (best-effort)
+	if h.wsHandler != nil && topicID != uuid.Nil {
+		// If your repo has GetReactions(messageID, userID) – отлично.
+		// Если сигнатура другая, поменяй под свою.
+		if reactions, err := h.service.repo.GetReactions(messageID, userID); err == nil {
+			h.wsHandler.BroadcastReactionUpdate(topicID, messageID, reactions)
+		}
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
