@@ -36,7 +36,7 @@ type UpdateProjectRequest struct {
 	AvatarURL   *string `json:"avatar_url" validate:"omitempty,url"`
 }
 
-type ProjectWith Members struct {
+type ProjectWithMembers struct {
 	Project
 	Members []ProjectMemberWithUser `json:"members"`
 }
