@@ -62,6 +62,7 @@ func main() {
 	topicHandler := topic.NewHandler(topicService)
 	messageHandler := message.NewHandler(messageService)
 	wsHandler := message.NewWSHandler(wsHub, messageService)
+        messageHandler.SetWSHandler(wsHandler)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
