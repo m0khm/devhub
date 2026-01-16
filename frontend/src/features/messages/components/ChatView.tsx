@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Topic, Message } from '../../../shared/types';
+import type { Topic, Message } from '../../../shared/types';
 import { apiClient } from '../../../api/client';
 import { wsClient } from '../../../api/websocket';
 import { useAuthStore } from '../../../store/authStore';

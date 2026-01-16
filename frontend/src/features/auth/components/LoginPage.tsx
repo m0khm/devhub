@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { apiClient } from '../../../api/client';
 import { useAuthStore } from '../../../store/authStore';
 import toast from 'react-hot-toast';
-import { AuthResponse } from '../../../shared/types';
+import type  { AuthResponse } from '../../../shared/types';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();

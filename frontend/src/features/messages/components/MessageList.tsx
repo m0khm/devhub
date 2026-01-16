@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Message } from '../../../shared/types';
+import type { Message } from '../../../shared/types';
 import { MessageItem } from './MessageItem';
 
 interface MessageListProps {

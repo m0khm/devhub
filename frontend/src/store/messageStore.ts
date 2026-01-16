@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Message } from '../shared/types';
+import type { Message } from '../shared/types';
 
 interface MessageState {
   messages: Message[];

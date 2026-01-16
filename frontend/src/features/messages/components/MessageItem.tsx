@@ -1,5 +1,5 @@
 import React from 'react';
-import { Message } from '../../../shared/types';
+import type { Message } from '../../../shared/types';
 import { useAuthStore } from '../../../store/authStore';
 import { apiClient } from '../../../api/client';
 import toast from 'react-hot-toast';

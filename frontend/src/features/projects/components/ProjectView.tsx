@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient } from '../../../api/client';
 import { useProjectStore } from '../../../store/projectStore';
-import { Project, Topic } from '../../../shared/types';
+import type { Project, Topic } from '../../../shared/types';
 import toast from 'react-hot-toast';
 import { TopicSidebar } from '../../topics/components/TopicSidebar';
 import { ChatView } from '../../messages/components/ChatView';

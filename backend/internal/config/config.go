@@ -60,14 +60,16 @@ type GitHubConfig struct {
 }
 
 func Load() (*Config, error) {
-	// Load .env file if exists (for local development)
 	_ = godotenv.Load()
+
+	originsRaw := getEnv("CORS_ORIGIN", "http://localhost:3000")
+	allowOrigins := normalizeOrigins(strings.Split(originsRaw, ","))
 
 	cfg := &Config{
 		Server: ServerConfig{
 			Port:         getEnvAsInt("PORT", 8080),
 			Environment:  getEnv("ENVIRONMENT", "development"),
-			AllowOrigins: strings.Split(getEnv("CORS_ORIGIN", "http://localhost:3000"), ","),
+			AllowOrigins: allowOrigins,
 		},
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
@@ -85,7 +87,7 @@ func Load() (*Config, error) {
 		},
 		JWT: JWTConfig{
 			Secret:      getEnv("JWT_SECRET", "change-me-in-production"),
-			ExpireHours: getEnvAsInt("JWT_EXPIRE_HOURS", 168), // 7 days
+			ExpireHours: getEnvAsInt("JWT_EXPIRE_HOURS", 168),
 		},
 		S3: S3Config{
 			Endpoint:  getEnv("S3_ENDPOINT", "localhost:9000"),
@@ -101,12 +103,29 @@ func Load() (*Config, error) {
 		},
 	}
 
-	// Validate required fields
 	if cfg.JWT.Secret == "change-me-in-production" && cfg.Server.Environment == "production" {
 		return nil, fmt.Errorf("JWT_SECRET must be set in production")
 	}
 
 	return cfg, nil
+}
+
+func normalizeOrigins(in []string) []string {
+	out := make([]string, 0, len(in))
+	seen := map[string]bool{}
+
+	for _, o := range in {
+		o = strings.TrimSpace(o)
+		if o == "" {
+			continue
+		}
+		if !seen[o] {
+			seen[o] = true
+			out = append(out, o)
+		}
+	}
+
+	return out
 }
 
 func (c *DatabaseConfig) DSN() string {

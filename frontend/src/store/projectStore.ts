@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Project, Topic } from '../shared/types';
+import type { Project, Topic } from '../shared/types';
 
 interface ProjectState {
   projects: Project[];

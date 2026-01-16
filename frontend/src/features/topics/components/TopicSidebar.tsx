@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Topic } from '../../../shared/types';
+import type { Topic } from '../../../shared/types';
 import { useProjectStore } from '../../../store/projectStore';
 import { apiClient } from '../../../api/client';
 import toast from 'react-hot-toast';
