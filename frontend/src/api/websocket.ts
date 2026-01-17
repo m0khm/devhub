@@ -25,11 +25,23 @@ export class WebSocketClient {
     this.token = token;
     this.handlers = handlers;
 
-    const wsUrl = `ws://localhost:8080/api/topics/${topicId}/ws?token=${token}`;
-    
+    // Берём API базу (например: http://91.184.243.98/api)
+    // Если env нет — используем текущий домен: http(s)://<host>/api
+    const apiBase =
+      (import.meta as any).env?.VITE_API_URL ||
+      `${window.location.protocol}//${window.location.hostname}/api`;
+
+    // http -> ws, https -> wss
+    const wsBase = String(apiBase).replace(/^http/i, 'ws').replace(/\/+$/, '');
+
+    // ВАЖНО: не localhost и не :5173
+    const wsUrl = `${wsBase}/topics/${topicId}/ws?token=${encodeURIComponent(token)}`;
+
+    console.log('[WS] connecting:', wsUrl);
+
     try {
       this.ws = new WebSocket(wsUrl);
-      
+
       this.ws.onopen = () => {
         console.log('✅ WebSocket connected');
         this.reconnectAttempts = 0;
@@ -79,7 +91,6 @@ export class WebSocketClient {
         this.handlers.onReactionUpdated?.(data.payload);
         break;
       case 'pong':
-        // Ignore pong messages
         break;
       default:
         console.log('Unknown WebSocket message type:', data.type);
@@ -94,9 +105,11 @@ export class WebSocketClient {
 
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-    
-    console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-    
+
+    console.log(
+      `Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
+    );
+
     setTimeout(() => {
       if (this.topicId && this.token) {
         this.connect(this.topicId, this.token, this.handlers);
@@ -130,5 +143,4 @@ export class WebSocketClient {
   }
 }
 
-// Singleton instance
 export const wsClient = new WebSocketClient();
