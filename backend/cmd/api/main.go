@@ -138,6 +138,9 @@ func main() {
 	projectRoutes.Get("/:id", projectHandler.GetByID)
 	projectRoutes.Put("/:id", projectHandler.Update)
 	projectRoutes.Delete("/:id", projectHandler.Delete)
+	projectRoutes.Get("/:id/members", projectHandler.GetMembers)
+	projectRoutes.Post("/:id/members", projectHandler.AddMember)
+	projectRoutes.Delete("/:id/members/:userId", projectHandler.RemoveMember)
 
 	// Topic routes (внутри проекта)
 	projectRoutes.Post("/:projectId/topics", topicHandler.Create)

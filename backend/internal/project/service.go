@@ -9,10 +9,12 @@ import (
 )
 
 var (
-	ErrProjectNotFound = errors.New("project not found")
-	ErrNotProjectMember = errors.New("not a project member")
-	ErrNotProjectOwner = errors.New("not a project owner")
-	ErrAlreadyMember = errors.New("user is already a member")
+	ErrProjectNotFound   = errors.New("project not found")
+	ErrNotProjectMember  = errors.New("not a project member")
+	ErrNotProjectOwner   = errors.New("not a project owner")
+	ErrAlreadyMember     = errors.New("user is already a member")
+	ErrInvalidMemberRole = errors.New("invalid project member role")
+	ErrCannotRemoveOwner = errors.New("cannot remove project owner")
 )
 
 type Service struct {
@@ -90,6 +92,25 @@ func (s *Service) GetByID(projectID, userID uuid.UUID) (*ProjectWithMembers, err
 	}, nil
 }
 
+// Get project members
+func (s *Service) GetMembers(projectID, userID uuid.UUID) ([]ProjectMemberWithUser, error) {
+	// Check if user is member
+	isMember, err := s.repo.IsUserMember(projectID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check membership: %w", err)
+	}
+	if !isMember {
+		return nil, ErrNotProjectMember
+	}
+
+	members, err := s.repo.GetMembers(projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get members: %w", err)
+	}
+
+	return members, nil
+}
+
 // Get user's projects
 func (s *Service) GetUserProjects(userID uuid.UUID) ([]Project, error) {
 	projects, err := s.repo.GetByUserID(userID)
@@ -141,6 +162,42 @@ func (s *Service) Update(projectID, userID uuid.UUID, req UpdateProjectRequest) 
 	return project, nil
 }
 
+// Add member to project
+func (s *Service) AddMember(projectID, userID uuid.UUID, req AddProjectMemberRequest) error {
+	role, err := s.repo.GetUserRole(projectID, userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrNotProjectMember
+		}
+		return fmt.Errorf("failed to get user role: %w", err)
+	}
+	if role != "owner" && role != "admin" {
+		return ErrNotProjectOwner
+	}
+
+	newRole := req.Role
+	if newRole == "" {
+		newRole = "member"
+	}
+	if newRole != "member" && newRole != "admin" {
+		return ErrInvalidMemberRole
+	}
+
+	isMember, err := s.repo.IsUserMember(projectID, req.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to check membership: %w", err)
+	}
+	if isMember {
+		return ErrAlreadyMember
+	}
+
+	if err := s.repo.AddMember(projectID, req.UserID, newRole); err != nil {
+		return fmt.Errorf("failed to add member: %w", err)
+	}
+
+	return nil
+}
+
 // Delete project
 func (s *Service) Delete(projectID, userID uuid.UUID) error {
 	// Check if user is owner
@@ -159,6 +216,37 @@ func (s *Service) Delete(projectID, userID uuid.UUID) error {
 	// Delete
 	if err := s.repo.Delete(projectID); err != nil {
 		return fmt.Errorf("failed to delete project: %w", err)
+	}
+
+	return nil
+}
+
+// Remove member from project
+func (s *Service) RemoveMember(projectID, userID, memberID uuid.UUID) error {
+	role, err := s.repo.GetUserRole(projectID, userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrNotProjectMember
+		}
+		return fmt.Errorf("failed to get user role: %w", err)
+	}
+	if role != "owner" && role != "admin" {
+		return ErrNotProjectOwner
+	}
+
+	targetRole, err := s.repo.GetUserRole(projectID, memberID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrNotProjectMember
+		}
+		return fmt.Errorf("failed to get member role: %w", err)
+	}
+	if targetRole == "owner" {
+		return ErrCannotRemoveOwner
+	}
+
+	if err := s.repo.RemoveMember(projectID, memberID); err != nil {
+		return fmt.Errorf("failed to remove member: %w", err)
 	}
 
 	return nil
