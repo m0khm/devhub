@@ -47,7 +47,7 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
   };
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+    <div className="flex h-full flex-col">
       {/* Project header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between gap-2">
@@ -138,12 +138,12 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
       </div>
 
       {/* Create topic button */}
-      <div className="p-2 border-t border-gray-200">
+      <div className="p-3 border-t border-slate-800/70">
         <button
           onClick={() => setShowCreateModal(true)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+          className="w-full flex items-center gap-2 px-3 py-2 text-slate-300 hover:bg-slate-800/60 rounded-xl transition"
         >
-          <PlusIcon className="w-5 h-5" />
+          <PlusIcon className="w-5 h-5 text-slate-400" />
           <span className="text-sm font-medium">Add Topic</span>
         </button>
       </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient } from '../../../api/client';
 import { useProjectStore } from '../../../store/projectStore';
@@ -6,10 +6,26 @@ import type { Project, ProjectMemberWithUser, Topic } from '../../../shared/type
 import toast from 'react-hot-toast';
 import { TopicSidebar } from '../../topics/components/TopicSidebar';
 import { ChatView } from '../../messages/components/ChatView';
+import { AppShell } from '../../../components/AppShell';
+import { ProjectSidebar } from './ProjectSidebar';
+import { useAuthStore } from '../../../store/authStore';
+import {
+  Cog6ToothIcon,
+  EllipsisVerticalIcon,
+  UserGroupIcon,
+} from '@heroicons/react/24/outline';
 
 export const ProjectView: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const { currentProject, setCurrentProject, currentTopics, setCurrentTopics } = useProjectStore();
+  const {
+    currentProject,
+    setCurrentProject,
+    currentTopics,
+    setCurrentTopics,
+    projects,
+    setProjects,
+  } = useProjectStore();
+  const { user } = useAuthStore();
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [directThreads, setDirectThreads] = useState<DirectMessageThread[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +65,15 @@ export const ProjectView: React.FC = () => {
       setCurrentProject(response.data);
     } catch (error) {
       toast.error('Failed to load project');
+    }
+  };
+
+  const loadProjects = async () => {
+    try {
+      const response = await apiClient.get<Project[]>('/projects');
+      setProjects(response.data);
+    } catch (error) {
+      toast.error('Failed to load projects');
     }
   };
 
@@ -122,7 +147,7 @@ export const ProjectView: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-slate-300">Loading...</div>
       </div>
     );
   }
@@ -149,7 +174,7 @@ export const ProjectView: React.FC = () => {
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <p className="text-gray-500">Select a topic to start chatting</p>
+              <p className="text-slate-300">Select a topic to start chatting</p>
             </div>
           </div>
         )}

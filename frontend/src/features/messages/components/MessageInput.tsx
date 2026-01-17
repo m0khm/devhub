@@ -62,7 +62,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ topicId, onSend }) =
   };
 
   return (
-    <div className="bg-white border-t border-gray-200 px-6 py-4">
+    <div className="border-t border-slate-800/80 bg-slate-900/80 px-6 py-4">
       <form onSubmit={handleSubmit} className="flex items-end gap-3">
         <FileUploadButton topicId={topicId} /> {/* NEW */}
         <textarea
@@ -71,13 +71,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({ topicId, onSend }) =
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder="Type a message... (Shift+Enter for new line)"
-          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none max-h-32"
+          className="flex-1 resize-none max-h-32 rounded-xl border border-slate-700/70 bg-slate-950/60 px-4 py-3 text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/40"
           rows={1}
         />
         <button
           type="submit"
           disabled={!content.trim()}
-          className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          className="rounded-xl bg-sky-500/90 p-3 text-white shadow hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50 transition"
         >
           <PaperAirplaneIcon className="w-5 h-5" />
         </button>

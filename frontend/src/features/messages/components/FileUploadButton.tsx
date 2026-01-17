@@ -54,7 +54,7 @@ export const FileUploadButton: React.FC<FileUploadButtonProps> = ({ topicId }) =
         type="button"
         onClick={handleClick}
         disabled={uploading}
-        className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 transition"
+        className="rounded-xl p-2 text-slate-400 hover:bg-slate-800/70 hover:text-slate-100 disabled:opacity-50 transition"
         title="Upload file"
       >
         <PaperClipIcon className="w-5 h-5" />
