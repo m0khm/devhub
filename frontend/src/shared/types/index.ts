@@ -25,6 +25,15 @@ export interface ProjectMember {
   joined_at: string;
 }
 
+export interface ProjectMemberWithUser extends ProjectMember {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    avatar_url?: string;
+  };
+}
+
 export interface Topic {
   id: string;
   project_id: string;

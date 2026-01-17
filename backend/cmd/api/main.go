@@ -17,6 +17,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/middleware"
 	"github.com/m0khm/devhub/backend/internal/project"
 	"github.com/m0khm/devhub/backend/internal/topic"
+	"github.com/m0khm/devhub/backend/internal/user"
 	"github.com/m0khm/devhub/backend/internal/video" // NEW
 )
 
@@ -51,14 +52,14 @@ func main() {
 	projectRepo := project.NewRepository(db)
 	topicRepo := topic.NewRepository(db)
 	messageRepo := message.NewRepository(db)
-	dmRepo := dm.NewRepository(db)
+	userRepo := user.NewRepository(db)
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager)
 	projectService := project.NewService(projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
 	messageService := message.NewService(messageRepo, topicRepo, projectRepo)
-	dmService := dm.NewService(dmRepo, projectRepo)
+	userService := user.NewService(db)
 
 	// Initialize handlers
 	authHandler := auth.NewHandler(authService)
@@ -68,6 +69,7 @@ func main() {
 	dmHandler := dm.NewHandler(dmService)
 	wsHandler := message.NewWSHandler(wsHub, messageService)
 	messageHandler.SetWSHandler(wsHandler)
+	userHandler := user.NewHandler(userService)
 
 	videoHandler := video.NewHandler() // NEW
 
@@ -142,6 +144,9 @@ func main() {
 	projectRoutes.Get("/:id", projectHandler.GetByID)
 	projectRoutes.Put("/:id", projectHandler.Update)
 	projectRoutes.Delete("/:id", projectHandler.Delete)
+	projectRoutes.Get("/:id/members", projectHandler.GetMembers)
+	projectRoutes.Post("/:id/members", projectHandler.AddMember)
+	projectRoutes.Delete("/:id/members/:userId", projectHandler.RemoveMember)
 
 	// Topic routes (внутри проекта)
 	projectRoutes.Post("/:projectId/topics", topicHandler.Create)
@@ -167,10 +172,9 @@ func main() {
 	messageRoutes.Delete("/:id", messageHandler.Delete)
 	messageRoutes.Post("/:id/reactions", messageHandler.ToggleReaction)
 
-	// Direct message routes
-	dmRoutes := protected.Group("/dm")
-	dmRoutes.Post("/", dmHandler.CreateOrGet)
-	dmRoutes.Get("/", dmHandler.List)
+	// User search routes
+	userRoutes := protected.Group("/users")
+	userRoutes.Get("/", userHandler.Search)
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
