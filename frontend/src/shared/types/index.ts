@@ -25,12 +25,21 @@ export interface ProjectMember {
   joined_at: string;
 }
 
+export interface ProjectMemberWithUser extends ProjectMember {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    avatar_url?: string;
+  };
+}
+
 export interface Topic {
   id: string;
   project_id: string;
   name: string;
   description?: string;
-  type: 'chat' | 'code' | 'deploy' | 'bugs' | 'planning' | 'custom';
+  type: 'chat' | 'code' | 'deploy' | 'bugs' | 'planning' | 'custom' | 'direct';
   icon?: string;
   position: number;
   created_by: string;
@@ -41,6 +50,10 @@ export interface Topic {
 export interface TopicWithStats extends Topic {
   message_count: number;
   last_message_at?: string;
+}
+
+export interface DirectMessageThread extends Topic {
+  user: User;
 }
 
 export interface Message {

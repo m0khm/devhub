@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient } from '../../../api/client';
 import { useProjectStore } from '../../../store/projectStore';
-import type { Project, Topic } from '../../../shared/types';
+import type { Project, ProjectMemberWithUser, Topic } from '../../../shared/types';
 import toast from 'react-hot-toast';
 import { TopicSidebar } from '../../topics/components/TopicSidebar';
 import { ChatView } from '../../messages/components/ChatView';
@@ -27,15 +27,37 @@ export const ProjectView: React.FC = () => {
   } = useProjectStore();
   const { user } = useAuthStore();
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [directThreads, setDirectThreads] = useState<DirectMessageThread[]>([]);
   const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState<ProjectMemberWithUser[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [inviteUserId, setInviteUserId] = useState('');
+  const [inviteRole, setInviteRole] = useState<'member' | 'admin'>('member');
+  const [inviteSubmitting, setInviteSubmitting] = useState(false);
 
   useEffect(() => {
     if (projectId) {
       loadProject();
       loadTopics();
-      loadProjects();
+      loadMembers();
     }
+
+    setLoading(true);
+    Promise.all([loadProject(), loadTopics(), loadDirectThreads()]).finally(() => {
+      setLoading(false);
+    });
   }, [projectId]);
+
+  useEffect(() => {
+    if (selectedTopicId) {
+      return;
+    }
+
+    const defaultTopic = currentTopics[0] || directThreads[0];
+    if (defaultTopic) {
+      setSelectedTopicId(defaultTopic.id);
+    }
+  }, [currentTopics, directThreads, selectedTopicId]);
 
   const loadProject = async () => {
     try {
@@ -58,16 +80,67 @@ export const ProjectView: React.FC = () => {
   const loadTopics = async () => {
     try {
       const response = await apiClient.get<Topic[]>(`/projects/${projectId}/topics`);
-      setCurrentTopics(response.data);
-      
-      // Auto-select first topic
-      if (response.data.length > 0 && !selectedTopicId) {
-        setSelectedTopicId(response.data[0].id);
-      }
+      const standardTopics = response.data.filter((topic) => topic.type !== 'direct');
+      setCurrentTopics(standardTopics);
     } catch (error) {
       toast.error('Failed to load topics');
+    }
+  };
+
+  const loadDirectThreads = async () => {
+    try {
+      const response = await apiClient.get<DirectMessageThread[]>('/dm', {
+        params: { projectId },
+      });
+      setDirectThreads(response.data);
+    } catch (error) {
+      toast.error('Failed to load direct messages');
+    }
+  };
+
+  const loadMembers = async () => {
+    try {
+      const response = await apiClient.get<ProjectMemberWithUser[]>(
+        `/projects/${projectId}/members`
+      );
+      setMembers(response.data);
+    } catch (error) {
+      toast.error('Failed to load project members');
     } finally {
-      setLoading(false);
+      setMembersLoading(false);
+    }
+  };
+
+  const handleInvite = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!inviteUserId.trim()) {
+      toast.error('Enter a user ID to invite');
+      return;
+    }
+
+    try {
+      setInviteSubmitting(true);
+      await apiClient.post(`/projects/${projectId}/members`, {
+        user_id: inviteUserId.trim(),
+        role: inviteRole,
+      });
+      setInviteUserId('');
+      toast.success('Member invited');
+      await loadMembers();
+    } catch (error) {
+      toast.error('Failed to invite member');
+    } finally {
+      setInviteSubmitting(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    try {
+      await apiClient.delete(`/projects/${projectId}/members/${memberId}`);
+      toast.success('Member removed');
+      await loadMembers();
+    } catch (error) {
+      toast.error('Failed to remove member');
     }
   };
 
@@ -79,75 +152,24 @@ export const ProjectView: React.FC = () => {
     );
   }
 
-  const selectedTopic = currentTopics.find((t) => t.id === selectedTopicId);
-  const projectInitials = useMemo(() => {
-    if (!currentProject?.name) return 'PR';
-    return currentProject.name
-      .split(' ')
-      .map((word) => word[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-  }, [currentProject?.name]);
+  const selectedTopic =
+    currentTopics.find((t) => t.id === selectedTopicId) ||
+    directThreads.find((thread) => thread.id === selectedTopicId);
 
   return (
-    <AppShell
-      left={<ProjectSidebar />}
-      middle={
-        <TopicSidebar
-          topics={currentTopics}
-          selectedTopicId={selectedTopicId}
-          onSelectTopic={setSelectedTopicId}
-          onTopicCreated={loadTopics}
-        />
-      }
-      header={
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {currentProject?.avatar_url ? (
-              <img
-                src={currentProject.avatar_url}
-                alt={currentProject.name}
-                className="h-12 w-12 rounded-2xl border border-slate-700 object-cover"
-              />
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800 text-sm font-semibold text-white">
-                {projectInitials}
-              </div>
-            )}
-            <div>
-              <h1 className="text-lg font-semibold text-white">
-                {currentProject?.name || 'Project'}
-              </h1>
-              <p className="text-sm text-slate-400">
-                {projects.length} проектов • {currentTopics.length} топиков
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-2 text-slate-300 hover:bg-slate-800/70 hover:text-white transition"
-            >
-              <UserGroupIcon className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-2 text-slate-300 hover:bg-slate-800/70 hover:text-white transition"
-            >
-              <Cog6ToothIcon className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-2 text-slate-300 hover:bg-slate-800/70 hover:text-white transition"
-            >
-              <EllipsisVerticalIcon className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      }
-      main={
-        selectedTopic ? (
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar with topics */}
+      <TopicSidebar
+        topics={currentTopics}
+        directThreads={directThreads}
+        selectedTopicId={selectedTopicId}
+        onSelectTopic={setSelectedTopicId}
+        onTopicCreated={loadTopics}
+      />
+
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col">
+        {selectedTopic ? (
           <ChatView topic={selectedTopic} />
         ) : (
           <div className="flex-1 flex items-center justify-center">
@@ -155,74 +177,90 @@ export const ProjectView: React.FC = () => {
               <p className="text-slate-300">Select a topic to start chatting</p>
             </div>
           </div>
-        )
-      }
-      right={
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-lg">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-              Профиль
-            </p>
-            <div className="mt-4 flex items-center gap-3">
-              {user?.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user.name}
-                  className="h-12 w-12 rounded-full border border-slate-700 object-cover"
-                />
-              ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700 text-sm font-semibold text-white">
-                  {user?.name?.[0]?.toUpperCase() || 'U'}
-                </div>
-              )}
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  {user?.name || 'User'}
-                </p>
-                <p className="text-xs text-slate-400">{user?.email || 'you@team.com'}</p>
-              </div>
-            </div>
-          </div>
+        )}
+      </div>
 
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-lg">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-              Участники
-            </p>
-            <div className="mt-4 space-y-3">
-              <div className="flex items-center justify-between rounded-xl bg-slate-800/60 px-3 py-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-700 text-xs font-semibold text-white">
-                    {user?.name?.[0]?.toUpperCase() || 'U'}
-                  </div>
-                  <div>
-                    <p className="text-sm text-white">{user?.name || 'You'}</p>
-                    <p className="text-xs text-slate-400">Вы</p>
-                  </div>
-                </div>
-                <span className="text-xs text-slate-400">online</span>
-              </div>
-              <div className="flex items-center justify-between rounded-xl bg-slate-800/40 px-3 py-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-600 text-xs font-semibold text-white">
-                    TM
-                  </div>
-                  <div>
-                    <p className="text-sm text-white">Team member</p>
-                    <p className="text-xs text-slate-400">Админ</p>
-                  </div>
-                </div>
-                <span className="text-xs text-slate-500">away</span>
-              </div>
+      {/* Members panel */}
+      <div className="w-80 border-l bg-white flex flex-col">
+        <div className="p-4 border-b">
+          <h2 className="text-sm font-semibold text-gray-700">Members</h2>
+          {currentProject && (
+            <p className="text-xs text-gray-500 mt-1">Project: {currentProject.name}</p>
+          )}
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <form onSubmit={handleInvite} className="space-y-3">
+            <div>
+              <label className="text-xs text-gray-500 block mb-1" htmlFor="invite-user-id">
+                Invite user ID
+              </label>
+              <input
+                id="invite-user-id"
+                className="w-full rounded border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={inviteUserId}
+                onChange={(event) => setInviteUserId(event.target.value)}
+                placeholder="UUID of user"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1" htmlFor="invite-role">
+                Role
+              </label>
+              <select
+                id="invite-role"
+                className="w-full rounded border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={inviteRole}
+                onChange={(event) => setInviteRole(event.target.value as 'member' | 'admin')}
+              >
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+              </select>
             </div>
             <button
-              type="button"
-              className="mt-4 w-full rounded-xl border border-slate-700/80 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800/80 transition"
+              type="submit"
+              className="w-full rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+              disabled={inviteSubmitting}
             >
-              Пригласить участника
+              {inviteSubmitting ? 'Inviting...' : 'Invite'}
             </button>
+          </form>
+
+          <div>
+            <h3 className="text-xs uppercase text-gray-400 tracking-wide mb-2">Current members</h3>
+            {membersLoading ? (
+              <div className="text-sm text-gray-500">Loading members...</div>
+            ) : members.length === 0 ? (
+              <div className="text-sm text-gray-500">No members yet.</div>
+            ) : (
+              <div className="space-y-3">
+                {members.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-start justify-between rounded border border-gray-100 p-3"
+                  >
+                    <div>
+                      <div className="text-sm font-medium text-gray-800">
+                        {member.user?.name || member.user?.email || member.user_id}
+                      </div>
+                      <div className="text-xs text-gray-500">{member.user?.email}</div>
+                      <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 mt-2">
+                        {member.role}
+                      </span>
+                    </div>
+                    <button
+                      className="text-xs text-red-500 hover:text-red-600"
+                      onClick={() => handleRemoveMember(member.user_id)}
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      }
-    />
+      </div>
+    </div>
   );
 };
