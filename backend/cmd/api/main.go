@@ -16,6 +16,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/middleware"
 	"github.com/m0khm/devhub/backend/internal/project"
 	"github.com/m0khm/devhub/backend/internal/topic"
+	"github.com/m0khm/devhub/backend/internal/user"
 	"github.com/m0khm/devhub/backend/internal/video" // NEW
 )
 
@@ -50,12 +51,14 @@ func main() {
 	projectRepo := project.NewRepository(db)
 	topicRepo := topic.NewRepository(db)
 	messageRepo := message.NewRepository(db)
+	userRepo := user.NewRepository(db)
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager)
 	projectService := project.NewService(projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
 	messageService := message.NewService(messageRepo, topicRepo, projectRepo)
+	userService := user.NewService(userRepo)
 
 	// Initialize handlers
 	authHandler := auth.NewHandler(authService)
@@ -64,6 +67,7 @@ func main() {
 	messageHandler := message.NewHandler(messageService)
 	wsHandler := message.NewWSHandler(wsHub, messageService)
 	messageHandler.SetWSHandler(wsHandler)
+	userHandler := user.NewHandler(userService)
 
 	videoHandler := video.NewHandler() // NEW
 
@@ -162,6 +166,10 @@ func main() {
 	messageRoutes.Put("/:id", messageHandler.Update)
 	messageRoutes.Delete("/:id", messageHandler.Delete)
 	messageRoutes.Post("/:id/reactions", messageHandler.ToggleReaction)
+
+	// User routes
+	userRoutes := protected.Group("/users")
+	userRoutes.Patch("/me", userHandler.UpdateMe)
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
