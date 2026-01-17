@@ -108,6 +108,38 @@ func (h *Handler) GetByID(c *fiber.Ctx) error {
 	return c.JSON(project)
 }
 
+// Get project members
+// GET /api/projects/:id/members
+func (h *Handler) GetMembers(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid project ID",
+		})
+	}
+
+	members, err := h.service.GetMembers(projectID, userID)
+	if err != nil {
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "You are not a member of this project",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get project members",
+		})
+	}
+
+	return c.JSON(members)
+}
+
 // Update project
 // PUT /api/projects/:id
 func (h *Handler) Update(c *fiber.Ctx) error {
@@ -160,6 +192,68 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 	return c.JSON(project)
 }
 
+// Add project member
+// POST /api/projects/:id/members
+func (h *Handler) AddMember(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid project ID",
+		})
+	}
+
+	var req AddProjectMemberRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"details": errs,
+		})
+	}
+
+	if err := h.service.AddMember(projectID, userID, req); err != nil {
+		if errors.Is(err, ErrNotProjectOwner) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Only project owner or admin can add members",
+			})
+		}
+		if errors.Is(err, ErrAlreadyMember) {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "User is already a member",
+			})
+		}
+		if errors.Is(err, ErrInvalidMemberRole) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid member role",
+			})
+		}
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "You are not a member of this project",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to add project member",
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"status": "member added",
+	})
+}
+
 // Delete project
 // DELETE /api/projects/:id
 func (h *Handler) Delete(c *fiber.Ctx) error {
@@ -190,6 +284,54 @@ func (h *Handler) Delete(c *fiber.Ctx) error {
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to delete project",
+		})
+	}
+
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
+// Remove project member
+// DELETE /api/projects/:id/members/:userId
+func (h *Handler) RemoveMember(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid project ID",
+		})
+	}
+
+	memberID, err := uuid.Parse(c.Params("userId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
+	}
+
+	if err := h.service.RemoveMember(projectID, userID, memberID); err != nil {
+		if errors.Is(err, ErrNotProjectOwner) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Only project owner or admin can remove members",
+			})
+		}
+		if errors.Is(err, ErrCannotRemoveOwner) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Cannot remove project owner",
+			})
+		}
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Project member not found",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to remove project member",
 		})
 	}
 
