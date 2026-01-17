@@ -21,7 +21,7 @@ export const ProjectList: React.FC = () => {
   const loadProjects = async () => {
     try {
       const res = await apiClient.get<Project[]>('/projects');
-      setProjects(res.data);
+      setProjects(res.data ?? []);
     } catch (e) {
       console.error('[API] GET /projects failed', e);
       toast.error('Failed to load projects');
