@@ -12,6 +12,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/auth"
 	"github.com/m0khm/devhub/backend/internal/config"
 	"github.com/m0khm/devhub/backend/internal/database"
+	"github.com/m0khm/devhub/backend/internal/dm"
 	"github.com/m0khm/devhub/backend/internal/message"
 	"github.com/m0khm/devhub/backend/internal/middleware"
 	"github.com/m0khm/devhub/backend/internal/project"
@@ -65,6 +66,7 @@ func main() {
 	projectHandler := project.NewHandler(projectService)
 	topicHandler := topic.NewHandler(topicService)
 	messageHandler := message.NewHandler(messageService)
+	dmHandler := dm.NewHandler(dmService)
 	wsHandler := message.NewWSHandler(wsHub, messageService)
 	messageHandler.SetWSHandler(wsHandler)
 	userHandler := user.NewHandler(userService)
