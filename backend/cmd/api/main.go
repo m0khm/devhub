@@ -51,6 +51,7 @@ func main() {
 	projectRepo := project.NewRepository(db)
 	topicRepo := topic.NewRepository(db)
 	messageRepo := message.NewRepository(db)
+	userRepo := user.NewRepository(db)
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager)

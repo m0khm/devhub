@@ -6,6 +6,7 @@ import { LoginPage } from './features/auth/components/LoginPage';
 import { RegisterPage } from './features/auth/components/RegisterPage';
 import { ProjectList } from './features/projects/components/ProjectList';
 import { ProjectView } from './features/projects/components/ProjectView';
+import { ProfilePage } from './features/profile/ProfilePage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -39,6 +40,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ProjectView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />
