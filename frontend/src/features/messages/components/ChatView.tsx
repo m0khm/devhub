@@ -119,13 +119,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-screen">
+    <div className="flex-1 flex min-h-0 flex-col">
       {/* Topic header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-slate-800/70 bg-slate-900/80 px-6 py-4 shadow-sm">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">{topic.name}</h2>
+          <h2 className="text-xl font-semibold text-white">{topic.name}</h2>
           {topic.description && (
-            <p className="text-sm text-gray-600 mt-1">{topic.description}</p>
+            <p className="text-sm text-slate-300 mt-1">{topic.description}</p>
           )}
         </div>
 
@@ -140,7 +140,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
 
       {/* Typing indicator */}
       {typingUsers.size > 0 && (
-        <div className="px-6 py-2 text-sm text-gray-500 italic">
+        <div className="px-6 py-2 text-sm text-slate-300 italic">
           Someone is typing...
         </div>
       )}

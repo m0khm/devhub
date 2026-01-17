@@ -43,30 +43,34 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
   };
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+    <div className="flex h-full flex-col">
       {/* Project header */}
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="font-semibold text-gray-900 truncate">
+      <div className="px-4 py-5 border-b border-slate-800/70">
+        <h2 className="font-semibold text-white truncate">
           {currentProject?.name || 'Project'}
         </h2>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-slate-400 mt-1">
           {topics.length} {topics.length === 1 ? 'topic' : 'topics'}
         </p>
       </div>
 
       {/* Topics list */}
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto p-3">
         {topics.map((topic) => (
           <button
             key={topic.id}
             onClick={() => onSelectTopic(topic.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition ${
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl mb-2 transition ${
               selectedTopicId === topic.id
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-slate-800/80 text-white shadow'
+                : 'text-slate-300 hover:bg-slate-800/60'
             }`}
           >
-            <span className={selectedTopicId === topic.id ? 'text-blue-600' : 'text-gray-500'}>
+            <span
+              className={
+                selectedTopicId === topic.id ? 'text-sky-300' : 'text-slate-400'
+              }
+            >
               {typeof getTopicIcon(topic.type, topic.icon) === 'string' ? (
                 <span className="text-xl">{getTopicIcon(topic.type, topic.icon)}</span>
               ) : (
@@ -81,12 +85,12 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
       </div>
 
       {/* Create topic button */}
-      <div className="p-2 border-t border-gray-200">
+      <div className="p-3 border-t border-slate-800/70">
         <button
           onClick={() => setShowCreateModal(true)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+          className="w-full flex items-center gap-2 px-3 py-2 text-slate-300 hover:bg-slate-800/60 rounded-xl transition"
         >
-          <PlusIcon className="w-5 h-5" />
+          <PlusIcon className="w-5 h-5 text-slate-400" />
           <span className="text-sm font-medium">Add Topic</span>
         </button>
       </div>

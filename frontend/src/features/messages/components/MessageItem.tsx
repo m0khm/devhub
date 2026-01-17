@@ -55,12 +55,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             href={metadata.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+            className="flex items-center gap-3 rounded-lg bg-slate-800/70 p-3 text-slate-100 hover:bg-slate-800 transition"
           >
-            <DocumentIcon className="w-8 h-8 text-gray-400" />
+            <DocumentIcon className="w-8 h-8 text-slate-400" />
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">{metadata.filename}</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-slate-400">
                 {(metadata.size / 1024).toFixed(1)} KB
               </p>
             </div>
@@ -90,10 +90,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
       {/* Message content */}
       <div className={`flex-1 ${isOwnMessage ? 'text-right' : ''}`}>
         <div className="flex items-baseline gap-2 mb-1">
-          <span className={`font-semibold text-sm ${isOwnMessage ? 'order-2' : ''}`}>
+          <span className={`font-semibold text-sm text-slate-200 ${isOwnMessage ? 'order-2' : ''}`}>
             {message.user?.name || 'Unknown'}
           </span>
-          <span className={`text-xs text-gray-500 ${isOwnMessage ? 'order-1' : ''}`}>
+          <span className={`text-xs text-slate-400 ${isOwnMessage ? 'order-1' : ''}`}>
             {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
           </span>
         </div>
@@ -101,8 +101,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         <div
           className={`inline-block px-4 py-2 rounded-2xl ${
             isOwnMessage
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-900'
+              ? 'bg-sky-500/90 text-white shadow'
+              : 'bg-slate-800/80 text-slate-100 shadow'
           }`}
         >
           <p className="whitespace-pre-wrap break-words">{message.content}</p>
@@ -118,17 +118,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                 onClick={() => handleReaction(reaction.emoji)}
                 className={`px-2 py-1 rounded-full text-sm flex items-center gap-1 transition ${
                   reaction.has_self
-                    ? 'bg-blue-100 border border-blue-300'
-                    : 'bg-gray-100 hover:bg-gray-200'
+                    ? 'bg-sky-500/20 border border-sky-500/40 text-slate-100'
+                    : 'bg-slate-800/60 text-slate-200 hover:bg-slate-800'
                 }`}
               >
                 <span>{reaction.emoji}</span>
-                <span className="text-xs text-gray-600">{reaction.count}</span>
+                <span className="text-xs text-slate-300">{reaction.count}</span>
               </button>
             ))}
             <button
               onClick={() => handleReaction('👍')}
-              className="px-2 py-1 rounded-full text-sm bg-gray-100 hover:bg-gray-200 transition"
+              className="px-2 py-1 rounded-full text-sm bg-slate-800/60 text-slate-200 hover:bg-slate-800 transition"
             >
               +
             </button>

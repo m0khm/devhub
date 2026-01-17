@@ -40,7 +40,7 @@ export const VideoCallButton: React.FC<VideoCallButtonProps> = ({ topicId }) => 
       <button
         onClick={startCall}
         disabled={loading}
-        className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition disabled:opacity-50"
+        className="rounded-xl p-2 text-slate-300 hover:bg-slate-800/60 hover:text-white transition disabled:opacity-50"
         title="Start video call"
       >
         <VideoCameraIcon className="w-5 h-5" />
