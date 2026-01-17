@@ -80,7 +80,8 @@ export const ProjectView: React.FC = () => {
   const loadTopics = async () => {
     try {
       const response = await apiClient.get<Topic[]>(`/projects/${projectId}/topics`);
-      const standardTopics = response.data.filter((topic) => topic.type !== 'direct');
+      const topics = Array.isArray(response.data) ? response.data : [];
+      const standardTopics = topics.filter((topic) => topic.type !== 'direct');
       setCurrentTopics(standardTopics);
     } catch (error) {
       toast.error('Failed to load topics');
@@ -92,7 +93,7 @@ export const ProjectView: React.FC = () => {
       const response = await apiClient.get<DirectMessageThread[]>('/dm', {
         params: { projectId },
       });
-      setDirectThreads(response.data);
+      setDirectThreads(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       toast.error('Failed to load direct messages');
     }
@@ -103,7 +104,7 @@ export const ProjectView: React.FC = () => {
       const response = await apiClient.get<ProjectMemberWithUser[]>(
         `/projects/${projectId}/members`
       );
-      setMembers(response.data);
+      setMembers(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       toast.error('Failed to load project members');
     } finally {
