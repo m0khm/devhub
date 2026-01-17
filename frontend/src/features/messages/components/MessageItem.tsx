@@ -4,6 +4,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { apiClient } from '../../../api/client';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { DocumentIcon, PhotoIcon } from '@heroicons/react/24/outline';
 
 interface MessageItemProps {
   message: Message;
@@ -28,6 +29,45 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const renderFileContent = () => {
+    if (message.type !== 'file' || !message.metadata) return null;
+
+    const metadata = typeof message.metadata === 'string' 
+      ? JSON.parse(message.metadata) 
+      : message.metadata;
+
+    const isImage = metadata.mime_type?.startsWith('image/');
+
+    return (
+      <div className="mt-2">
+        {isImage ? (
+          <a href={metadata.url} target="_blank" rel="noopener noreferrer">
+            <img
+              src={metadata.url}
+              alt={metadata.filename}
+              className="max-w-sm rounded-lg cursor-pointer hover:opacity-90 transition"
+            />
+          </a>
+        ) : (
+          <a
+            href={metadata.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+          >
+            <DocumentIcon className="w-8 h-8 text-gray-400" />
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">{metadata.filename}</p>
+              <p className="text-xs text-gray-500">
+                {(metadata.size / 1024).toFixed(1)} KB
+              </p>
+            </div>
+          </a>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -66,6 +106,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           }`}
         >
           <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          {renderFileContent()}
         </div>
 
         {/* Reactions */}

@@ -18,6 +18,21 @@ type Message struct {
 	UpdatedAt time.Time  `json:"updated_at"`
 }
 
+type File struct {
+	ID         uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
+	MessageID  uuid.UUID `json:"message_id" gorm:"not null"`
+	Filename   string    `json:"filename" gorm:"not null"`
+	FileSize   int64     `json:"file_size" gorm:"not null"`
+	MimeType   string    `json:"mime_type" gorm:"not null"`
+	StorageKey string    `json:"storage_key" gorm:"not null"`
+	UploadedBy uuid.UUID `json:"uploaded_by" gorm:"not null"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+func (File) TableName() string {
+	return "files"
+}
+
 type MessageReaction struct {
 	ID        uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
 	MessageID uuid.UUID `json:"message_id" gorm:"not null"`

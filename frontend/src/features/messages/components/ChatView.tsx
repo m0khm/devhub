@@ -7,6 +7,8 @@ import { useMessageStore } from '../../../store/messageStore';
 import toast from 'react-hot-toast';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
+import { SearchBar } from './SearchBar';
+import { VideoCallButton } from '../../video/components/VideoCallButton';
 
 interface ChatViewProps {
   topic: Topic;
@@ -14,17 +16,23 @@ interface ChatViewProps {
 
 export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
   const { token } = useAuthStore();
-  const { messages, setMessages, addMessage, updateMessage, deleteMessage, clearMessages } = useMessageStore();
+  const {
+    messages,
+    setMessages,
+    addMessage,
+    updateMessage,
+    deleteMessage,
+    clearMessages,
+  } = useMessageStore();
+
   const [loading, setLoading] = useState(true);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const typingTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
 
   useEffect(() => {
-    // Clear messages when topic changes
     clearMessages();
     loadMessages();
 
-    // Connect WebSocket
     if (token) {
       wsClient.connect(topic.id, token, {
         onNewMessage: (payload) => {
@@ -48,20 +56,29 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
         onDisconnect: () => {
           console.log('WebSocket disconnected');
         },
+        onError: (err) => {
+          console.error('WebSocket error:', err);
+        },
       });
     }
 
     return () => {
       wsClient.disconnect();
       clearMessages();
+
+      Object.values(typingTimeoutRef.current).forEach((t) => clearTimeout(t));
+      typingTimeoutRef.current = {};
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topic.id, token]);
 
   const loadMessages = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get<Message[]>(`/topics/${topic.id}/messages?limit=50`);
-      setMessages(response.data.reverse()); // Reverse to show oldest first
+      const response = await apiClient.get<Message[]>(
+        `/topics/${topic.id}/messages?limit=50`
+      );
+      setMessages(response.data.reverse()); // oldest first
     } catch (error) {
       toast.error('Failed to load messages');
     } finally {
@@ -73,15 +90,12 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
     const userId = payload.user_id;
     if (!userId) return;
 
-    // Add to typing users
     setTypingUsers((prev) => new Set(prev).add(userId));
 
-    // Clear existing timeout
     if (typingTimeoutRef.current[userId]) {
       clearTimeout(typingTimeoutRef.current[userId]);
     }
 
-    // Set new timeout
     typingTimeoutRef.current[userId] = setTimeout(() => {
       setTypingUsers((prev) => {
         const newSet = new Set(prev);
@@ -98,7 +112,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
         content,
         type: 'text',
       });
-      // Message will be added via WebSocket
+      // добавится через WS
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to send message');
     }
@@ -107,11 +121,18 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
   return (
     <div className="flex-1 flex flex-col h-screen">
       {/* Topic header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <h2 className="text-xl font-semibold text-gray-900">{topic.name}</h2>
-        {topic.description && (
-          <p className="text-sm text-gray-600 mt-1">{topic.description}</p>
-        )}
+      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">{topic.name}</h2>
+          {topic.description && (
+            <p className="text-sm text-gray-600 mt-1">{topic.description}</p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <VideoCallButton topicId={topic.id} />
+          <SearchBar topicId={topic.id} />
+        </div>
       </div>
 
       {/* Messages */}
@@ -125,7 +146,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
       )}
 
       {/* Message input */}
-      <MessageInput onSend={handleSendMessage} />
+      <MessageInput topicId={topic.id} onSend={handleSendMessage} />
     </div>
   );
 };

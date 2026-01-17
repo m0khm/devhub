@@ -12,7 +12,7 @@ import (
 
 type Handler struct {
 	service   *Service
-	wsHandler *WSHandler // NEW (optional)
+	wsHandler *WSHandler // optional
 }
 
 func NewHandler(service *Service) *Handler {
@@ -126,6 +126,56 @@ func (h *Handler) GetByTopicID(c *fiber.Ctx) error {
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to get messages",
+		})
+	}
+
+	return c.JSON(messages)
+}
+
+// Search messages
+// GET /api/topics/:topicId/search?q=query
+func (h *Handler) SearchMessages(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	topicID, err := uuid.Parse(c.Params("topicId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid topic ID",
+		})
+	}
+
+	query := c.Query("q")
+	if query == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Search query is required",
+		})
+	}
+
+	// Check access
+	topicObj, err := h.service.topicRepo.GetByID(topicID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Topic not found",
+		})
+	}
+
+	isMember, err := h.service.projectRepo.IsUserMember(topicObj.ProjectID, userID)
+	if err != nil || !isMember {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Not a project member",
+		})
+	}
+
+	// Search
+	messages, err := h.service.repo.Search(topicID, query, 50)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to search messages",
 		})
 	}
 
@@ -296,8 +346,7 @@ func (h *Handler) ToggleReaction(c *fiber.Ctx) error {
 
 	// Broadcast reaction update (best-effort)
 	if h.wsHandler != nil && topicID != uuid.Nil {
-		// If your repo has GetReactions(messageID, userID) – отлично.
-		// Если сигнатура другая, поменяй под свою.
+		// NOTE: Если у тебя другая сигнатура — подгони под свою.
 		if reactions, err := h.service.repo.GetReactions(messageID, userID); err == nil {
 			h.wsHandler.BroadcastReactionUpdate(topicID, messageID, reactions)
 		}

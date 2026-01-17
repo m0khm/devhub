@@ -16,6 +16,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/middleware"
 	"github.com/m0khm/devhub/backend/internal/project"
 	"github.com/m0khm/devhub/backend/internal/topic"
+	"github.com/m0khm/devhub/backend/internal/video" // NEW
 )
 
 func main() {
@@ -62,7 +63,9 @@ func main() {
 	topicHandler := topic.NewHandler(topicService)
 	messageHandler := message.NewHandler(messageService)
 	wsHandler := message.NewWSHandler(wsHub, messageService)
-        messageHandler.SetWSHandler(wsHandler)
+	messageHandler.SetWSHandler(wsHandler)
+
+	videoHandler := video.NewHandler() // NEW
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -93,9 +96,7 @@ func main() {
 	authRoutes.Post("/login", authHandler.Login)
 	authRoutes.Get("/me", middleware.Auth(jwtManager), authHandler.GetMe)
 
-	// ---- WebSocket routes (ВАЖНО: НЕ через protected!) ----
-	// ws://host:8080/api/topics/:topicId/ws?token=JWT
-	// или с заголовком Authorization: Bearer JWT
+	// ---- WebSocket routes (НЕ через protected) ----
 	wsRoutes := api.Group("/topics")
 
 	wsRoutes.Use("/:topicId/ws", func(c *fiber.Ctx) error {
@@ -151,6 +152,10 @@ func main() {
 	// Message routes (внутри топика)
 	topicRoutes.Post("/:topicId/messages", messageHandler.Create)
 	topicRoutes.Get("/:topicId/messages", messageHandler.GetByTopicID)
+	topicRoutes.Get("/:topicId/search", messageHandler.SearchMessages)
+
+	// Video routes (внутри топика) // NEW
+	topicRoutes.Post("/:topicId/video/room", videoHandler.CreateRoom)
 
 	// Message routes (по id)
 	messageRoutes := protected.Group("/messages")

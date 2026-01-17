@@ -1,19 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { wsClient } from '../../../api/websocket';
+import { FileUploadButton } from './FileUploadButton';
 
 interface MessageInputProps {
+  topicId: string; // NEW
   onSend: (content: string) => void;
 }
 
-export const MessageInput: React.FC<MessageInputProps> = ({ onSend }) => {
+export const MessageInput: React.FC<MessageInputProps> = ({ topicId, onSend }) => {
   const [content, setContent] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    // Auto-resize textarea
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
@@ -23,18 +24,15 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend }) => {
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
 
-    // Send typing indicator
     if (!isTyping && e.target.value.length > 0) {
       setIsTyping(true);
       wsClient.sendTyping(true);
     }
 
-    // Clear previous timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Set new timeout
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
       wsClient.sendTyping(false);
@@ -66,6 +64,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend }) => {
   return (
     <div className="bg-white border-t border-gray-200 px-6 py-4">
       <form onSubmit={handleSubmit} className="flex items-end gap-3">
+        <FileUploadButton topicId={topicId} /> {/* NEW */}
         <textarea
           ref={textareaRef}
           value={content}
