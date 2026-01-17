@@ -52,7 +52,7 @@ func main() {
 	projectRepo := project.NewRepository(db)
 	topicRepo := topic.NewRepository(db)
 	messageRepo := message.NewRepository(db)
-	userRepo := user.NewRepository(db)
+	dmRepo := dm.NewRepository(db)
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager)
@@ -60,6 +60,7 @@ func main() {
 	topicService := topic.NewService(topicRepo, projectRepo)
 	messageService := message.NewService(messageRepo, topicRepo, projectRepo)
 	userService := user.NewService(db)
+	dmService := dm.NewService(dmRepo, projectRepo)
 
 	// Initialize handlers
 	authHandler := auth.NewHandler(authService)
@@ -147,6 +148,8 @@ func main() {
 	projectRoutes.Get("/:id/members", projectHandler.GetMembers)
 	projectRoutes.Post("/:id/members", projectHandler.AddMember)
 	projectRoutes.Delete("/:id/members/:userId", projectHandler.RemoveMember)
+	projectRoutes.Post("/:projectId/dm", dmHandler.CreateOrGet)
+	projectRoutes.Get("/:projectId/dm", dmHandler.List)
 
 	// Topic routes (внутри проекта)
 	projectRoutes.Post("/:projectId/topics", topicHandler.Create)
@@ -171,6 +174,11 @@ func main() {
 	messageRoutes.Put("/:id", messageHandler.Update)
 	messageRoutes.Delete("/:id", messageHandler.Delete)
 	messageRoutes.Post("/:id/reactions", messageHandler.ToggleReaction)
+
+	// Direct message routes
+	dmRoutes := protected.Group("/dm")
+	dmRoutes.Post("/", dmHandler.CreateOrGet)
+	dmRoutes.Get("/", dmHandler.List)
 
 	// User search routes
 	userRoutes := protected.Group("/users")
