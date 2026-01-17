@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Topic } from '../../../shared/types';
+import type { DirectMessageThread, Topic } from '../../../shared/types';
 import { useProjectStore } from '../../../store/projectStore';
 import { apiClient } from '../../../api/client';
 import toast from 'react-hot-toast';
@@ -10,10 +10,12 @@ import {
   RocketLaunchIcon,
   BugAntIcon,
   ClipboardDocumentListIcon,
+  UserCircleIcon,
 } from '@heroicons/react/24/outline';
 
 interface TopicSidebarProps {
   topics: Topic[];
+  directThreads: DirectMessageThread[];
   selectedTopicId: string | null;
   onSelectTopic: (topicId: string) => void;
   onTopicCreated: () => void;
@@ -21,6 +23,7 @@ interface TopicSidebarProps {
 
 export const TopicSidebar: React.FC<TopicSidebarProps> = ({
   topics,
+  directThreads,
   selectedTopicId,
   onSelectTopic,
   onTopicCreated,
@@ -55,29 +58,72 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
       </div>
 
       {/* Topics list */}
-      <div className="flex-1 overflow-y-auto p-2">
-        {topics.map((topic) => (
-          <button
-            key={topic.id}
-            onClick={() => onSelectTopic(topic.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition ${
-              selectedTopicId === topic.id
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <span className={selectedTopicId === topic.id ? 'text-blue-600' : 'text-gray-500'}>
-              {typeof getTopicIcon(topic.type, topic.icon) === 'string' ? (
-                <span className="text-xl">{getTopicIcon(topic.type, topic.icon)}</span>
-              ) : (
-                getTopicIcon(topic.type, topic.icon)
-              )}
-            </span>
-            <span className="flex-1 text-left truncate font-medium text-sm">
-              {topic.name}
-            </span>
-          </button>
-        ))}
+      <div className="flex-1 overflow-y-auto p-2 space-y-3">
+        <div>
+          <p className="px-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            Темы
+          </p>
+          <div className="mt-2">
+            {topics.map((topic) => (
+              <button
+                key={topic.id}
+                onClick={() => onSelectTopic(topic.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition ${
+                  selectedTopicId === topic.id
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <span
+                  className={selectedTopicId === topic.id ? 'text-blue-600' : 'text-gray-500'}
+                >
+                  {typeof getTopicIcon(topic.type, topic.icon) === 'string' ? (
+                    <span className="text-xl">{getTopicIcon(topic.type, topic.icon)}</span>
+                  ) : (
+                    getTopicIcon(topic.type, topic.icon)
+                  )}
+                </span>
+                <span className="flex-1 text-left truncate font-medium text-sm">
+                  {topic.name}
+                </span>
+              </button>
+            ))}
+            {topics.length === 0 && (
+              <p className="px-3 py-2 text-xs text-gray-400">Нет тем</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <p className="px-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            Личные чаты
+          </p>
+          <div className="mt-2">
+            {directThreads.map((thread) => (
+              <button
+                key={thread.id}
+                onClick={() => onSelectTopic(thread.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition ${
+                  selectedTopicId === thread.id
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <span
+                  className={selectedTopicId === thread.id ? 'text-blue-600' : 'text-gray-500'}
+                >
+                  <UserCircleIcon className="w-5 h-5" />
+                </span>
+                <span className="flex-1 text-left truncate font-medium text-sm">
+                  {thread.user?.name || thread.name}
+                </span>
+              </button>
+            ))}
+            {directThreads.length === 0 && (
+              <p className="px-3 py-2 text-xs text-gray-400">Нет личных чатов</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Create topic button */}

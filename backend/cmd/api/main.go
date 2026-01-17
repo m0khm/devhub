@@ -12,6 +12,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/auth"
 	"github.com/m0khm/devhub/backend/internal/config"
 	"github.com/m0khm/devhub/backend/internal/database"
+	"github.com/m0khm/devhub/backend/internal/dm"
 	"github.com/m0khm/devhub/backend/internal/message"
 	"github.com/m0khm/devhub/backend/internal/middleware"
 	"github.com/m0khm/devhub/backend/internal/project"
@@ -50,18 +51,21 @@ func main() {
 	projectRepo := project.NewRepository(db)
 	topicRepo := topic.NewRepository(db)
 	messageRepo := message.NewRepository(db)
+	dmRepo := dm.NewRepository(db)
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager)
 	projectService := project.NewService(projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
 	messageService := message.NewService(messageRepo, topicRepo, projectRepo)
+	dmService := dm.NewService(dmRepo, projectRepo)
 
 	// Initialize handlers
 	authHandler := auth.NewHandler(authService)
 	projectHandler := project.NewHandler(projectService)
 	topicHandler := topic.NewHandler(topicService)
 	messageHandler := message.NewHandler(messageService)
+	dmHandler := dm.NewHandler(dmService)
 	wsHandler := message.NewWSHandler(wsHub, messageService)
 	messageHandler.SetWSHandler(wsHandler)
 
@@ -162,6 +166,11 @@ func main() {
 	messageRoutes.Put("/:id", messageHandler.Update)
 	messageRoutes.Delete("/:id", messageHandler.Delete)
 	messageRoutes.Post("/:id/reactions", messageHandler.ToggleReaction)
+
+	// Direct message routes
+	dmRoutes := protected.Group("/dm")
+	dmRoutes.Post("/", dmHandler.CreateOrGet)
+	dmRoutes.Get("/", dmHandler.List)
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
