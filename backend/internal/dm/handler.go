@@ -19,6 +19,7 @@ func NewHandler(service *Service) *Handler {
 
 // Create or get direct message thread
 // POST /api/dm
+// POST /api/projects/:projectId/dm
 func (h *Handler) CreateOrGet(c *fiber.Ctx) error {
 	userID, err := getUserIDFromContext(c)
 	if err != nil {
@@ -32,6 +33,16 @@ func (h *Handler) CreateOrGet(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
+	}
+
+	if req.ProjectID == uuid.Nil {
+		projectID, err := uuid.Parse(c.Params("projectId"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid project ID",
+			})
+		}
+		req.ProjectID = projectID
 	}
 
 	if errs := validator.Validate(req); len(errs) > 0 {
@@ -72,6 +83,7 @@ func (h *Handler) CreateOrGet(c *fiber.Ctx) error {
 
 // List direct message threads
 // GET /api/dm?projectId=...
+// GET /api/projects/:projectId/dm
 func (h *Handler) List(c *fiber.Ctx) error {
 	userID, err := getUserIDFromContext(c)
 	if err != nil {
@@ -80,7 +92,12 @@ func (h *Handler) List(c *fiber.Ctx) error {
 		})
 	}
 
-	projectID, err := uuid.Parse(c.Query("projectId"))
+	projectIDParam := c.Query("projectId")
+	if projectIDParam == "" {
+		projectIDParam = c.Params("projectId")
+	}
+
+	projectID, err := uuid.Parse(projectIDParam)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid project ID",
