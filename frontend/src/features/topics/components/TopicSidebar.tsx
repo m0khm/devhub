@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import type { Topic } from '../../../shared/types';
+import React, { useEffect, useState } from 'react';
+import type { Topic, User } from '../../../shared/types';
 import { useProjectStore } from '../../../store/projectStore';
 import { apiClient } from '../../../api/client';
 import toast from 'react-hot-toast';
@@ -10,6 +10,7 @@ import {
   RocketLaunchIcon,
   BugAntIcon,
   ClipboardDocumentListIcon,
+  UserPlusIcon,
 } from '@heroicons/react/24/outline';
 
 interface TopicSidebarProps {
@@ -27,6 +28,7 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
 }) => {
   const { currentProject } = useProjectStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const getTopicIcon = (type: string, icon?: string) => {
     if (icon) return icon;
@@ -46,9 +48,19 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
     <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
       {/* Project header */}
       <div className="p-4 border-b border-gray-200">
-        <h2 className="font-semibold text-gray-900 truncate">
-          {currentProject?.name || 'Project'}
-        </h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-semibold text-gray-900 truncate">
+            {currentProject?.name || 'Project'}
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowInviteModal(true)}
+            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+          >
+            <UserPlusIcon className="h-4 w-4" />
+            Invite
+          </button>
+        </div>
         <p className="text-xs text-gray-500 mt-1">
           {topics.length} {topics.length === 1 ? 'topic' : 'topics'}
         </p>
@@ -99,6 +111,13 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
             setShowCreateModal(false);
             onTopicCreated();
           }}
+        />
+      )}
+
+      {showInviteModal && currentProject && (
+        <InviteMemberModal
+          projectId={currentProject.id}
+          onClose={() => setShowInviteModal(false)}
         />
       )}
     </div>
@@ -205,6 +224,144 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
             >
               {loading ? 'Creating...' : 'Create'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+interface InviteMemberModalProps {
+  projectId: string;
+  onClose: () => void;
+}
+
+const InviteMemberModal: React.FC<InviteMemberModalProps> = ({ projectId, onClose }) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!query.trim() || selectedUser) {
+      setResults([]);
+      return;
+    }
+
+    const handle = window.setTimeout(async () => {
+      const trimmed = query.trim();
+      if (!trimmed) return;
+
+      setLoading(true);
+      try {
+        const response = await apiClient.get<User[]>('/users', {
+          params: { query: trimmed },
+        });
+        setResults(response.data);
+      } catch (error: any) {
+        toast.error(error.response?.data?.error || 'Failed to search users');
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+
+    return () => window.clearTimeout(handle);
+  }, [query, selectedUser]);
+
+  const selectUser = (user: User) => {
+    setSelectedUser(user);
+    setQuery(`${user.name} (${user.email})`);
+    setResults([]);
+  };
+
+  const submitInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) {
+      toast.error('Select a user to invite');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await apiClient.post(`/projects/${projectId}/members`, {
+        user_id: selectedUser.id,
+      });
+      toast.success('Invitation sent!');
+      onClose();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to invite user');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-start justify-between">
+          <h2 className="text-2xl font-bold">Invite member</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={submitInvite} className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Search by name or email</label>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setSelectedUser(null);
+              }}
+              className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
+              placeholder="jane@company.com"
+            />
+            {loading && <p className="mt-2 text-xs text-gray-500">Searching...</p>}
+            {!loading && query.trim() && results.length === 0 && !selectedUser && (
+              <p className="mt-2 text-xs text-gray-500">No users found.</p>
+            )}
+            {results.length > 0 && (
+              <ul className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+                {results.map((user) => (
+                  <li key={user.id}>
+                    <button
+                      type="button"
+                      onClick={() => selectUser(user)}
+                      className="flex w-full flex-col px-3 py-2 text-left hover:bg-gray-50"
+                    >
+                      <span className="text-sm font-medium text-gray-900">{user.name}</span>
+                      <span className="text-xs text-gray-500">{user.email}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50"
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !selectedUser}
+              className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {submitting ? 'Inviting...' : 'Invite'}
             </button>
           </div>
         </form>
