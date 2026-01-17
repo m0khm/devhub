@@ -34,6 +34,25 @@ func (h *Handler) CreateOrGet(c *fiber.Ctx) error {
 		})
 	}
 
+	projectIDParam := c.Params("projectId")
+	if projectIDParam == "" {
+		projectIDParam = c.Query("projectId")
+	}
+	if req.ProjectID == uuid.Nil && projectIDParam == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "projectId is required",
+		})
+	}
+	if req.ProjectID == uuid.Nil && projectIDParam != "" {
+		projectID, err := uuid.Parse(projectIDParam)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid project ID",
+			})
+		}
+		req.ProjectID = projectID
+	}
+
 	if errs := validator.Validate(req); len(errs) > 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Validation failed",
@@ -80,7 +99,14 @@ func (h *Handler) List(c *fiber.Ctx) error {
 		})
 	}
 
-	projectID, err := uuid.Parse(c.Query("projectId"))
+	projectIDParam := c.Query("projectId")
+	if projectIDParam == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "projectId is required",
+		})
+	}
+
+	projectID, err := uuid.Parse(projectIDParam)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid project ID",
