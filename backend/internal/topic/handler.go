@@ -98,6 +98,16 @@ func (h *Handler) GetByProjectID(c *fiber.Ctx) error {
 			"error": "Failed to get topics",
 		})
 	}
+	switch typed := topics.(type) {
+	case []Topic:
+		if typed == nil {
+			topics = []Topic{}
+		}
+	case []TopicWithStats:
+		if typed == nil {
+			topics = []TopicWithStats{}
+		}
+	}
 
 	return c.JSON(topics)
 }
