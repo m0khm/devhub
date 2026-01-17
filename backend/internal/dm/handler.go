@@ -115,6 +115,9 @@ func (h *Handler) List(c *fiber.Ctx) error {
 			"error": "Failed to load direct threads",
 		})
 	}
+	if threads == nil {
+		threads = []DirectMessageThread{}
+	}
 
 	return c.JSON(threads)
 }

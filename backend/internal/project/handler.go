@@ -67,6 +67,9 @@ func (h *Handler) GetUserProjects(c *fiber.Ctx) error {
 			"error": "Failed to get projects",
 		})
 	}
+	if projects == nil {
+		projects = []Project{}
+	}
 
 	return c.JSON(projects)
 }
