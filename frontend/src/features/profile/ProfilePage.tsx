@@ -14,7 +14,6 @@ export const ProfilePage: React.FC = () => {
   const [company, setCompany] = useState(user?.company ?? '');
   const [location, setLocation] = useState(user?.location ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
-  const [handle, setHandle] = useState(user?.handle ?? '');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -26,7 +25,6 @@ export const ProfilePage: React.FC = () => {
       setCompany(user.company ?? '');
       setLocation(user.location ?? '');
       setPhone(user.phone ?? '');
-      setHandle(user.handle ?? '');
     }
   }, [user]);
 
