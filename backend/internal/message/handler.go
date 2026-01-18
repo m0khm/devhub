@@ -2,18 +2,21 @@ package message
 
 import (
 	"errors"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/m0khm/devhub/backend/internal/notification"
 	"github.com/m0khm/devhub/backend/pkg/validator"
 )
 
 type Handler struct {
-	service   *Service
-	wsHandler *WSHandler // optional
+	service             *Service
+	wsHandler           *WSHandler // optional
+	notificationService *notification.Service
 }
 
 func NewHandler(service *Service) *Handler {
@@ -25,6 +28,11 @@ func NewHandler(service *Service) *Handler {
 // SetWSHandler sets the WebSocket handler (called from main.go)
 func (h *Handler) SetWSHandler(wsHandler *WSHandler) {
 	h.wsHandler = wsHandler
+}
+
+// SetNotificationService sets the notification service (called from main.go)
+func (h *Handler) SetNotificationService(notificationService *notification.Service) {
+	h.notificationService = notificationService
 }
 
 // Create message
@@ -74,6 +82,21 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 	// Broadcast new message
 	if h.wsHandler != nil {
 		h.wsHandler.BroadcastNewMessage(message)
+	}
+
+	if h.notificationService != nil {
+		notifications, err := h.notificationService.CreateMessageNotifications(
+			topicID,
+			userID,
+			message.Content,
+		)
+		if err != nil {
+			log.Printf("failed to create notifications for message %s: %v", message.ID, err)
+		} else if h.wsHandler != nil {
+			for _, item := range notifications {
+				h.wsHandler.BroadcastNotificationCreated(topicID, item)
+			}
+		}
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(message)
