@@ -9,16 +9,60 @@ export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
   
+  const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const validateStep = () => {
+    if (step === 1 && !name.trim()) {
+      toast.error('Please enter your full name');
+      return false;
+    }
+
+    if (step === 2) {
+      if (!email.trim()) {
+        toast.error('Please enter your email');
+        return false;
+      }
+
+      if (!/^\S+@\S+\.\S+$/.test(email)) {
+        toast.error('Please enter a valid email');
+        return false;
+      }
+
+      if (password.length < 8) {
+        toast.error('Password must be at least 8 characters');
+        return false;
+      }
+    }
+
+    if (step === 3 && !confirm) {
+      toast.error('Please confirm to create your account');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleNext = () => {
+    if (!validateStep()) {
+      return;
+    }
+
+    setStep((prevStep) => Math.min(prevStep + 1, 3));
+  };
+
+  const handleBack = () => {
+    setStep((prevStep) => Math.max(prevStep - 1, 1));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (password.length < 8) {
-      toast.error('Password must be at least 8 characters');
+
+    if (step !== 3 || !validateStep()) {
       return;
     }
 
@@ -53,59 +97,111 @@ export const RegisterPage: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Full Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              placeholder="John Doe"
-              required
-            />
+          <div className="text-sm text-slate-500">
+            Step {step} of 3
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              placeholder="you@example.com"
-              required
-            />
-          </div>
+          {step === 1 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="John Doe"
+                autoComplete="name"
+              />
+            </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              placeholder="••••••••"
-              minLength={8}
-              required
-            />
-            <p className="mt-1 text-sm text-slate-500">
-              Must be at least 8 characters
-            </p>
-          </div>
+          {step === 2 && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                />
+              </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-500 focus:ring-4 focus:ring-blue-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Creating account...' : 'Create Account'}
-          </button>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="••••••••"
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+                <p className="mt-1 text-sm text-slate-500">
+                  Must be at least 8 characters
+                </p>
+              </div>
+            </>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                <p className="font-medium text-slate-700">Confirm details</p>
+                <p className="mt-1">Name: {name || '—'}</p>
+                <p>Email: {email || '—'}</p>
+              </div>
+
+              <label className="flex items-start gap-3 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={confirm}
+                  onChange={(e) => setConfirm(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                I confirm the information is correct and want to create my account.
+              </label>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-3">
+            {step > 1 && (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="w-full rounded-lg border border-slate-200 bg-white py-3 font-medium text-slate-700 hover:bg-slate-50 transition"
+              >
+                Back
+              </button>
+            )}
+
+            {step < 3 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-500 focus:ring-4 focus:ring-blue-200 transition"
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-500 focus:ring-4 focus:ring-blue-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Creating account...' : 'Create Account'}
+              </button>
+            )}
+          </div>
         </form>
 
         <p className="mt-6 text-center text-slate-600">
