@@ -3,6 +3,7 @@ package message
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,6 +17,8 @@ var (
 	ErrMessageNotFound  = errors.New("message not found")
 	ErrNotProjectMember = errors.New("not a project member")
 	ErrNotMessageAuthor = errors.New("not message author")
+	ErrUnknownCommand   = errors.New("unknown command")
+	ErrInvalidCommand   = errors.New("invalid command")
 )
 
 type Service struct {
@@ -50,6 +53,59 @@ func (s *Service) Create(topicID, userID uuid.UUID, req CreateMessageRequest) (*
 	}
 	if !isMember {
 		return nil, ErrNotProjectMember
+	}
+
+	if command, isCommand := ParseCommand(req.Content); isCommand {
+		switch command.Name {
+		case "shrug":
+			content := strings.TrimSpace(command.Args)
+			if content == "" {
+				req.Content = `¯\_(ツ)_/¯`
+			} else {
+				req.Content = fmt.Sprintf("%s ¯\\_(ツ)_/¯", content)
+			}
+			req.Type = "text"
+		case "topic":
+			newName := strings.TrimSpace(command.Args)
+			if newName == "" {
+				return nil, ErrInvalidCommand
+			}
+			topicObj.Name = newName
+			if err := s.topicRepo.Update(topicObj); err != nil {
+				return nil, fmt.Errorf("failed to update topic: %w", err)
+			}
+			systemMessage := Message{
+				TopicID:  topicID,
+				UserID:   nil,
+				Content:  fmt.Sprintf("Topic renamed to \"%s\"", newName),
+				Type:     "system",
+				Metadata: nil,
+				ParentID: nil,
+			}
+			if err := s.repo.Create(&systemMessage); err != nil {
+				return nil, fmt.Errorf("failed to create system message: %w", err)
+			}
+			return s.GetByID(systemMessage.ID, userID)
+		case "invite":
+			target := strings.TrimSpace(command.Args)
+			if target == "" {
+				return nil, ErrInvalidCommand
+			}
+			systemMessage := Message{
+				TopicID:  topicID,
+				UserID:   nil,
+				Content:  fmt.Sprintf("Invitation sent to %s", target),
+				Type:     "system",
+				Metadata: nil,
+				ParentID: nil,
+			}
+			if err := s.repo.Create(&systemMessage); err != nil {
+				return nil, fmt.Errorf("failed to create system message: %w", err)
+			}
+			return s.GetByID(systemMessage.ID, userID)
+		default:
+			return nil, ErrUnknownCommand
+		}
 	}
 
 	messageType := req.Type
