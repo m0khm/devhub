@@ -4,17 +4,23 @@ import { MessageItem } from './MessageItem';
 
 interface MessageListProps {
   messages: Message[];
+  pinnedMessages: Message[];
   loading: boolean;
   highlightedMessageId?: string | null;
+  onReply?: (message: Message) => void;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
   messages,
+  pinnedMessages,
   loading,
   highlightedMessageId,
+  onReply,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const pinnedIds = new Set(pinnedMessages.map((message) => message.id));
+  const visibleMessages = messages.filter((message) => !pinnedIds.has(message.id));
 
   useEffect(() => {
     if (!highlightedMessageId) {
@@ -49,7 +55,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     );
   }
 
-  if (messages.length === 0) {
+  if (messages.length === 0 && pinnedMessages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
@@ -62,12 +68,32 @@ export const MessageList: React.FC<MessageListProps> = ({
 
   return (
     <div className="flex-1 overflow-y-auto px-5 py-3 space-y-3 bg-slate-900/60">
-      {messages.map((message) => (
+      {pinnedMessages.length > 0 && (
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-900/80 p-3">
+          <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
+            📌 Pinned
+          </div>
+          <div className="space-y-3">
+            {pinnedMessages.map((message) => (
+              <MessageItem
+                key={message.id}
+                ref={setMessageRef(message.id)}
+                message={message}
+                isPinned
+                isHighlighted={message.id === highlightedMessageId}
+                onTogglePin={onTogglePin}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      {visibleMessages.map((message) => (
         <MessageItem
           key={message.id}
           ref={setMessageRef(message.id)}
           message={message}
           isHighlighted={message.id === highlightedMessageId}
+          onReply={onReply}
         />
       ))}
       <div ref={messagesEndRef} />
