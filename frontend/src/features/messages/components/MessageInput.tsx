@@ -231,6 +231,22 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
+  const trimmedContent = content.trimStart();
+  const isCommandInput = trimmedContent.startsWith('/');
+  const commandQuery = isCommandInput
+    ? trimmedContent.slice(1).split(' ')[0].toLowerCase()
+    : '';
+  const filteredCommands = isCommandInput
+    ? commandOptions.filter((command) =>
+        command.name.slice(1).toLowerCase().startsWith(commandQuery)
+      )
+    : [];
+
+  const handleCommandSelect = (command: (typeof commandOptions)[number]) => {
+    setContent(`${command.name} `);
+    textareaRef.current?.focus();
+  };
+
   return (
     <div className="border-t border-slate-800/80 bg-slate-900/80 px-6 py-4">
       {replyTo && (

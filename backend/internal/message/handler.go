@@ -74,6 +74,16 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 				"error": "Not a project member",
 			})
 		}
+		if errors.Is(err, ErrUnknownCommand) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Unknown command",
+			})
+		}
+		if errors.Is(err, ErrInvalidCommand) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid command usage",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to create message",
 		})
