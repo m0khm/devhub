@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { PlusIcon, FolderIcon, XMarkIcon } from '@heroicons/react/24/outline';
@@ -9,7 +8,7 @@ import { useProjectStore } from '../../../store/projectStore';
 import type { Project } from '../../../shared/types';
 
 export const ProjectList: React.FC = () => {
-  const { projects, setProjects } = useProjectStore();
+  const { projects, currentProject, setProjects, setCurrentProject } = useProjectStore();
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -53,10 +52,20 @@ export const ProjectList: React.FC = () => {
             onClick={openCreate}
             className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-accent-foreground transition hover:bg-accent/90"
           >
-            <PlusIcon className="w-5 h-5" />
-            New Project
+            <PlusIcon className="h-4 w-4" />
+            Create Project
           </button>
         </div>
+      ) : (
+        <div className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+          {projects.map((project) => {
+            const isActive = currentProject?.id === project.id;
+            const initials = project.name
+              .split(' ')
+              .map((word) => word[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase();
 
         {projects.length === 0 ? (
           <div className="py-12 text-center">
@@ -94,18 +103,26 @@ export const ProjectList: React.FC = () => {
                       </p>
                     )}
                   </div>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{project.name}</p>
+                  {project.description ? (
+                    <p className="truncate text-xs text-slate-400">{project.description}</p>
+                  ) : (
+                    <p className="text-xs text-slate-500">Team workspace</p>
+                  )}
                 </div>
-              </Link>
-            ))}
-          </div>
-        )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-        <CreateProjectModal
-          open={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onCreated={loadProjects}
-        />
-      </div>
+      <CreateProjectModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreated={loadProjects}
+      />
     </div>
   );
 };

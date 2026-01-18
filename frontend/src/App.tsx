@@ -5,8 +5,7 @@ import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { RegisterPage } from './features/auth/components/RegisterPage';
-import { ProjectList } from './features/projects/components/ProjectList';
-import { ProjectView } from './features/projects/components/ProjectView';
+import { ProjectWorkspace } from './features/projects/components/ProjectWorkspace';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { LandingPage } from './features/landing/LandingPage';
 
@@ -42,7 +41,7 @@ function App() {
           path="/app"
           element={
             <ProtectedRoute>
-              <ProjectList />
+              <ProjectWorkspace />
             </ProtectedRoute>
           }
         />
@@ -50,7 +49,7 @@ function App() {
           path="/projects/:projectId"
           element={
             <ProtectedRoute>
-              <ProjectView />
+              <ProjectWorkspace />
             </ProtectedRoute>
           }
         />
