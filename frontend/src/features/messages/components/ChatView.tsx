@@ -4,6 +4,7 @@ import { apiClient } from '../../../api/client';
 import { wsClient } from '../../../api/websocket';
 import { useAuthStore } from '../../../store/authStore';
 import { useMessageStore } from '../../../store/messageStore';
+import { useThemeStore } from '../../../store/themeStore';
 import toast from 'react-hot-toast';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
@@ -24,6 +25,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
     deleteMessage,
     clearMessages,
   } = useMessageStore();
+  const { theme, toggleTheme } = useThemeStore();
 
   const [loading, setLoading] = useState(true);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
@@ -121,15 +123,26 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
   return (
     <div className="flex-1 flex min-h-0 flex-col">
       {/* Topic header */}
-      <div className="flex items-center justify-between border-b border-slate-800/70 bg-slate-900/80 px-6 py-4 shadow-sm">
+      <div className="flex items-center justify-between border-b border-border/70 bg-surface/80 px-6 py-4 shadow-sm">
         <div>
-          <h2 className="text-xl font-semibold text-white">{topic.name}</h2>
+          <h2 className="text-xl font-semibold text-text">{topic.name}</h2>
           {topic.description && (
-            <p className="text-sm text-slate-300 mt-1">{topic.description}</p>
+            <p className="text-sm text-text-muted mt-1">{topic.description}</p>
           )}
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-text transition hover:bg-surface"
+            aria-label="Toggle theme"
+          >
+            <span aria-hidden>{theme === 'dark' ? '🌙' : '☀️'}</span>
+            <span className="hidden sm:inline">
+              {theme === 'dark' ? 'Dark' : 'Light'}
+            </span>
+          </button>
           <VideoCallButton topicId={topic.id} />
           <SearchBar topicId={topic.id} />
         </div>
@@ -140,7 +153,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
 
       {/* Typing indicator */}
       {typingUsers.size > 0 && (
-        <div className="px-6 py-2 text-sm text-slate-300 italic">
+        <div className="px-6 py-2 text-sm text-text-muted italic">
           Someone is typing...
         </div>
       )}
