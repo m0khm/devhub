@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useProjectStore } from '../../../store/projectStore';
+import { useAuthStore } from '../../../store/authStore';
 import {
   ChatBubbleLeftRightIcon,
   StarIcon,
@@ -11,15 +12,40 @@ import {
 
 export const ProjectSidebar: React.FC = () => {
   const { projects, currentProject } = useProjectStore();
+  const user = useAuthStore((state) => state.user);
   const location = useLocation();
   const isProfileActive = location.pathname === '/profile';
+  const userDisplayName = user?.name ?? user?.handle ?? user?.email ?? 'User';
+  const userInitials = userDisplayName
+    .split(' ')
+    .map((word) => word[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="flex h-full flex-col items-center justify-between py-4">
       <div className="flex w-full flex-col items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-xs font-semibold text-slate-200 shadow-inner">
-          DH
-        </div>
+        <Link
+          to="/profile"
+          title={userDisplayName}
+          className={`group flex h-10 w-10 items-center justify-center rounded-2xl border transition ${
+            isProfileActive
+              ? 'border-blue-500/80 bg-slate-900 text-white shadow-[0_0_12px_rgba(37,99,235,0.35)]'
+              : 'border-transparent bg-slate-900 text-slate-200 shadow-inner hover:border-slate-700'
+          }`}
+          aria-label="Профиль"
+        >
+          {user?.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt={userDisplayName}
+              className="h-9 w-9 rounded-full border border-slate-700 object-cover"
+            />
+          ) : (
+            <span className="text-xs font-semibold">{userInitials}</span>
+          )}
+        </Link>
         <div className="flex w-full flex-1 flex-col items-center gap-2 overflow-y-auto px-2 pb-4">
         {projects.map((project) => {
           const isActive = currentProject?.id === project.id;
