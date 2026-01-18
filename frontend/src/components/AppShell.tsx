@@ -16,24 +16,24 @@ export const AppShell: React.FC<AppShellProps> = ({
   right,
 }) => {
   return (
-    <div className="h-screen w-full bg-slate-950 text-slate-100">
+    <div className="h-screen w-full bg-base text-text">
       <div className="flex h-full">
-        <aside className="w-16 border-r border-slate-800/70 bg-slate-950/90 shadow-[1px_0_0_rgba(15,23,42,0.6)]">
+        <aside className="w-64 border-r border-border/80 bg-base/70 backdrop-blur">
           {left}
         </aside>
-        <aside className="w-80 border-r border-slate-800/70 bg-slate-900/90 shadow-[1px_0_0_rgba(15,23,42,0.6)]">
+        <aside className="w-72 border-r border-border/80 bg-surface/80 backdrop-blur">
           {middle}
         </aside>
         <section className="flex-1 flex min-w-0 flex-col">
           {header && (
-            <div className="border-b border-slate-800/70 bg-slate-900/90 px-6 py-4 shadow-sm">
+            <div className="border-b border-border/70 bg-surface/80 px-6 py-4 shadow-sm">
               {header}
             </div>
           )}
           <div className="flex flex-1 min-w-0">
-            <div className="flex-1 min-w-0 bg-slate-900/70">{main}</div>
+            <div className="flex-1 min-w-0 bg-surface/60">{main}</div>
             {right && (
-              <aside className="hidden w-80 border-l border-slate-800/70 bg-slate-950/80 p-4 lg:block">
+              <aside className="hidden w-80 border-l border-border/80 bg-base/60 p-4 backdrop-blur lg:block">
                 {right}
               </aside>
             )}

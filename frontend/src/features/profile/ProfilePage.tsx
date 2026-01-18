@@ -8,13 +8,25 @@ export const ProfilePage: React.FC = () => {
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const [name, setName] = useState(user?.name ?? '');
+  const [handle, setHandle] = useState(user?.handle ?? '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url ?? '');
+  const [bio, setBio] = useState(user?.bio ?? '');
+  const [company, setCompany] = useState(user?.company ?? '');
+  const [location, setLocation] = useState(user?.location ?? '');
+  const [phone, setPhone] = useState(user?.phone ?? '');
+  const [handle, setHandle] = useState(user?.handle ?? '');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
       setName(user.name);
+      setHandle(user.handle ?? '');
       setAvatarUrl(user.avatar_url ?? '');
+      setBio(user.bio ?? '');
+      setCompany(user.company ?? '');
+      setLocation(user.location ?? '');
+      setPhone(user.phone ?? '');
+      setHandle(user.handle ?? '');
     }
   }, [user]);
 
@@ -26,14 +38,38 @@ export const ProfilePage: React.FC = () => {
       return;
     }
 
-    const payload: { name?: string; avatar_url?: string } = {};
+    const payload: { name?: string; handle?: string; avatar_url?: string } = {};
 
     if (name.trim() && name.trim() !== user.name) {
       payload.name = name.trim();
     }
 
+    if (handle.trim() !== (user.handle ?? '')) {
+      payload.handle = handle.trim();
+    }
+
     if (avatarUrl.trim() && avatarUrl.trim() !== (user.avatar_url ?? '')) {
       payload.avatar_url = avatarUrl.trim();
+    }
+
+    if (bio.trim() && bio.trim() !== (user.bio ?? '')) {
+      payload.bio = bio.trim();
+    }
+
+    if (company.trim() && company.trim() !== (user.company ?? '')) {
+      payload.company = company.trim();
+    }
+
+    if (location.trim() && location.trim() !== (user.location ?? '')) {
+      payload.location = location.trim();
+    }
+
+    if (phone.trim() && phone.trim() !== (user.phone ?? '')) {
+      payload.phone = phone.trim();
+    }
+
+    if (handle.trim() && handle.trim() !== (user.handle ?? '')) {
+      payload.handle = handle.trim();
     }
 
     if (Object.keys(payload).length === 0) {
@@ -73,6 +109,32 @@ export const ProfilePage: React.FC = () => {
           <p className="text-gray-600">Update your personal information</p>
         </div>
 
+        <div className="mb-8 rounded-xl border border-gray-100 bg-gray-50 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile details</h2>
+          <dl className="grid grid-cols-1 gap-4 text-sm text-gray-700 sm:grid-cols-2">
+            <div>
+              <dt className="font-medium text-gray-500">Handle</dt>
+              <dd>{user.handle ?? 'Not provided'}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-gray-500">Company</dt>
+              <dd>{user.company ?? 'Not provided'}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-gray-500">Location</dt>
+              <dd>{user.location ?? 'Not provided'}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-gray-500">Phone</dt>
+              <dd>{user.phone ?? 'Not provided'}</dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="font-medium text-gray-500">Bio</dt>
+              <dd>{user.bio ?? 'Not provided'}</dd>
+            </div>
+          </dl>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -102,6 +164,19 @@ export const ProfilePage: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
+              Handle
+            </label>
+            <input
+              type="text"
+              value={handle}
+              onChange={(event) => setHandle(event.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              placeholder="@devhub"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Avatar URL
             </label>
             <input
@@ -110,6 +185,71 @@ export const ProfilePage: React.FC = () => {
               onChange={(event) => setAvatarUrl(event.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               placeholder="https://example.com/avatar.png"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Handle
+            </label>
+            <input
+              type="text"
+              value={handle}
+              onChange={(event) => setHandle(event.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              placeholder="@yourhandle"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Company
+            </label>
+            <input
+              type="text"
+              value={company}
+              onChange={(event) => setCompany(event.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              placeholder="Your company"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Location
+            </label>
+            <input
+              type="text"
+              value={location}
+              onChange={(event) => setLocation(event.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              placeholder="City, Country"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Phone
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              placeholder="+1 555 123 4567"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Bio
+            </label>
+            <textarea
+              value={bio}
+              onChange={(event) => setBio(event.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              placeholder="Tell us a little about yourself"
+              rows={4}
             />
           </div>
 

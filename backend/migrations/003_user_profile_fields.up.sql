@@ -1,0 +1,6 @@
+ALTER TABLE users
+    ADD COLUMN bio TEXT,
+    ADD COLUMN company VARCHAR(255),
+    ADD COLUMN location VARCHAR(255),
+    ADD COLUMN phone VARCHAR(50),
+    ADD COLUMN handle VARCHAR(50);
