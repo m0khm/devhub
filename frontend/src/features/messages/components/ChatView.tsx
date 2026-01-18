@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import type { Topic, Message } from '../../../shared/types';
 import { apiClient } from '../../../api/client';
 import { wsClient } from '../../../api/websocket';
@@ -28,14 +28,21 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
   const { theme, toggleTheme } = useThemeStore();
 
   const [loading, setLoading] = useState(true);
+  const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const typingTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
+  const pinnedIds = useMemo(
+    () => new Set(pinnedMessages.map((message) => message.id)),
+    [pinnedMessages]
+  );
 
   useEffect(() => {
     clearMessages();
     setHighlightedMessageId(null);
+    setPinnedMessages([]);
     loadMessages();
+    loadPinnedMessages();
 
     if (token) {
       wsClient.connect(topic.id, token, {
@@ -44,9 +51,17 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
         },
         onMessageUpdated: (payload) => {
           updateMessage(payload.message.id, payload.message);
+          setPinnedMessages((prev) =>
+            prev.map((message) =>
+              message.id === payload.message.id ? { ...message, ...payload.message } : message
+            )
+          );
         },
         onMessageDeleted: (payload) => {
           deleteMessage(payload.message_id);
+          setPinnedMessages((prev) =>
+            prev.filter((message) => message.id !== payload.message_id)
+          );
         },
         onTyping: (payload) => {
           handleTyping(payload);
@@ -69,6 +84,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
     return () => {
       wsClient.disconnect();
       clearMessages();
+      setPinnedMessages([]);
 
       Object.values(typingTimeoutRef.current).forEach((t) => clearTimeout(t));
       typingTimeoutRef.current = {};
@@ -87,6 +103,15 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
       toast.error('Failed to load messages');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPinnedMessages = async () => {
+    try {
+      const response = await apiClient.get<Message[]>(`/topics/${topic.id}/pins`);
+      setPinnedMessages(response.data);
+    } catch (error) {
+      toast.error('Failed to load pinned messages');
     }
   };
 
@@ -122,6 +147,21 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
     }
   };
 
+  const handleTogglePin = async (message: Message) => {
+    const isPinned = pinnedIds.has(message.id);
+    try {
+      if (isPinned) {
+        await apiClient.delete(`/messages/${message.id}/pin`);
+        setPinnedMessages((prev) => prev.filter((item) => item.id !== message.id));
+      } else {
+        await apiClient.post(`/messages/${message.id}/pin`);
+        setPinnedMessages((prev) => [message, ...prev.filter((item) => item.id !== message.id)]);
+      }
+    } catch (error) {
+      toast.error(isPinned ? 'Failed to unpin message' : 'Failed to pin message');
+    }
+  };
+
   return (
     <div className="flex-1 flex min-h-0 flex-col">
       {/* Topic header */}
@@ -153,8 +193,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
       {/* Messages */}
       <MessageList
         messages={messages}
+        pinnedMessages={pinnedMessages}
         loading={loading}
         highlightedMessageId={highlightedMessageId}
+        onTogglePin={handleTogglePin}
       />
 
       {/* Typing indicator */}
