@@ -8,6 +8,7 @@ export const ProfilePage: React.FC = () => {
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const [name, setName] = useState(user?.name ?? '');
+  const [handle, setHandle] = useState(user?.handle ?? '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [company, setCompany] = useState(user?.company ?? '');
@@ -19,6 +20,7 @@ export const ProfilePage: React.FC = () => {
   useEffect(() => {
     if (user) {
       setName(user.name);
+      setHandle(user.handle ?? '');
       setAvatarUrl(user.avatar_url ?? '');
       setBio(user.bio ?? '');
       setCompany(user.company ?? '');
@@ -36,18 +38,14 @@ export const ProfilePage: React.FC = () => {
       return;
     }
 
-    const payload: {
-      name?: string;
-      avatar_url?: string;
-      bio?: string;
-      company?: string;
-      location?: string;
-      phone?: string;
-      handle?: string;
-    } = {};
+    const payload: { name?: string; handle?: string; avatar_url?: string } = {};
 
     if (name.trim() && name.trim() !== user.name) {
       payload.name = name.trim();
+    }
+
+    if (handle.trim() !== (user.handle ?? '')) {
+      payload.handle = handle.trim();
     }
 
     if (avatarUrl.trim() && avatarUrl.trim() !== (user.avatar_url ?? '')) {
@@ -161,6 +159,19 @@ export const ProfilePage: React.FC = () => {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               placeholder="Your name"
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Handle
+            </label>
+            <input
+              type="text"
+              value={handle}
+              onChange={(event) => setHandle(event.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              placeholder="@devhub"
             />
           </div>
 

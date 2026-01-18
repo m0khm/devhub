@@ -27,11 +27,12 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 			"error": "Invalid request body",
 		})
 	}
+	req.Handle = user.NormalizeHandle(req.Handle)
 
 	// Validate request
 	if errs := validator.Validate(req); len(errs) > 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Validation failed",
+			"error":   "Validation failed",
 			"details": errs,
 		})
 	}
@@ -67,7 +68,7 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 	// Validate request
 	if errs := validator.Validate(req); len(errs) > 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Validation failed",
+			"error":   "Validation failed",
 			"details": errs,
 		})
 	}

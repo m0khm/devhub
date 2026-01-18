@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/m0khm/devhub/backend/pkg/validator"
 )
@@ -38,13 +39,27 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 	return c.JSON(users)
 }
 
-// Update current user
+// UpdateMe updates current authenticated user
 // PATCH /api/users/me
 func (h *Handler) UpdateMe(c *fiber.Ctx) error {
-	userID, err := getUserIDFromContext(c)
-	if err != nil {
+	userID := c.Locals("userID")
+	if userID == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "Unauthorized",
+		})
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid user ID format",
+		})
+	}
+
+	userUUID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid user ID",
 		})
 	}
 
@@ -55,6 +70,8 @@ func (h *Handler) UpdateMe(c *fiber.Ctx) error {
 		})
 	}
 
+	req.Handle = NormalizeHandle(req.Handle)
+
 	if errs := validator.Validate(req); len(errs) > 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Validation failed",
@@ -62,9 +79,9 @@ func (h *Handler) UpdateMe(c *fiber.Ctx) error {
 		})
 	}
 
-	updatedUser, err := h.service.UpdateUser(userID, req)
+	updatedUser, err := h.service.Update(userUUID, req)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "User not found",
 			})
@@ -75,12 +92,4 @@ func (h *Handler) UpdateMe(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(updatedUser)
-}
-
-func getUserIDFromContext(c *fiber.Ctx) (uuid.UUID, error) {
-	userIDStr, ok := c.Locals("userID").(string)
-	if !ok {
-		return uuid.Nil, errors.New("user ID not found in context")
-	}
-	return uuid.Parse(userIDStr)
 }

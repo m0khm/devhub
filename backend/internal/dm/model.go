@@ -36,6 +36,7 @@ type ThreadUser struct {
 	ID        uuid.UUID `json:"id"`
 	Email     string    `json:"email"`
 	Name      string    `json:"name"`
+	Handle    *string   `json:"handle"`
 	AvatarURL *string   `json:"avatar_url"`
 }
 
@@ -43,6 +44,7 @@ type UserSummary struct {
 	ID        uuid.UUID `json:"id"`
 	Email     string    `json:"email"`
 	Name      string    `json:"name"`
+	Handle    *string   `json:"handle"`
 	AvatarURL *string   `json:"avatar_url"`
 }
 
