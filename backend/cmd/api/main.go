@@ -14,7 +14,9 @@ import (
 	"github.com/m0khm/devhub/backend/internal/database"
 	"github.com/m0khm/devhub/backend/internal/dm"
 	"github.com/m0khm/devhub/backend/internal/message"
+	"github.com/m0khm/devhub/backend/internal/metrics"
 	"github.com/m0khm/devhub/backend/internal/middleware"
+	"github.com/m0khm/devhub/backend/internal/notification"
 	"github.com/m0khm/devhub/backend/internal/project"
 	"github.com/m0khm/devhub/backend/internal/storage"
 	"github.com/m0khm/devhub/backend/internal/topic"
@@ -65,15 +67,18 @@ func main() {
 	projectRepo := project.NewRepository(db)
 	topicRepo := topic.NewRepository(db)
 	messageRepo := message.NewRepository(db)
+	notificationRepo := notification.NewRepository(db)
 	dmRepo := dm.NewRepository(db)
+	notificationRepo := notification.NewRepository(db)
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager)
 	projectService := project.NewService(projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
-	messageService := message.NewService(messageRepo, topicRepo, projectRepo)
+	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo)
 	userService := user.NewService(db)
 	dmService := dm.NewService(dmRepo, projectRepo)
+	notificationService := notification.NewService(notificationRepo, projectRepo, topicRepo)
 
 	// Initialize handlers
 	authHandler := auth.NewHandler(authService)
@@ -83,9 +88,11 @@ func main() {
 	dmHandler := dm.NewHandler(dmService)
 	wsHandler := message.NewWSHandler(wsHub, messageService)
 	messageHandler.SetWSHandler(wsHandler)
+	messageHandler.SetNotificationService(notificationService)
 	fileHandler := message.NewFileHandler(messageService, s3Client)
 	fileHandler.SetWSHandler(wsHandler)
 	userHandler := user.NewHandler(userService)
+	notificationHandler := notification.NewHandler(notificationService)
 
 	videoHandler := video.NewHandler() // NEW
 
@@ -100,6 +107,9 @@ func main() {
 	app.Use(recover.New())
 	app.Use(middleware.Logger())
 	app.Use(middleware.CORS(cfg.Server.AllowOrigins))
+	app.Use(metrics.Middleware())
+
+	app.Get("/metrics", metrics.Handler)
 
 	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
@@ -179,6 +189,7 @@ func main() {
 	// Message routes (внутри топика)
 	topicRoutes.Post("/:topicId/messages", messageHandler.Create)
 	topicRoutes.Get("/:topicId/messages", messageHandler.GetByTopicID)
+	topicRoutes.Get("/:topicId/pins", messageHandler.GetPinnedByTopicID)
 	topicRoutes.Get("/:topicId/search", messageHandler.SearchMessages)
 	topicRoutes.Post("/:topicId/upload", fileHandler.UploadFile)
 
@@ -190,6 +201,8 @@ func main() {
 	messageRoutes.Put("/:id", messageHandler.Update)
 	messageRoutes.Delete("/:id", messageHandler.Delete)
 	messageRoutes.Post("/:id/reactions", messageHandler.ToggleReaction)
+	messageRoutes.Post("/:id/pin", messageHandler.PinMessage)
+	messageRoutes.Delete("/:id/pin", messageHandler.UnpinMessage)
 
 	// Direct message routes
 	dmRoutes := protected.Group("/dm")
@@ -200,6 +213,11 @@ func main() {
 	userRoutes := protected.Group("/users")
 	userRoutes.Get("/", userHandler.Search)
 	userRoutes.Patch("/me", userHandler.UpdateMe)
+
+	// Notification routes
+	notificationRoutes := protected.Group("/notifications")
+	notificationRoutes.Get("/", notificationHandler.List)
+	notificationRoutes.Patch("/:id/read", notificationHandler.MarkRead)
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)

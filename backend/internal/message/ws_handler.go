@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
+	"github.com/m0khm/devhub/backend/internal/notification"
 )
 
 type WSHandler struct {
@@ -92,4 +93,12 @@ func (h *WSHandler) BroadcastReactionUpdate(topicID, messageID uuid.UUID, reacti
 		Reactions: reactions,
 	}
 	h.hub.BroadcastToTopic(topicID, "reaction_updated", payload)
+}
+
+// BroadcastNotificationCreated broadcasts a new notification event
+func (h *WSHandler) BroadcastNotificationCreated(topicID uuid.UUID, item notification.Notification) {
+	payload := map[string]interface{}{
+		"notification": item,
+	}
+	h.hub.BroadcastToTopic(topicID, "notification_created", payload)
 }

@@ -2,18 +2,21 @@ package message
 
 import (
 	"errors"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/m0khm/devhub/backend/internal/notification"
 	"github.com/m0khm/devhub/backend/pkg/validator"
 )
 
 type Handler struct {
-	service   *Service
-	wsHandler *WSHandler // optional
+	service             *Service
+	wsHandler           *WSHandler // optional
+	notificationService *notification.Service
 }
 
 func NewHandler(service *Service) *Handler {
@@ -25,6 +28,11 @@ func NewHandler(service *Service) *Handler {
 // SetWSHandler sets the WebSocket handler (called from main.go)
 func (h *Handler) SetWSHandler(wsHandler *WSHandler) {
 	h.wsHandler = wsHandler
+}
+
+// SetNotificationService sets the notification service (called from main.go)
+func (h *Handler) SetNotificationService(notificationService *notification.Service) {
+	h.notificationService = notificationService
 }
 
 // Create message
@@ -74,6 +82,21 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 	// Broadcast new message
 	if h.wsHandler != nil {
 		h.wsHandler.BroadcastNewMessage(message)
+	}
+
+	if h.notificationService != nil {
+		notifications, err := h.notificationService.CreateMessageNotifications(
+			topicID,
+			userID,
+			message.Content,
+		)
+		if err != nil {
+			log.Printf("failed to create notifications for message %s: %v", message.ID, err)
+		} else if h.wsHandler != nil {
+			for _, item := range notifications {
+				h.wsHandler.BroadcastNotificationCreated(topicID, item)
+			}
+		}
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(message)
@@ -146,6 +169,38 @@ func (h *Handler) GetByTopicID(c *fiber.Ctx) error {
 	return c.JSON(messages)
 }
 
+// Get pinned messages by topic
+// GET /api/topics/:topicId/pins
+func (h *Handler) GetPinnedByTopicID(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	topicID, err := uuid.Parse(c.Params("topicId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid topic ID",
+		})
+	}
+
+	messages, err := h.service.GetPinnedByTopicID(topicID, userID)
+	if err != nil {
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Not a project member",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get pinned messages",
+		})
+	}
+
+	return c.JSON(messages)
+}
+
 // Search messages
 // GET /api/topics/:topicId/search?q=query
 func (h *Handler) SearchMessages(c *fiber.Ctx) error {
@@ -184,6 +239,82 @@ func (h *Handler) SearchMessages(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(messages)
+}
+
+// Pin message
+// POST /api/messages/:id/pin
+func (h *Handler) PinMessage(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	messageID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid message ID",
+		})
+	}
+
+	if err := h.service.PinMessage(messageID, userID); err != nil {
+		if errors.Is(err, ErrMessageNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Message not found",
+			})
+		}
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Not a project member",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to pin message",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+	})
+}
+
+// Unpin message
+// DELETE /api/messages/:id/pin
+func (h *Handler) UnpinMessage(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	messageID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid message ID",
+		})
+	}
+
+	if err := h.service.UnpinMessage(messageID, userID); err != nil {
+		if errors.Is(err, ErrMessageNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Message not found",
+			})
+		}
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Not a project member",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to unpin message",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+	})
 }
 
 // Update message

@@ -100,3 +100,13 @@ func (r *Repository) GetMembers(projectID uuid.UUID) ([]ProjectMemberWithUser, e
 		Scan(&members).Error
 	return members, err
 }
+
+// Get project member IDs
+func (r *Repository) GetMemberIDs(projectID uuid.UUID) ([]uuid.UUID, error) {
+	var memberIDs []uuid.UUID
+	err := r.db.Model(&ProjectMember{}).
+		Select("user_id").
+		Where("project_id = ?", projectID).
+		Scan(&memberIDs).Error
+	return memberIDs, err
+}
