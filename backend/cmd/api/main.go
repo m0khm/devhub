@@ -66,6 +66,7 @@ func main() {
 	projectRepo := project.NewRepository(db)
 	topicRepo := topic.NewRepository(db)
 	messageRepo := message.NewRepository(db)
+	notificationRepo := notification.NewRepository(db)
 	dmRepo := dm.NewRepository(db)
 	notificationRepo := notification.NewRepository(db)
 
@@ -73,7 +74,7 @@ func main() {
 	authService := auth.NewService(db, jwtManager)
 	projectService := project.NewService(projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
-	messageService := message.NewService(messageRepo, topicRepo, projectRepo)
+	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo)
 	userService := user.NewService(db)
 	dmService := dm.NewService(dmRepo, projectRepo)
 	notificationService := notification.NewService(notificationRepo, projectRepo, topicRepo)

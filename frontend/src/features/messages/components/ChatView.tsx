@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import type { Topic, Message } from '../../../shared/types';
+import type { Mention, Topic, Message } from '../../../shared/types';
 import { apiClient } from '../../../api/client';
 import { wsClient } from '../../../api/websocket';
 import { useAuthStore } from '../../../store/authStore';
@@ -123,11 +123,14 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
     }, 3000);
   };
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, mentions: Mention[]) => {
     try {
+      const metadata =
+        mentions.length > 0 ? JSON.stringify({ mentions }) : undefined;
       await apiClient.post(`/topics/${topic.id}/messages`, {
         content,
         type: 'text',
+        metadata,
       });
       // добавится через WS
     } catch (error: any) {
@@ -190,7 +193,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
       )}
 
       {/* Message input */}
-      <MessageInput topicId={topic.id} onSend={handleSendMessage} />
+      <MessageInput
+        topicId={topic.id}
+        projectId={topic.project_id}
+        onSend={handleSendMessage}
+      />
     </div>
   );
 };
