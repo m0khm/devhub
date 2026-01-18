@@ -199,6 +199,7 @@ func main() {
 	// User search routes
 	userRoutes := protected.Group("/users")
 	userRoutes.Get("/", userHandler.Search)
+	userRoutes.Patch("/me", userHandler.UpdateMe)
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)

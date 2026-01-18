@@ -125,31 +125,36 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
             Личные чаты
           </p>
           <div className="mt-2">
-            {directThreads.map((thread) => (
-              <button
-                key={thread.id}
-                onClick={() => onSelectTopic(thread.id)}
-                className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 transition ${
-                  selectedTopicId === thread.id
-                    ? 'bg-slate-800/90 text-white shadow-sm'
-                    : 'text-slate-200 hover:bg-slate-800/60'
-                }`}
-              >
-                <span
-                  className={
-                    selectedTopicId === thread.id ? 'text-blue-400' : 'text-slate-400'
-                  }
+            {directThreads.map((thread) => {
+              const handleLabel = thread.user?.handle ? `@${thread.user.handle}` : null;
+              return (
+                <button
+                  key={thread.id}
+                  onClick={() => onSelectTopic(thread.id)}
+                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 transition ${
+                    selectedTopicId === thread.id
+                      ? 'bg-slate-800/90 text-white shadow-sm'
+                      : 'text-slate-200 hover:bg-slate-800/60'
+                  }`}
                 >
-                  <UserCircleIcon className="w-5 h-5" />
-                </span>
-                <span className="flex-1 text-left">
-                  <span className="block truncate text-sm font-semibold">
-                    {thread.user?.name || thread.name}
+                  <span
+                    className={
+                      selectedTopicId === thread.id ? 'text-blue-400' : 'text-slate-400'
+                    }
+                  >
+                    <UserCircleIcon className="w-5 h-5" />
                   </span>
-                  <span className="block truncate text-xs text-slate-400">Личный чат</span>
-                </span>
-              </button>
-            ))}
+                  <span className="flex-1 text-left">
+                    <span className="block truncate text-sm font-semibold">
+                      {thread.user?.name || thread.name}
+                    </span>
+                    <span className="block truncate text-xs text-slate-400">
+                      {handleLabel ? `Личный чат · ${handleLabel}` : 'Личный чат'}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
             {directThreads.length === 0 && (
               <p className="px-3 py-2 text-xs text-slate-500">Нет личных чатов</p>
             )}
