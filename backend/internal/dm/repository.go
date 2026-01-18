@@ -23,6 +23,7 @@ func (r *Repository) GetThreadByUsers(projectID, userID, otherUserID uuid.UUID) 
 			users.id as "user__id",
 			users.email as "user__email",
 			users.name as "user__name",
+			users.handle as "user__handle",
 			users.avatar_url as "user__avatar_url"
 		`).
 		Joins("JOIN direct_participants dp_self ON dp_self.topic_id = topics.id AND dp_self.user_id = ?", userID).
@@ -44,6 +45,7 @@ func (r *Repository) ListThreads(projectID, userID uuid.UUID) ([]DirectMessageTh
 			users.id as "user__id",
 			users.email as "user__email",
 			users.name as "user__name",
+			users.handle as "user__handle",
 			users.avatar_url as "user__avatar_url"
 		`).
 		Joins("JOIN direct_participants dp_self ON dp_self.topic_id = topics.id AND dp_self.user_id = ?", userID).
@@ -97,7 +99,7 @@ func (r *Repository) CreateThread(projectID, userID, otherUserID uuid.UUID, thre
 func (r *Repository) GetUserSummary(userID uuid.UUID) (*UserSummary, error) {
 	var user UserSummary
 	err := r.db.Table("users").
-		Select("id, email, name, avatar_url").
+		Select("id, email, name, handle, avatar_url").
 		Where("id = ?", userID).
 		Take(&user).Error
 	if err != nil {

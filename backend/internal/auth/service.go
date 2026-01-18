@@ -48,6 +48,7 @@ func (s *Service) Register(req user.RegisterRequest) (*user.User, string, error)
 		Email:        req.Email,
 		PasswordHash: &passwordHashStr,
 		Name:         req.Name,
+		Handle:       user.NormalizeHandle(req.Handle),
 	}
 
 	if err := s.db.Create(&newUser).Error; err != nil {

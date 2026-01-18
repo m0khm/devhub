@@ -2,6 +2,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  handle?: string;
   avatar_url?: string;
   created_at: string;
   updated_at: string;
@@ -30,6 +31,7 @@ export interface ProjectMemberWithUser extends ProjectMember {
     id: string;
     email: string;
     name: string;
+    handle?: string;
     avatar_url?: string;
   };
 }
@@ -70,6 +72,7 @@ export interface Message {
     id: string;
     name: string;
     email: string;
+    handle?: string;
     avatar_url?: string;
   };
   reactions?: ReactionGroup[];
@@ -91,6 +94,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
+  handle?: string;
 }
 
 export interface AuthResponse {

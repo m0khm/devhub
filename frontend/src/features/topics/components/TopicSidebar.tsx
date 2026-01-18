@@ -140,11 +140,12 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
                     selectedTopicId === thread.id ? 'text-accent' : 'text-text-muted'
                   }
                 >
-                  <UserCircleIcon className="w-5 h-5" />
-                </span>
-                <span className="flex-1 text-left">
-                  <span className="block truncate text-sm font-semibold">
-                    {thread.user?.name || thread.name}
+                  <span
+                    className={
+                      selectedTopicId === thread.id ? 'text-blue-400' : 'text-slate-400'
+                    }
+                  >
+                    <UserCircleIcon className="w-5 h-5" />
                   </span>
                   <span className="block truncate text-xs text-text-muted">
                     Личный чат
