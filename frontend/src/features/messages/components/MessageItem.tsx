@@ -9,10 +9,11 @@ import { DocumentIcon, PhotoIcon } from '@heroicons/react/24/outline';
 interface MessageItemProps {
   message: Message;
   isHighlighted?: boolean;
+  onReply?: (message: Message) => void;
 }
 
 export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
-  ({ message, isHighlighted = false }, ref) => {
+  ({ message, isHighlighted = false, onReply }, ref) => {
     const { user: currentUser } = useAuthStore();
     const isOwnMessage = message.user_id === currentUser?.id;
 
@@ -141,6 +142,18 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
                 className="px-2 py-1 rounded-full text-sm bg-slate-800/60 text-slate-200 hover:bg-slate-800 transition"
               >
                 +
+              </button>
+            </div>
+          )}
+
+          {onReply && (
+            <div className={`mt-2 flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+              <button
+                type="button"
+                onClick={() => onReply(message)}
+                className="text-xs font-medium text-slate-400 hover:text-slate-200 transition"
+              >
+                Reply
               </button>
             </div>
           )}

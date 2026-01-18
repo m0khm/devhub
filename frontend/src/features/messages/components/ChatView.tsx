@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Topic, Message } from '../../../shared/types';
 import { apiClient } from '../../../api/client';
 import { wsClient } from '../../../api/websocket';
@@ -7,6 +7,7 @@ import { useMessageStore } from '../../../store/messageStore';
 import { useThemeStore } from '../../../store/themeStore';
 import toast from 'react-hot-toast';
 import { MessageList } from './MessageList';
+import { MessageItem } from './MessageItem';
 import { MessageInput } from './MessageInput';
 import { SearchBar } from './SearchBar';
 import { VideoCallButton } from '../../video/components/VideoCallButton';
@@ -30,7 +31,52 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
   const [loading, setLoading] = useState(true);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [threadRootId, setThreadRootId] = useState<string | null>(null);
   const typingTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
+  const messageMap = useMemo(
+    () => new Map(messages.map((message) => [message.id, message])),
+    [messages]
+  );
+
+  const resolveThreadRoot = (message: Message) => {
+    let current = message;
+    while (current.parent_id && messageMap.has(current.parent_id)) {
+      const next = messageMap.get(current.parent_id);
+      if (!next) break;
+      current = next;
+    }
+    return current;
+  };
+
+  const threadRoot = threadRootId ? messageMap.get(threadRootId) ?? null : null;
+  const threadMessages = useMemo(() => {
+    if (!threadRootId) return [];
+    const childrenMap = new Map<string, Message[]>();
+    messages.forEach((message) => {
+      if (!message.parent_id) return;
+      const list = childrenMap.get(message.parent_id) ?? [];
+      list.push(message);
+      childrenMap.set(message.parent_id, list);
+    });
+
+    const sortByTime = (items: Message[]) =>
+      items.sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+
+    const result: Message[] = [];
+    const visit = (parentId: string) => {
+      const children = sortByTime(childrenMap.get(parentId) ?? []);
+      children.forEach((child) => {
+        result.push(child);
+        visit(child.id);
+      });
+    };
+
+    visit(threadRootId);
+    return result;
+  }, [messages, threadRootId]);
 
   useEffect(() => {
     clearMessages();
@@ -110,16 +156,28 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
     }, 3000);
   };
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, parentId?: string) => {
     try {
       await apiClient.post(`/topics/${topic.id}/messages`, {
         content,
         type: 'text',
+        parent_id: parentId,
       });
       // добавится через WS
+      setReplyToMessage(null);
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to send message');
     }
+  };
+
+  const handleReply = (message: Message) => {
+    setReplyToMessage(message);
+    setThreadRootId(resolveThreadRoot(message).id);
+  };
+
+  const handleCloseThread = () => {
+    setThreadRootId(null);
+    setReplyToMessage(null);
   };
 
   return (
@@ -150,22 +208,62 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
         </div>
       </div>
 
-      {/* Messages */}
-      <MessageList
-        messages={messages}
-        loading={loading}
-        highlightedMessageId={highlightedMessageId}
-      />
+      <div className="flex-1 min-h-0 flex">
+        <div className="flex-1 min-h-0 flex flex-col">
+          {/* Messages */}
+          <MessageList
+            messages={messages}
+            loading={loading}
+            highlightedMessageId={highlightedMessageId}
+            onReply={handleReply}
+          />
 
-      {/* Typing indicator */}
-      {typingUsers.size > 0 && (
-        <div className="px-6 py-2 text-sm text-text-muted italic">
-          Someone is typing...
+          {/* Typing indicator */}
+          {typingUsers.size > 0 && (
+            <div className="px-6 py-2 text-sm text-text-muted italic">
+              Someone is typing...
+            </div>
+          )}
+
+          {/* Message input */}
+          <MessageInput
+            topicId={topic.id}
+            onSend={handleSendMessage}
+            replyTo={replyToMessage}
+            onCancelReply={() => setReplyToMessage(null)}
+          />
         </div>
-      )}
 
-      {/* Message input */}
-      <MessageInput topicId={topic.id} onSend={handleSendMessage} />
+        {threadRoot && (
+          <aside className="w-full max-w-sm border-l border-slate-800/70 bg-slate-900/80 flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/70">
+              <div>
+                <p className="text-sm font-semibold text-slate-200">Thread</p>
+                <p className="text-xs text-slate-400">Replies to this message</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseThread}
+                className="text-xs text-slate-400 hover:text-slate-100 transition"
+              >
+                Close
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+              <MessageItem message={threadRoot} onReply={handleReply} />
+              {threadMessages.length === 0 ? (
+                <p className="text-xs text-slate-500">No replies yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {threadMessages.map((message) => (
+                    <MessageItem key={message.id} message={message} onReply={handleReply} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </aside>
+        )}
+      </div>
     </div>
   );
 };

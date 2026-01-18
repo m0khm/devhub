@@ -5,10 +5,23 @@ import { FileUploadButton } from './FileUploadButton';
 
 interface MessageInputProps {
   topicId: string; // NEW
-  onSend: (content: string) => void;
+  onSend: (content: string, parentId?: string) => void;
+  replyTo?: {
+    id: string;
+    content: string;
+    user?: {
+      name: string;
+    };
+  } | null;
+  onCancelReply?: () => void;
 }
 
-export const MessageInput: React.FC<MessageInputProps> = ({ topicId, onSend }) => {
+export const MessageInput: React.FC<MessageInputProps> = ({
+  topicId,
+  onSend,
+  replyTo,
+  onCancelReply,
+}) => {
   const [content, setContent] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
@@ -44,7 +57,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({ topicId, onSend }) =
     
     if (!content.trim()) return;
 
-    onSend(content.trim());
+    onSend(content.trim(), replyTo?.id);
     setContent('');
     setIsTyping(false);
     wsClient.sendTyping(false);
@@ -63,6 +76,25 @@ export const MessageInput: React.FC<MessageInputProps> = ({ topicId, onSend }) =
 
   return (
     <div className="border-t border-slate-800/80 bg-slate-900/80 px-6 py-4">
+      {replyTo && (
+        <div className="mb-3 flex items-center justify-between rounded-lg border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs text-slate-300">
+          <div className="min-w-0">
+            <p className="font-medium text-slate-200">
+              Replying to {replyTo.user?.name ?? 'Unknown'}
+            </p>
+            <p className="truncate text-slate-400">{replyTo.content}</p>
+          </div>
+          {onCancelReply && (
+            <button
+              type="button"
+              onClick={onCancelReply}
+              className="ml-3 text-slate-400 hover:text-slate-100 transition"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="flex items-end gap-3">
         <FileUploadButton topicId={topicId} /> {/* NEW */}
         <textarea
