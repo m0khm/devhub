@@ -37,14 +37,14 @@ export const ProjectList: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex h-full items-center justify-center">
         <div className="text-text-muted">Loading projects...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-base text-text">
+    <div className="h-full overflow-y-auto bg-base text-text">
       <div className="w-full px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-text">Your Projects</h1>
