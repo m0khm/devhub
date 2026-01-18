@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { User } from '../shared/types';
+import { safeStorage } from '../shared/utils/storage';
 
 interface AuthState {
   user: User | null;
@@ -17,13 +18,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
 
   setAuth: (user, token) => {
-    localStorage.setItem('auth_token', token);
-    localStorage.setItem('auth_user', JSON.stringify(user));
+    safeStorage.set('auth_token', token);
+    safeStorage.set('auth_user', JSON.stringify(user));
     set({ user, token, isAuthenticated: true });
   },
 
   updateUser: (user) => {
-    localStorage.setItem('auth_user', JSON.stringify(user));
+    safeStorage.set('auth_user', JSON.stringify(user));
     set((state) => ({
       user,
       token: state.token,
@@ -32,23 +33,23 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
+    safeStorage.remove('auth_token');
+    safeStorage.remove('auth_user');
     set({ user: null, token: null, isAuthenticated: false });
   },
 
   loadFromStorage: () => {
-    const token = localStorage.getItem('auth_token');
-    const userStr = localStorage.getItem('auth_user');
-    
+    const token = safeStorage.get('auth_token');
+    const userStr = safeStorage.get('auth_user');
+
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
         set({ user, token, isAuthenticated: true });
       } catch (error) {
         console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
+        safeStorage.remove('auth_token');
+        safeStorage.remove('auth_user');
       }
     }
   },
