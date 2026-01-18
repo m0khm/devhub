@@ -121,11 +121,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
   return (
     <div className="flex-1 flex min-h-0 flex-col">
       {/* Topic header */}
-      <div className="flex items-center justify-between border-b border-slate-800/70 bg-slate-900/80 px-6 py-4 shadow-sm">
+      <div className="flex items-center justify-between border-b border-slate-800/70 bg-slate-900/90 px-5 py-3 shadow-sm">
         <div>
-          <h2 className="text-xl font-semibold text-white">{topic.name}</h2>
+          <h2 className="text-lg font-semibold text-white">{topic.name}</h2>
           {topic.description && (
-            <p className="text-sm text-slate-300 mt-1">{topic.description}</p>
+            <p className="mt-1 text-xs text-slate-400">{topic.description}</p>
           )}
         </div>
 

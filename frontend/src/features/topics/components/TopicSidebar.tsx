@@ -59,29 +59,29 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
   return (
     <div className="flex h-full flex-col text-slate-100">
       {/* Project header */}
-      <div className="border-b border-slate-800/70 px-4 py-4">
+      <div className="border-b border-slate-800/70 bg-slate-900/70 px-4 py-3 shadow-sm">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="truncate font-semibold text-slate-100">
+          <h2 className="truncate text-sm font-semibold text-slate-100">
             {currentProject?.name || 'Project'}
           </h2>
           <button
             type="button"
             onClick={() => setShowInviteModal(true)}
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2 py-1 text-xs font-medium text-slate-300 hover:bg-slate-800/70"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/70 px-2 py-1 text-[11px] font-medium text-slate-300 transition hover:border-slate-600 hover:bg-slate-800/80"
           >
             <UserPlusIcon className="h-4 w-4" />
             Invite
           </button>
         </div>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-1 text-[11px] text-slate-400">
           {topics.length} {topics.length === 1 ? 'topic' : 'topics'}
         </p>
       </div>
 
       {/* Topics list */}
-      <div className="flex-1 space-y-5 overflow-y-auto p-3">
+      <div className="flex-1 space-y-4 overflow-y-auto px-3 py-3">
         <div>
-          <p className="px-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p className="px-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
             Темы
           </p>
           <div className="mt-2">
@@ -89,39 +89,39 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
               <button
                 key={topic.id}
                 onClick={() => onSelectTopic(topic.id)}
-                className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 transition ${
+                className={`w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-left transition ${
                   selectedTopicId === topic.id
-                    ? 'bg-slate-800/90 text-white shadow-sm'
-                    : 'text-slate-200 hover:bg-slate-800/60'
+                    ? 'bg-slate-800/90 text-white shadow-[0_6px_20px_rgba(15,23,42,0.35)]'
+                    : 'text-slate-200 hover:bg-slate-800/70'
                 }`}
               >
                 <span
                   className={
-                    selectedTopicId === topic.id ? 'text-blue-400' : 'text-slate-400'
+                    selectedTopicId === topic.id ? 'text-blue-300' : 'text-slate-400'
                   }
                 >
                   {typeof getTopicIcon(topic.type, topic.icon) === 'string' ? (
-                    <span className="text-xl">{getTopicIcon(topic.type, topic.icon)}</span>
+                    <span className="text-lg">{getTopicIcon(topic.type, topic.icon)}</span>
                   ) : (
                     getTopicIcon(topic.type, topic.icon)
                   )}
                 </span>
                 <span className="flex-1 text-left">
-                  <span className="block truncate text-sm font-semibold">{topic.name}</span>
-                  <span className="block truncate text-xs text-slate-400">
+                  <span className="block truncate text-sm font-medium">{topic.name}</span>
+                  <span className="block truncate text-[11px] text-slate-400">
                     {topicTypeLabel[topic.type]}
                   </span>
                 </span>
               </button>
             ))}
             {topics.length === 0 && (
-              <p className="px-3 py-2 text-xs text-slate-500">Нет тем</p>
+              <p className="px-3 py-2 text-[11px] text-slate-500">Нет тем</p>
             )}
           </div>
         </div>
 
         <div>
-          <p className="px-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p className="px-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
             Личные чаты
           </p>
           <div className="mt-2">
@@ -129,41 +129,45 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
               <button
                 key={thread.id}
                 onClick={() => onSelectTopic(thread.id)}
-                className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 transition ${
+                className={`w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-left transition ${
                   selectedTopicId === thread.id
-                    ? 'bg-slate-800/90 text-white shadow-sm'
-                    : 'text-slate-200 hover:bg-slate-800/60'
+                    ? 'bg-slate-800/90 text-white shadow-[0_6px_20px_rgba(15,23,42,0.35)]'
+                    : 'text-slate-200 hover:bg-slate-800/70'
                 }`}
               >
                 <span
                   className={
-                    selectedTopicId === thread.id ? 'text-blue-400' : 'text-slate-400'
+                    selectedTopicId === thread.id ? 'text-blue-300' : 'text-slate-400'
                   }
                 >
                   <UserCircleIcon className="w-5 h-5" />
                 </span>
                 <span className="flex-1 text-left">
-                  <span className="block truncate text-sm font-semibold">
+                  <span className="block truncate text-sm font-medium">
                     {thread.user?.name || thread.name}
                   </span>
-                  <span className="block truncate text-xs text-slate-400">Личный чат</span>
+                  <span className="block truncate text-[11px] text-slate-400">
+                    Личный чат
+                  </span>
                 </span>
               </button>
             ))}
             {directThreads.length === 0 && (
-              <p className="px-3 py-2 text-xs text-slate-500">Нет личных чатов</p>
+              <p className="px-3 py-2 text-[11px] text-slate-500">
+                Нет личных чатов
+              </p>
             )}
           </div>
         </div>
       </div>
 
       {/* Create topic button */}
-      <div className="border-t border-slate-800/70 p-3">
+      <div className="border-t border-slate-800/70 bg-slate-900/70 p-3">
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-slate-800/70"
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-200 transition hover:bg-slate-800/80"
         >
-          <PlusIcon className="w-5 h-5 text-slate-400" />
+          <PlusIcon className="w-4 h-4 text-slate-400" />
           <span className="text-sm font-medium">Add Topic</span>
         </button>
       </div>
