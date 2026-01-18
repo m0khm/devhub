@@ -15,6 +15,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/dm"
 	"github.com/m0khm/devhub/backend/internal/message"
 	"github.com/m0khm/devhub/backend/internal/middleware"
+	"github.com/m0khm/devhub/backend/internal/notification"
 	"github.com/m0khm/devhub/backend/internal/project"
 	"github.com/m0khm/devhub/backend/internal/storage"
 	"github.com/m0khm/devhub/backend/internal/topic"
@@ -65,13 +66,14 @@ func main() {
 	projectRepo := project.NewRepository(db)
 	topicRepo := topic.NewRepository(db)
 	messageRepo := message.NewRepository(db)
+	notificationRepo := notification.NewRepository(db)
 	dmRepo := dm.NewRepository(db)
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager)
 	projectService := project.NewService(projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
-	messageService := message.NewService(messageRepo, topicRepo, projectRepo)
+	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo)
 	userService := user.NewService(db)
 	dmService := dm.NewService(dmRepo, projectRepo)
 

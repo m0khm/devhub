@@ -83,6 +83,12 @@ export interface Message {
   reactions?: ReactionGroup[];
 }
 
+export interface Mention {
+  id: string;
+  name: string;
+  handle?: string;
+}
+
 export interface ReactionGroup {
   emoji: string;
   count: number;
