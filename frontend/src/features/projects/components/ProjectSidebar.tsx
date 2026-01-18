@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useProjectStore } from '../../../store/projectStore';
 import { useAuthStore } from '../../../store/authStore';
@@ -8,15 +8,21 @@ import {
   PlusIcon,
   Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
+import { CreateProjectModal } from './CreateProjectModal';
 
 interface ProjectSidebarProps {
   onOpenProfile?: () => void;
+  onProjectCreated?: () => void;
 }
 
-export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ onOpenProfile }) => {
+export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
+  onOpenProfile,
+  onProjectCreated,
+}) => {
   const { projects, currentProject } = useProjectStore();
   const user = useAuthStore((state) => state.user);
   const location = useLocation();
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const isProfileActive = location.pathname === '/profile';
   const userDisplayName = user?.name ?? user?.handle ?? user?.email ?? 'User';
   const userInitials = userDisplayName
@@ -108,6 +114,8 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ onOpenProfile })
           type="button"
           className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/70 text-slate-300 transition hover:border-slate-700 hover:bg-slate-900"
           aria-label="Добавить проект"
+          onClick={() => setShowCreateModal(true)}
+          title="Добавить проект"
         >
           <PlusIcon className="h-5 w-5" />
         </button>
@@ -134,6 +142,14 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ onOpenProfile })
           <Cog6ToothIcon className="h-5 w-5" />
         </button>
       </div>
+      <CreateProjectModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreated={async () => {
+          await onProjectCreated?.();
+          setShowCreateModal(false);
+        }}
+      />
     </div>
   );
 };
