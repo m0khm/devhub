@@ -23,16 +23,12 @@ export const JitsiMeet: React.FC<JitsiMeetProps> = ({
   domain,
   onClose,
 }) => {
-  const [portalRoot, setPortalRoot] = useState<HTMLDivElement | null>(null);
   const [portalConflict, setPortalConflict] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const portalOwnerRef = useRef(false);
-  const portalCreatedRef = useRef(false);
-
-  const portalId = 'jitsi-meet-portal-root';
 
   const resolvedDomain = useMemo(() => {
     if (domain) {
@@ -49,9 +45,8 @@ export const JitsiMeet: React.FC<JitsiMeetProps> = ({
   }, [domain, roomUrl]);
 
   useEffect(() => {
-    const existingRoot = document.getElementById(portalId) as HTMLDivElement | null;
-
-    if (existingRoot?.dataset.active === 'true') {
+    const { body } = document;
+    if (body.dataset.jitsiActive === 'true') {
       setPortalConflict(true);
       const message = 'Another video call is already open.';
       toast.error(message);
@@ -60,36 +55,20 @@ export const JitsiMeet: React.FC<JitsiMeetProps> = ({
       return;
     }
 
-    const root = existingRoot ?? document.createElement('div');
-    if (!existingRoot) {
-      root.id = portalId;
-      document.body.appendChild(root);
-      portalCreatedRef.current = true;
-    }
-    root.dataset.active = 'true';
+    body.dataset.jitsiActive = 'true';
     portalOwnerRef.current = true;
-    setPortalRoot(root);
+    const previousOverflow = body.style.overflow;
+    body.style.overflow = 'hidden';
 
     return () => {
       if (!portalOwnerRef.current) return;
-      delete root.dataset.active;
-      if (portalCreatedRef.current && root.parentNode) {
-        document.body.removeChild(root);
-      }
+      delete body.dataset.jitsiActive;
+      body.style.overflow = previousOverflow;
     };
-  }, [portalId]);
+  }, []);
 
   useEffect(() => {
-    if (!portalRoot || portalConflict) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [portalConflict, portalRoot]);
-
-  useEffect(() => {
-    if (!portalRoot || portalConflict) return;
+    if (portalConflict) return;
 
     // Load Jitsi script
     const script = document.createElement('script');
@@ -160,7 +139,8 @@ export const JitsiMeet: React.FC<JitsiMeetProps> = ({
     };
 
     script.onerror = () => {
-      const message = 'Unable to load video call. Please check your connection.';
+      const message =
+        'Unable to load the video call script. Please check your connection or try again later.';
       toast.error(message);
       setLoadError(message);
       setIsLoading(false);
@@ -174,9 +154,9 @@ export const JitsiMeet: React.FC<JitsiMeetProps> = ({
         document.body.removeChild(script);
       }
     };
-  }, [portalConflict, portalRoot, roomName, userName, onClose, resolvedDomain]);
+  }, [portalConflict, roomName, userName, onClose, resolvedDomain]);
 
-  if (!portalRoot || portalConflict) {
+  if (portalConflict) {
     return null;
   }
 
@@ -205,6 +185,6 @@ export const JitsiMeet: React.FC<JitsiMeetProps> = ({
         </div>
       )}
     </div>,
-    portalRoot,
+    document.body,
   );
 };
