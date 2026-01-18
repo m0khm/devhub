@@ -4,6 +4,7 @@ import { apiClient } from '../../../api/client';
 import { wsClient } from '../../../api/websocket';
 import { useAuthStore } from '../../../store/authStore';
 import { useMessageStore } from '../../../store/messageStore';
+import { useNotificationStore } from '../../../store/notificationStore';
 import { useThemeStore } from '../../../store/themeStore';
 import toast from 'react-hot-toast';
 import { MessageList } from './MessageList';
@@ -13,9 +14,10 @@ import { VideoCallButton } from '../../video/components/VideoCallButton';
 
 interface ChatViewProps {
   topic: Topic;
+  onOpenProfile?: () => void;
 }
 
-export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
+export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
   const { token } = useAuthStore();
   const {
     messages,
@@ -25,6 +27,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
     deleteMessage,
     clearMessages,
   } = useMessageStore();
+  const { addNotification } = useNotificationStore();
   const { theme, toggleTheme } = useThemeStore();
 
   const [loading, setLoading] = useState(true);
@@ -53,6 +56,16 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
         },
         onReactionUpdated: (payload) => {
           updateMessage(payload.message_id, { reactions: payload.reactions });
+        },
+        onNotificationCreated: (payload) => {
+          const notification = payload?.notification;
+          if (!notification) {
+            return;
+          }
+          if (user?.id && notification.user_id !== user.id) {
+            return;
+          }
+          addNotification(notification);
         },
         onConnect: () => {
           console.log('WebSocket connected');
@@ -137,6 +150,18 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
         </div>
 
         <div className="flex items-center gap-2">
+          {onOpenProfile && (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-text transition hover:bg-surface"
+              aria-label="Настройки профиля"
+              title="Настройки профиля"
+            >
+              <span aria-hidden>👤</span>
+              <span className="hidden sm:inline">Профиль</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={toggleTheme}

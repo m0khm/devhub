@@ -68,6 +68,7 @@ func main() {
 	messageRepo := message.NewRepository(db)
 	notificationRepo := notification.NewRepository(db)
 	dmRepo := dm.NewRepository(db)
+	notificationRepo := notification.NewRepository(db)
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager)
@@ -76,6 +77,7 @@ func main() {
 	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo)
 	userService := user.NewService(db)
 	dmService := dm.NewService(dmRepo, projectRepo)
+	notificationService := notification.NewService(notificationRepo, projectRepo, topicRepo)
 
 	// Initialize handlers
 	authHandler := auth.NewHandler(authService)
@@ -85,9 +87,11 @@ func main() {
 	dmHandler := dm.NewHandler(dmService)
 	wsHandler := message.NewWSHandler(wsHub, messageService)
 	messageHandler.SetWSHandler(wsHandler)
+	messageHandler.SetNotificationService(notificationService)
 	fileHandler := message.NewFileHandler(messageService, s3Client)
 	fileHandler.SetWSHandler(wsHandler)
 	userHandler := user.NewHandler(userService)
+	notificationHandler := notification.NewHandler(notificationService)
 
 	videoHandler := video.NewHandler() // NEW
 
@@ -202,6 +206,11 @@ func main() {
 	userRoutes := protected.Group("/users")
 	userRoutes.Get("/", userHandler.Search)
 	userRoutes.Patch("/me", userHandler.UpdateMe)
+
+	// Notification routes
+	notificationRoutes := protected.Group("/notifications")
+	notificationRoutes.Get("/", notificationHandler.List)
+	notificationRoutes.Patch("/:id/read", notificationHandler.MarkRead)
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)

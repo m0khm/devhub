@@ -1,9 +1,10 @@
 package notification
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type Repository struct {
@@ -14,23 +15,51 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) CreateMentionNotifications(messageID, topicID uuid.UUID, userIDs []uuid.UUID) error {
-	if len(userIDs) == 0 {
+func (r *Repository) Create(notification *Notification) error {
+	return r.db.Create(notification).Error
+}
+
+func (r *Repository) CreateMany(notifications []Notification) error {
+	if len(notifications) == 0 {
 		return nil
 	}
+	return r.db.Create(&notifications).Error
+}
 
-	notifications := make([]Notification, 0, len(userIDs))
-	for _, userID := range userIDs {
-		notifications = append(notifications, Notification{
-			UserID:    userID,
-			MessageID: messageID,
-			TopicID:   topicID,
-			Type:      "mention",
-		})
+func (r *Repository) ListByUser(userID uuid.UUID, limit int, unreadOnly bool) ([]Notification, error) {
+	var notifications []Notification
+	query := r.db.Where("user_id = ?", userID)
+	if unreadOnly {
+		query = query.Where("is_read = false")
 	}
 
-	return r.db.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}, {Name: "message_id"}, {Name: "type"}},
-		DoNothing: true,
-	}).Create(&notifications).Error
+	err := query.
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&notifications).Error
+
+	return notifications, err
+}
+
+func (r *Repository) MarkRead(id, userID uuid.UUID) (*Notification, error) {
+	var notification Notification
+	if err := r.db.Where("id = ? AND user_id = ?", id, userID).First(&notification).Error; err != nil {
+		return nil, err
+	}
+
+	if notification.IsRead {
+		return &notification, nil
+	}
+
+	now := time.Now()
+	if err := r.db.Model(&notification).Updates(map[string]interface{}{
+		"is_read": true,
+		"read_at": &now,
+	}).Error; err != nil {
+		return nil, err
+	}
+
+	notification.IsRead = true
+	notification.ReadAt = &now
+	return &notification, nil
 }

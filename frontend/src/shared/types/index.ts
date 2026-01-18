@@ -96,6 +96,18 @@ export interface ReactionGroup {
   has_self: boolean;
 }
 
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  body: string;
+  link?: string;
+  type: string;
+  is_read: boolean;
+  read_at?: string;
+  created_at: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
