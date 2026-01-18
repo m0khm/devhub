@@ -6,12 +6,14 @@ interface MessageListProps {
   messages: Message[];
   loading: boolean;
   highlightedMessageId?: string | null;
+  onReply?: (message: Message) => void;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
   messages,
   loading,
   highlightedMessageId,
+  onReply,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -68,6 +70,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           ref={setMessageRef(message.id)}
           message={message}
           isHighlighted={message.id === highlightedMessageId}
+          onReply={onReply}
         />
       ))}
       <div ref={messagesEndRef} />
