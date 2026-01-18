@@ -16,6 +16,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/message"
 	"github.com/m0khm/devhub/backend/internal/middleware"
 	"github.com/m0khm/devhub/backend/internal/project"
+	"github.com/m0khm/devhub/backend/internal/storage"
 	"github.com/m0khm/devhub/backend/internal/topic"
 	"github.com/m0khm/devhub/backend/internal/user"
 	"github.com/m0khm/devhub/backend/internal/video" // NEW
@@ -48,6 +49,18 @@ func main() {
 	wsHub := message.NewHub()
 	go wsHub.Run()
 
+	// Initialize S3 client
+	s3Client, err := storage.NewS3Client(
+		cfg.S3.Endpoint,
+		cfg.S3.AccessKey,
+		cfg.S3.SecretKey,
+		cfg.S3.Bucket,
+		cfg.S3.UseSSL,
+	)
+	if err != nil {
+		log.Printf("S3 storage unavailable: %v", err)
+	}
+
 	// Initialize repositories
 	projectRepo := project.NewRepository(db)
 	topicRepo := topic.NewRepository(db)
@@ -70,6 +83,8 @@ func main() {
 	dmHandler := dm.NewHandler(dmService)
 	wsHandler := message.NewWSHandler(wsHub, messageService)
 	messageHandler.SetWSHandler(wsHandler)
+	fileHandler := message.NewFileHandler(messageService, s3Client)
+	fileHandler.SetWSHandler(wsHandler)
 	userHandler := user.NewHandler(userService)
 
 	videoHandler := video.NewHandler() // NEW
@@ -165,6 +180,7 @@ func main() {
 	topicRoutes.Post("/:topicId/messages", messageHandler.Create)
 	topicRoutes.Get("/:topicId/messages", messageHandler.GetByTopicID)
 	topicRoutes.Get("/:topicId/search", messageHandler.SearchMessages)
+	topicRoutes.Post("/:topicId/upload", fileHandler.UploadFile)
 
 	// Video routes (внутри топика) // NEW
 	topicRoutes.Post("/:topicId/video/room", videoHandler.CreateRoom)
