@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 import { apiClient } from '../../../api/client';
 import type { Message } from '../../../shared/types';
 import toast from 'react-hot-toast';
@@ -7,12 +12,15 @@ import { formatDistanceToNow } from 'date-fns';
 
 interface SearchBarProps {
   topicId: string;
+  onJumpToMessage: (messageId: string | null) => void;
 }
 
-export const SearchBar: React.FC<SearchBarProps> = ({ topicId }) => {
+export const SearchBar: React.FC<SearchBarProps> = ({ topicId, onJumpToMessage }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Message[]>([]);
+  const [resultIds, setResultIds] = useState<string[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(-1);
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async () => {
@@ -22,9 +30,19 @@ export const SearchBar: React.FC<SearchBarProps> = ({ topicId }) => {
     setLoading(true);
     try {
       const response = await apiClient.get<Message[]>(
-        `/topics/${topicId}/search?q=${encodeURIComponent(q)}`
+        `/topics/${topicId}/messages?query=${encodeURIComponent(q)}`
       );
-      setResults(response.data);
+      const messages = response.data;
+      const ids = messages.map((message) => message.id);
+      setResults(messages);
+      setResultIds(ids);
+      if (ids.length > 0) {
+        setCurrentIndex(0);
+        onJumpToMessage(ids[0]);
+      } else {
+        setCurrentIndex(-1);
+        onJumpToMessage(null);
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Search failed');
     } finally {
@@ -41,12 +59,36 @@ export const SearchBar: React.FC<SearchBarProps> = ({ topicId }) => {
     setIsOpen(false);
     setQuery('');
     setResults([]);
+    setResultIds([]);
+    setCurrentIndex(-1);
     setLoading(false);
+    onJumpToMessage(null);
   };
 
   const open = () => {
     setIsOpen(true);
     // results не чистим, чтобы можно было открыть снова и увидеть прошлые результаты
+  };
+
+  const jumpToIndex = (index: number) => {
+    const messageId = resultIds[index];
+    if (!messageId) return;
+    setCurrentIndex(index);
+    onJumpToMessage(messageId);
+  };
+
+  const handleNext = () => {
+    if (resultIds.length === 0) return;
+    const nextIndex =
+      currentIndex >= 0 ? (currentIndex + 1) % resultIds.length : 0;
+    jumpToIndex(nextIndex);
+  };
+
+  const handlePrev = () => {
+    if (resultIds.length === 0) return;
+    const prevIndex =
+      currentIndex > 0 ? currentIndex - 1 : resultIds.length - 1;
+    jumpToIndex(prevIndex);
   };
 
   return (
@@ -85,6 +127,31 @@ export const SearchBar: React.FC<SearchBarProps> = ({ topicId }) => {
                   className="flex-1 bg-transparent text-lg text-slate-100 outline-none placeholder:text-slate-400"
                   autoFocus
                 />
+                <div className="flex items-center gap-1 text-xs text-slate-400">
+                  <button
+                    type="button"
+                    onClick={handlePrev}
+                    disabled={resultIds.length === 0}
+                    className="rounded p-1 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 transition"
+                    aria-label="Previous match"
+                    title="Previous match"
+                  >
+                    <ChevronUpIcon className="w-4 h-4" />
+                  </button>
+                  <span className="min-w-[40px] text-center">
+                    {resultIds.length > 0 ? `${currentIndex + 1}/${resultIds.length}` : '0/0'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={resultIds.length === 0}
+                    className="rounded p-1 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 transition"
+                    aria-label="Next match"
+                    title="Next match"
+                  >
+                    <ChevronDownIcon className="w-4 h-4" />
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={handleClose}
@@ -113,10 +180,13 @@ export const SearchBar: React.FC<SearchBarProps> = ({ topicId }) => {
                 <div className="text-center py-8 text-slate-400">Searching...</div>
               ) : results.length > 0 ? (
                 <div className="space-y-3">
-                  {results.map((message) => (
+                  {results.map((message, index) => (
                     <div
                       key={message.id}
-                      className="cursor-pointer rounded-xl bg-slate-800/70 p-4 transition hover:bg-slate-800"
+                      onClick={() => jumpToIndex(index)}
+                      className={`cursor-pointer rounded-xl bg-slate-800/70 p-4 transition hover:bg-slate-800 ${
+                        index === currentIndex ? 'ring-2 ring-sky-400/70 bg-sky-500/10' : ''
+                      }`}
                     >
                       <div className="flex items-start gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-500 text-sm font-semibold text-white">

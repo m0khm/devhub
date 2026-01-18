@@ -148,6 +148,41 @@ func (s *Service) GetByTopicID(topicID, userID uuid.UUID, limit, offset int, bef
 	return messages, nil
 }
 
+// Search messages by topic
+func (s *Service) SearchByTopicID(topicID, userID uuid.UUID, query string, limit int) ([]MessageWithUser, error) {
+	// Check access
+	topicObj, err := s.topicRepo.GetByID(topicID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("topic not found")
+		}
+		return nil, fmt.Errorf("failed to get topic: %w", err)
+	}
+
+	isMember, err := s.projectRepo.IsUserMember(topicObj.ProjectID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check membership: %w", err)
+	}
+	if !isMember {
+		return nil, ErrNotProjectMember
+	}
+
+	messages, err := s.repo.Search(topicID, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search messages: %w", err)
+	}
+
+	for i := range messages {
+		reactions, err := s.repo.GetReactions(messages[i].ID, userID)
+		if err != nil {
+			continue
+		}
+		messages[i].Reactions = reactions
+	}
+
+	return messages, nil
+}
+
 // Update message
 func (s *Service) Update(messageID, userID uuid.UUID, req UpdateMessageRequest) (*MessageWithUser, error) {
 	message, err := s.repo.GetByID(messageID)

@@ -29,10 +29,12 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
 
   const [loading, setLoading] = useState(true);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const typingTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
 
   useEffect(() => {
     clearMessages();
+    setHighlightedMessageId(null);
     loadMessages();
 
     if (token) {
@@ -144,12 +146,16 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
             </span>
           </button>
           <VideoCallButton topicId={topic.id} />
-          <SearchBar topicId={topic.id} />
+          <SearchBar topicId={topic.id} onJumpToMessage={setHighlightedMessageId} />
         </div>
       </div>
 
       {/* Messages */}
-      <MessageList messages={messages} loading={loading} />
+      <MessageList
+        messages={messages}
+        loading={loading}
+        highlightedMessageId={highlightedMessageId}
+      />
 
       {/* Typing indicator */}
       {typingUsers.size > 0 && (
