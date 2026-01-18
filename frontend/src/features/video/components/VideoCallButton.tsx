@@ -13,6 +13,8 @@ export const VideoCallButton: React.FC<VideoCallButtonProps> = ({ topicId }) => 
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [roomName, setRoomName] = useState<string | null>(null);
+  const [roomUrl, setRoomUrl] = useState<string | null>(null);
+  const [domain, setDomain] = useState<string | null>(null);
 
   const startCall = async () => {
     setLoading(true);
@@ -20,9 +22,12 @@ export const VideoCallButton: React.FC<VideoCallButtonProps> = ({ topicId }) => 
       const response = await apiClient.post<{
         room_name: string;
         room_url: string;
+        domain: string;
       }>(`/topics/${topicId}/video/room`);
 
       setRoomName(response.data.room_name);
+      setRoomUrl(response.data.room_url);
+      setDomain(response.data.domain);
       toast.success('Video call started!');
     } catch (error) {
       toast.error('Failed to start video call');
@@ -33,6 +38,8 @@ export const VideoCallButton: React.FC<VideoCallButtonProps> = ({ topicId }) => 
 
   const closeCall = () => {
     setRoomName(null);
+    setRoomUrl(null);
+    setDomain(null);
   };
 
   return (
@@ -50,6 +57,8 @@ export const VideoCallButton: React.FC<VideoCallButtonProps> = ({ topicId }) => 
         <JitsiMeet
           roomName={roomName}
           userName={user?.name || 'Unknown'}
+          roomUrl={roomUrl ?? undefined}
+          domain={domain ?? undefined}
           onClose={closeCall}
         />
       )}
