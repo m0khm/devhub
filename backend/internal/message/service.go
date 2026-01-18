@@ -1,13 +1,16 @@
 package message
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/m0khm/devhub/backend/internal/notification"
 	"github.com/m0khm/devhub/backend/internal/project"
 	"github.com/m0khm/devhub/backend/internal/topic"
 )
@@ -19,16 +22,23 @@ var (
 )
 
 type Service struct {
-	repo        *Repository
-	topicRepo   *topic.Repository
-	projectRepo *project.Repository
+	repo             *Repository
+	topicRepo        *topic.Repository
+	projectRepo      *project.Repository
+	notificationRepo *notification.Repository
 }
 
-func NewService(repo *Repository, topicRepo *topic.Repository, projectRepo *project.Repository) *Service {
+func NewService(
+	repo *Repository,
+	topicRepo *topic.Repository,
+	projectRepo *project.Repository,
+	notificationRepo *notification.Repository,
+) *Service {
 	return &Service{
-		repo:        repo,
-		topicRepo:   topicRepo,
-		projectRepo: projectRepo,
+		repo:             repo,
+		topicRepo:        topicRepo,
+		projectRepo:      projectRepo,
+		notificationRepo: notificationRepo,
 	}
 }
 
@@ -70,8 +80,57 @@ func (s *Service) Create(topicID, userID uuid.UUID, req CreateMessageRequest) (*
 		return nil, fmt.Errorf("failed to create message: %w", err)
 	}
 
+	if err := s.createMentionNotifications(topicID, userID, message.ID, req.Metadata); err != nil {
+		log.Printf("failed to create mention notifications: %v", err)
+	}
+
 	// Return message with user info
 	return s.GetByID(message.ID, userID)
+}
+
+type mentionPayload struct {
+	Mentions []struct {
+		ID uuid.UUID `json:"id"`
+	} `json:"mentions"`
+}
+
+func (s *Service) createMentionNotifications(
+	topicID uuid.UUID,
+	senderID uuid.UUID,
+	messageID uuid.UUID,
+	metadata *string,
+) error {
+	if metadata == nil || s.notificationRepo == nil {
+		return nil
+	}
+
+	var payload mentionPayload
+	if err := json.Unmarshal([]byte(*metadata), &payload); err != nil {
+		return nil
+	}
+
+	if len(payload.Mentions) == 0 {
+		return nil
+	}
+
+	seen := make(map[uuid.UUID]struct{})
+	userIDs := make([]uuid.UUID, 0, len(payload.Mentions))
+	for _, mention := range payload.Mentions {
+		if mention.ID == senderID {
+			continue
+		}
+		if _, exists := seen[mention.ID]; exists {
+			continue
+		}
+		seen[mention.ID] = struct{}{}
+		userIDs = append(userIDs, mention.ID)
+	}
+
+	if len(userIDs) == 0 {
+		return nil
+	}
+
+	return s.notificationRepo.CreateMentionNotifications(messageID, topicID, userIDs)
 }
 
 // Get message by ID

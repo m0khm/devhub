@@ -83,11 +83,29 @@ export interface Message {
   reactions?: ReactionGroup[];
 }
 
+export interface Mention {
+  id: string;
+  name: string;
+  handle?: string;
+}
+
 export interface ReactionGroup {
   emoji: string;
   count: number;
   users: string[];
   has_self: boolean;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  body: string;
+  link?: string;
+  type: string;
+  is_read: boolean;
+  read_at?: string;
+  created_at: string;
 }
 
 export interface LoginRequest {

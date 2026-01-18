@@ -7,7 +7,7 @@ interface MessageListProps {
   pinnedMessages: Message[];
   loading: boolean;
   highlightedMessageId?: string | null;
-  onTogglePin?: (message: Message) => void;
+  onReply?: (message: Message) => void;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -15,7 +15,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   pinnedMessages,
   loading,
   highlightedMessageId,
-  onTogglePin,
+  onReply,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -93,8 +93,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           ref={setMessageRef(message.id)}
           message={message}
           isHighlighted={message.id === highlightedMessageId}
-          isPinned={pinnedIds.has(message.id)}
-          onTogglePin={onTogglePin}
+          onReply={onReply}
         />
       ))}
       <div ref={messagesEndRef} />
