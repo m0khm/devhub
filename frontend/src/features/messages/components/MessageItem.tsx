@@ -5,10 +5,25 @@ import { apiClient } from '../../../api/client';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { DocumentIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github-dark.css';
 
 interface MessageItemProps {
   message: Message;
   isHighlighted?: boolean;
+}
+
+interface CodeMetadata {
+  language?: string;
+  filename?: string;
+  content?: string;
+}
+
+interface FileMetadata {
+  filename?: string;
+  mime_type?: string;
+  size?: number;
+  url?: string;
 }
 
 export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
@@ -39,7 +54,7 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
       const metadata =
         typeof message.metadata === 'string'
           ? JSON.parse(message.metadata)
-          : message.metadata;
+          : (message.metadata as FileMetadata | undefined);
 
       const isImage = metadata.mime_type?.startsWith('image/');
 
@@ -68,6 +83,47 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
                 </p>
               </div>
             </a>
+          )}
+        </div>
+      );
+    };
+
+    const renderCodeContent = () => {
+      if (message.type !== 'code') return null;
+
+      const metadata =
+        typeof message.metadata === 'string'
+          ? JSON.parse(message.metadata)
+          : message.metadata;
+
+      const codeContent = metadata?.content ?? message.content;
+      const language = metadata?.language;
+      const filename = metadata?.filename;
+
+      const highlightedCode =
+        language && hljs.getLanguage(language)
+          ? hljs.highlight(codeContent, { language }).value
+          : hljs.highlightAuto(codeContent).value;
+
+      return (
+        <div className="mt-2 w-full">
+          {filename && (
+            <div className="rounded-t-lg bg-slate-900/80 px-3 py-2 text-xs text-slate-300 font-mono">
+              {filename}
+            </div>
+          )}
+          <pre
+            className={`overflow-x-auto rounded-lg bg-slate-900/90 p-3 text-sm ${
+              filename ? 'rounded-t-none' : ''
+            }`}
+          >
+            <code
+              className="hljs"
+              dangerouslySetInnerHTML={{ __html: highlightedCode }}
+            />
+          </pre>
+          {language && (
+            <div className="mt-1 text-xs text-slate-400">{language}</div>
           )}
         </div>
       );
@@ -115,8 +171,14 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
                 : 'bg-slate-800/80 text-slate-100 shadow'
             }`}
           >
-            <p className="whitespace-pre-wrap break-words">{message.content}</p>
-            {renderFileContent()}
+            {message.type === 'code' ? (
+              renderCodeContent()
+            ) : (
+              <>
+                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                {renderFileContent()}
+              </>
+            )}
           </div>
 
           {/* Reactions */}
