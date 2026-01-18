@@ -30,6 +30,10 @@ func (h *FileHandler) SetWSHandler(wsHandler *WSHandler) {
 // UploadFile handles file upload
 // POST /api/topics/:topicId/upload
 func (h *FileHandler) UploadFile(c *fiber.Ctx) error {
+	if h.s3Client == nil {
+		return fiber.NewError(fiber.StatusServiceUnavailable, "storage unavailable")
+	}
+
 	userID, err := getUserIDFromContext(c)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
