@@ -4,6 +4,7 @@ import { apiClient } from '../../../api/client';
 import { wsClient } from '../../../api/websocket';
 import { useAuthStore } from '../../../store/authStore';
 import { useMessageStore } from '../../../store/messageStore';
+import { useNotificationStore } from '../../../store/notificationStore';
 import { useThemeStore } from '../../../store/themeStore';
 import toast from 'react-hot-toast';
 import { MessageList } from './MessageList';
@@ -26,6 +27,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
     deleteMessage,
     clearMessages,
   } = useMessageStore();
+  const { addNotification } = useNotificationStore();
   const { theme, toggleTheme } = useThemeStore();
 
   const [loading, setLoading] = useState(true);
@@ -54,6 +56,16 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
         },
         onReactionUpdated: (payload) => {
           updateMessage(payload.message_id, { reactions: payload.reactions });
+        },
+        onNotificationCreated: (payload) => {
+          const notification = payload?.notification;
+          if (!notification) {
+            return;
+          }
+          if (user?.id && notification.user_id !== user.id) {
+            return;
+          }
+          addNotification(notification);
         },
         onConnect: () => {
           console.log('WebSocket connected');

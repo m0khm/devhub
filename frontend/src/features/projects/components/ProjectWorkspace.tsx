@@ -46,6 +46,20 @@ export const ProjectWorkspace: React.FC = () => {
   const activeProjectId = routeProjectId ?? currentProject?.id;
   const openProfileModal = () => setIsProfileOpen(true);
 
+  const header = (
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div className="text-sm text-text-muted">Workspace</div>
+        <div className="text-lg font-semibold text-text">
+          {currentProject?.name || 'Select a project'}
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <NotificationBell />
+      </div>
+    </div>
+  );
+
   return (
     <>
       <ProjectView projectId={activeProjectId} onOpenProfile={openProfileModal}>
