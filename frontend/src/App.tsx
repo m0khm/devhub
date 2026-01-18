@@ -7,6 +7,7 @@ import { RegisterPage } from './features/auth/components/RegisterPage';
 import { ProjectList } from './features/projects/components/ProjectList';
 import { ProjectView } from './features/projects/components/ProjectView';
 import { ProfilePage } from './features/profile/ProfilePage';
+import { LandingPage } from './features/landing/LandingPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -25,10 +26,11 @@ function App() {
     <BrowserRouter>
       <Toaster position="top-right" />
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route
-          path="/"
+          path="/app"
           element={
             <ProtectedRoute>
               <ProjectList />
