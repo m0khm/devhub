@@ -9,12 +9,51 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
   
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const validateStep = () => {
+    if (step === 1) {
+      if (!email.trim()) {
+        toast.error('Please enter your email');
+        return false;
+      }
+
+      if (!/^\S+@\S+\.\S+$/.test(email)) {
+        toast.error('Please enter a valid email');
+        return false;
+      }
+    }
+
+    if (step === 2 && !password) {
+      toast.error('Please enter your password');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleNext = () => {
+    if (!validateStep()) {
+      return;
+    }
+
+    setStep(2);
+  };
+
+  const handleBack = () => {
+    setStep(1);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (step !== 2 || !validateStep()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -45,41 +84,71 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              placeholder="you@example.com"
-              required
-            />
+          <div className="text-sm text-slate-500">
+            Step {step} of 2
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              placeholder="••••••••"
-              required
-            />
-          </div>
+          {step === 1 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
+            </div>
+          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-500 focus:ring-4 focus:ring-blue-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
+          {step === 2 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
+            </div>
+          )}
+
+          <div className="flex flex-col gap-3">
+            {step === 2 && (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="w-full rounded-lg border border-slate-200 bg-white py-3 font-medium text-slate-700 hover:bg-slate-50 transition"
+              >
+                Back
+              </button>
+            )}
+
+            {step === 1 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-500 focus:ring-4 focus:ring-blue-200 transition"
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-500 focus:ring-4 focus:ring-blue-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Signing in...' : 'Sign In'}
+              </button>
+            )}
+          </div>
         </form>
 
         <p className="mt-6 text-center text-slate-600">
