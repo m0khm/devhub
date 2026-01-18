@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
+import { useThemeStore } from './store/themeStore';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { RegisterPage } from './features/auth/components/RegisterPage';
 import { ProjectWorkspace } from './features/projects/components/ProjectWorkspace';
@@ -16,10 +17,18 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 function App() {
   const loadFromStorage = useAuthStore((state) => state.loadFromStorage);
+  const theme = useThemeStore((state) => state.theme);
+  const loadThemeFromStorage = useThemeStore((state) => state.loadFromStorage);
 
   useEffect(() => {
     loadFromStorage();
-  }, []);
+    loadThemeFromStorage();
+  }, [loadFromStorage, loadThemeFromStorage]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  }, [theme]);
 
   return (
     <BrowserRouter>
