@@ -3,6 +3,7 @@ package message
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -79,7 +80,7 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 }
 
 // Get messages by topic
-// GET /api/topics/:topicId/messages?limit=50&offset=0&before=2024-01-01T00:00:00Z
+// GET /api/topics/:topicId/messages?limit=50&offset=0&before=2024-01-01T00:00:00Z&query=search
 func (h *Handler) GetByTopicID(c *fiber.Ctx) error {
 	userID, err := getUserIDFromContext(c)
 	if err != nil {
@@ -117,7 +118,21 @@ func (h *Handler) GetByTopicID(c *fiber.Ctx) error {
 		}
 	}
 
-	messages, err := h.service.GetByTopicID(topicID, userID, limit, offset, before)
+	query := strings.TrimSpace(c.Query("query"))
+	if query == "" {
+		query = strings.TrimSpace(c.Query("q"))
+	}
+
+	var (
+		messages []MessageWithUser
+		err      error
+	)
+
+	if query != "" {
+		messages, err = h.service.SearchByTopicID(topicID, userID, query, limit)
+	} else {
+		messages, err = h.service.GetByTopicID(topicID, userID, limit, offset, before)
+	}
 	if err != nil {
 		if errors.Is(err, ErrNotProjectMember) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -156,24 +171,14 @@ func (h *Handler) SearchMessages(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check access
-	topicObj, err := h.service.topicRepo.GetByID(topicID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Topic not found",
-		})
-	}
-
-	isMember, err := h.service.projectRepo.IsUserMember(topicObj.ProjectID, userID)
-	if err != nil || !isMember {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "Not a project member",
-		})
-	}
-
 	// Search
-	messages, err := h.service.repo.Search(topicID, query, 50)
+	messages, err := h.service.SearchByTopicID(topicID, userID, query, 50)
 	if err != nil {
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Not a project member",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to search messages",
 		})
