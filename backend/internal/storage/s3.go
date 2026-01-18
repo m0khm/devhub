@@ -84,3 +84,7 @@ func (s *S3Client) Delete(ctx context.Context, key string) error {
 func (s *S3Client) GetURL(key string) string {
 	return fmt.Sprintf("http://localhost:9000/%s/%s", s.bucket, key)
 }
+
+func (s *S3Client) IsReady() bool {
+	return s != nil && s.client != nil && s.bucket != ""
+}

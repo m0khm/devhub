@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -30,8 +31,11 @@ func (h *FileHandler) SetWSHandler(wsHandler *WSHandler) {
 // UploadFile handles file upload
 // POST /api/topics/:topicId/upload
 func (h *FileHandler) UploadFile(c *fiber.Ctx) error {
-	if h.s3Client == nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "storage unavailable")
+	if h.s3Client == nil || !h.s3Client.IsReady() {
+		log.Printf("file upload: storage unavailable for topic %s", c.Params("topicId"))
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Storage is unavailable, please try again later",
+		})
 	}
 
 	userID, err := getUserIDFromContext(c)
@@ -67,6 +71,7 @@ func (h *FileHandler) UploadFile(c *fiber.Ctx) error {
 	// Open file
 	fileReader, err := file.Open()
 	if err != nil {
+		log.Printf("file upload: failed to open file %s: %v", file.Filename, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to read file",
 		})
@@ -77,6 +82,7 @@ func (h *FileHandler) UploadFile(c *fiber.Ctx) error {
 	ctx := context.Background()
 	uploadResult, err := h.s3Client.Upload(ctx, fileReader, file.Filename, file.Size, file.Header.Get("Content-Type"))
 	if err != nil {
+		log.Printf("file upload: failed to upload file %s: %v", file.Filename, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to upload file",
 		})
@@ -102,7 +108,10 @@ func (h *FileHandler) UploadFile(c *fiber.Ctx) error {
 	message, err := h.service.Create(topicID, userID, messageReq)
 	if err != nil {
 		// Clean up uploaded file
-		h.s3Client.Delete(ctx, uploadResult.Key)
+		if deleteErr := h.s3Client.Delete(ctx, uploadResult.Key); deleteErr != nil {
+			log.Printf("file upload: failed to delete uploaded file %s after message create error: %v", uploadResult.Key, deleteErr)
+		}
+		log.Printf("file upload: failed to create message for topic %s user %s: %v", topicID, userID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to create message",
 		})

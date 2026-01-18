@@ -38,7 +38,11 @@ export const FileUploadButton: React.FC<FileUploadButtonProps> = ({ topicId }) =
       });
       toast.success('File uploaded!');
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to upload file');
+      if (error.response?.status === 503) {
+        toast.error('Storage is unavailable. Please try again later.');
+      } else {
+        toast.error(error.response?.data?.error || 'Failed to upload file');
+      }
     } finally {
       setUploading(false);
       // Reset input
