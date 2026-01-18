@@ -13,9 +13,10 @@ import { VideoCallButton } from '../../video/components/VideoCallButton';
 
 interface ChatViewProps {
   topic: Topic;
+  onOpenProfile?: () => void;
 }
 
-export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
+export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
   const { token } = useAuthStore();
   const {
     messages,
@@ -134,6 +135,18 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
         </div>
 
         <div className="flex items-center gap-2">
+          {onOpenProfile && (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-text transition hover:bg-surface"
+              aria-label="Настройки профиля"
+              title="Настройки профиля"
+            >
+              <span aria-hidden>👤</span>
+              <span className="hidden sm:inline">Профиль</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={toggleTheme}
