@@ -20,10 +20,15 @@ interface ProjectViewSlots {
 
 interface ProjectViewProps {
   projectId?: string;
+  onOpenProfile?: () => void;
   children?: (slots: ProjectViewSlots) => React.ReactNode;
 }
 
-export const ProjectView: React.FC<ProjectViewProps> = ({ projectId, children }) => {
+export const ProjectView: React.FC<ProjectViewProps> = ({
+  projectId,
+  onOpenProfile,
+  children,
+}) => {
   const { projectId: routeProjectId } = useParams<{ projectId: string }>();
   const {
     currentProject,
@@ -196,7 +201,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ projectId, children })
                 <div className="text-slate-300">Loading...</div>
               </div>
             ) : selectedTopic ? (
-              <ChatView topic={selectedTopic} />
+              <ChatView topic={selectedTopic} onOpenProfile={onOpenProfile} />
             ) : (
               <div className="flex flex-1 items-center justify-center">
                 <div className="text-center">
