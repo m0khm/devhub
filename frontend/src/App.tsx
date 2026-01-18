@@ -12,6 +12,10 @@ import { LandingPage } from './features/landing/LandingPage';
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
+  if (!isHydrated) {
+    return null;
+  }
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
 
