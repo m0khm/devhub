@@ -12,7 +12,7 @@ type Message struct {
 	UserID    *uuid.UUID `json:"user_id"` // NULL for system messages
 	Content   string     `json:"content" gorm:"not null"`
 	Type      string     `json:"type" gorm:"not null;default:'text'"` // text, file, system, code, integration
-	Metadata  *string    `json:"metadata" gorm:"type:jsonb"`           // For files, code blocks, etc
+	Metadata  *string    `json:"metadata" gorm:"type:jsonb"`           // For files, code blocks, etc (code: {"language":"ts","filename":"index.ts","content":"..."})
 	ParentID  *uuid.UUID `json:"parent_id"`                            // For threads
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
