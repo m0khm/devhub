@@ -37,44 +37,33 @@ export const ProfilePage: React.FC = () => {
     }
 
     const payload: {
-      name?: string;
-      handle?: string;
-      avatar_url?: string;
-      bio?: string;
-      company?: string;
-      location?: string;
-      phone?: string;
-    } = {};
+      name: string;
+      handle: string;
+      avatar_url: string;
+      bio: string;
+      company: string;
+      location: string;
+      phone: string;
+    } = {
+      name: name.trim(),
+      handle: handle.trim(),
+      avatar_url: avatarUrl.trim(),
+      bio: bio.trim(),
+      company: company.trim(),
+      location: location.trim(),
+      phone: phone.trim(),
+    };
 
-    if (name.trim() && name.trim() !== user.name) {
-      payload.name = name.trim();
-    }
+    const hasChanges =
+      payload.name !== user.name ||
+      payload.handle !== (user.handle ?? '') ||
+      payload.avatar_url !== (user.avatar_url ?? '') ||
+      payload.bio !== (user.bio ?? '') ||
+      payload.company !== (user.company ?? '') ||
+      payload.location !== (user.location ?? '') ||
+      payload.phone !== (user.phone ?? '');
 
-    if (handle.trim() !== (user.handle ?? '')) {
-      payload.handle = handle.trim();
-    }
-
-    if (avatarUrl.trim() && avatarUrl.trim() !== (user.avatar_url ?? '')) {
-      payload.avatar_url = avatarUrl.trim();
-    }
-
-    if (bio.trim() && bio.trim() !== (user.bio ?? '')) {
-      payload.bio = bio.trim();
-    }
-
-    if (company.trim() && company.trim() !== (user.company ?? '')) {
-      payload.company = company.trim();
-    }
-
-    if (location.trim() && location.trim() !== (user.location ?? '')) {
-      payload.location = location.trim();
-    }
-
-    if (phone.trim() && phone.trim() !== (user.phone ?? '')) {
-      payload.phone = phone.trim();
-    }
-
-    if (Object.keys(payload).length === 0) {
+    if (!hasChanges) {
       toast('No changes to save');
       return;
     }
@@ -166,19 +155,6 @@ export const ProfilePage: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Handle
-            </label>
-            <input
-              type="text"
-              value={handle}
-              onChange={(event) => setHandle(event.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              placeholder="@devhub"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
               Avatar URL
             </label>
             <input
@@ -188,6 +164,15 @@ export const ProfilePage: React.FC = () => {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               placeholder="https://example.com/avatar.png"
             />
+            {avatarUrl.trim() ? (
+              <div className="mt-4 flex items-center justify-center rounded-lg border border-gray-200 bg-white p-4">
+                <img
+                  src={avatarUrl}
+                  alt={`${name || 'Profile'} avatar`}
+                  className="h-24 w-24 rounded-full object-cover"
+                />
+              </div>
+            ) : null}
           </div>
 
           <div>
