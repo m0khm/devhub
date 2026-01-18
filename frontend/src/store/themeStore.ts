@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { safeStorage } from '../shared/utils/storage';
 
 type Theme = 'light' | 'dark';
 
@@ -16,7 +17,7 @@ const getInitialTheme = (): Theme => {
     return 'dark';
   }
 
-  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  const stored = safeStorage.get(THEME_STORAGE_KEY);
   if (stored === 'light' || stored === 'dark') {
     return stored;
   }
@@ -28,20 +29,20 @@ export const useThemeStore = create<ThemeState>((set) => ({
   theme: getInitialTheme(),
 
   setTheme: (theme) => {
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    safeStorage.set(THEME_STORAGE_KEY, theme);
     set({ theme });
   },
 
   toggleTheme: () => {
     set((state) => {
       const nextTheme: Theme = state.theme === 'dark' ? 'light' : 'dark';
-      localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+      safeStorage.set(THEME_STORAGE_KEY, nextTheme);
       return { theme: nextTheme };
     });
   },
 
   loadFromStorage: () => {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    const stored = safeStorage.get(THEME_STORAGE_KEY);
     if (stored === 'light' || stored === 'dark') {
       set({ theme: stored });
     }
