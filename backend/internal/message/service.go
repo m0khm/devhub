@@ -76,7 +76,7 @@ func (s *Service) Create(topicID, userID uuid.UUID, req CreateMessageRequest) (*
 
 // Get message by ID
 func (s *Service) GetByID(messageID, currentUserID uuid.UUID) (*MessageWithUser, error) {
-	message, err := s.repo.GetByID(messageID)
+	message, err := s.repo.GetByIDWithUser(messageID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrMessageNotFound
@@ -104,12 +104,9 @@ func (s *Service) GetByID(messageID, currentUserID uuid.UUID) (*MessageWithUser,
 		return nil, fmt.Errorf("failed to get reactions: %w", err)
 	}
 
-	// TODO: Fetch user info properly
-	// For now, return basic message
-	return &MessageWithUser{
-		Message:   *message,
-		Reactions: reactions,
-	}, nil
+	message.Reactions = reactions
+
+	return message, nil
 }
 
 // Get messages by topic

@@ -27,6 +27,25 @@ func (r *Repository) GetByID(id uuid.UUID) (*Message, error) {
 	return &message, err
 }
 
+// Get message by ID with user info
+func (r *Repository) GetByIDWithUser(id uuid.UUID) (*MessageWithUser, error) {
+	var message MessageWithUser
+
+	err := r.db.Table("messages").
+		Select(`
+			messages.*,
+			users.id as "user__id",
+			users.name as "user__name",
+			users.email as "user__email",
+			users.avatar_url as "user__avatar_url"
+		`).
+		Joins("LEFT JOIN users ON users.id = messages.user_id").
+		Where("messages.id = ?", id).
+		Take(&message).Error
+
+	return &message, err
+}
+
 // Get messages by topic with pagination
 func (r *Repository) GetByTopicID(topicID uuid.UUID, limit, offset int, before *time.Time) ([]MessageWithUser, error) {
 	var messages []MessageWithUser
