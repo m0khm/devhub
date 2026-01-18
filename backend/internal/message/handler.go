@@ -125,7 +125,6 @@ func (h *Handler) GetByTopicID(c *fiber.Ctx) error {
 
 	var (
 		messages []MessageWithUser
-		err      error
 	)
 
 	if query != "" {

@@ -27,10 +27,8 @@ export const VideoCallButton: React.FC<VideoCallButtonProps> = ({ topicId }) => 
       }>(`/topics/${topicId}/video/room`);
 
       console.info('Video call room response:', response.data);
-      setRoomName(response.data.room_name);
-      setRoomUrl(response.data.room_url);
-      setDomain(response.data.domain);
-      toast.success('Video call started!');
+      window.open(response.data.room_url, "_blank", "noopener,noreferrer");
+        toast.success('Video call started!');
     } catch (error) {
       const apiError = error as AxiosError<{ error?: string }>;
       const apiMessage = apiError.response?.data?.error;

@@ -1,4 +1,24 @@
 services:
+  coturn:
+    image: coturn/coturn:latest
+    restart: unless-stopped
+    network_mode: "host"
+    command: ["-n",
+      "--realm=dvhub.tech",
+      "--server-name=dvhub.tech",
+      "--listening-ip=0.0.0.0",
+      "--listening-port=3478",
+      "--external-ip=91.184.243.98",
+      "--min-port=49160",
+      "--max-port=49200",
+      "--fingerprint",
+      "--lt-cred-mech",
+      "--user=devhub:devhub_turn_password",
+      "--cli-password=devhub_cli",
+      "--log-file=stdout",
+      "--verbose",
+      "--no-tls",
+      "--no-dtls" ]
   postgres:
     image: postgres:15-alpine
     container_name: devhub-postgres-prod
@@ -115,3 +135,4 @@ volumes:
 networks:
   devhub-network:
     driver: bridge
+

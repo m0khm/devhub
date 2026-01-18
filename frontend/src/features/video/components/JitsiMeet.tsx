@@ -131,7 +131,35 @@ export const JitsiMeet: React.FC<JitsiMeetProps> = ({
       };
 
       apiRef.current = new window.JitsiMeetExternalAPI(scriptDomain, options);
-      setIsLoading(false);
+
+        const api = apiRef.current;
+
+        // Verbose diagnostics
+        const events = [
+          "videoConferenceJoined",
+          "videoConferenceLeft",
+          "participantJoined",
+          "participantLeft",
+          "conferenceFailed",
+          "readyToClose",
+          "errorOccurred",
+          "audioMuteStatusChanged",
+          "videoMuteStatusChanged",
+          "endpointTextMessageReceived",
+        ];
+        events.forEach((ev) => api.addEventListener(ev, (payload: any) => {
+          console.log("[jitsi:event]", ev, payload);
+        }));
+
+        api.getAvailableDevices?.().then((d:any)=>console.log("[jitsi] devices", d)).catch(()=>{});
+        api.getIFrame?.() && console.log("[jitsi] iframe", api.getIFrame());
+      
+      console.log("[jitsi] created", scriptDomain, options);
+      apiRef.current.addListener("videoConferenceJoined", (e:any)=>console.log("[jitsi] joined", e));
+      apiRef.current.addListener("conferenceFailed", (e:any)=>console.error("[jitsi] conferenceFailed", e));
+      apiRef.current.addListener("errorOccurred", (e:any)=>console.error("[jitsi] errorOccurred", e));
+      apiRef.current.addListener("readyToClose", ()=>console.log("[jitsi] readyToClose"));
+setIsLoading(false);
 
       apiRef.current.addEventListener('videoConferenceLeft', () => {
         onClose();
