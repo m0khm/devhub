@@ -349,3 +349,97 @@ func (s *Service) ToggleReaction(messageID, userID uuid.UUID, emoji string) erro
 		return s.repo.AddReaction(&reaction)
 	}
 }
+
+// Pin message
+func (s *Service) PinMessage(messageID, userID uuid.UUID) error {
+	message, err := s.repo.GetByID(messageID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrMessageNotFound
+		}
+		return fmt.Errorf("failed to get message: %w", err)
+	}
+
+	topicObj, err := s.topicRepo.GetByID(message.TopicID)
+	if err != nil {
+		return fmt.Errorf("failed to get topic: %w", err)
+	}
+
+	isMember, err := s.projectRepo.IsUserMember(topicObj.ProjectID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to check membership: %w", err)
+	}
+	if !isMember {
+		return ErrNotProjectMember
+	}
+
+	if err := s.repo.PinMessage(message.TopicID, message.ID); err != nil {
+		return fmt.Errorf("failed to pin message: %w", err)
+	}
+
+	return nil
+}
+
+// Unpin message
+func (s *Service) UnpinMessage(messageID, userID uuid.UUID) error {
+	message, err := s.repo.GetByID(messageID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrMessageNotFound
+		}
+		return fmt.Errorf("failed to get message: %w", err)
+	}
+
+	topicObj, err := s.topicRepo.GetByID(message.TopicID)
+	if err != nil {
+		return fmt.Errorf("failed to get topic: %w", err)
+	}
+
+	isMember, err := s.projectRepo.IsUserMember(topicObj.ProjectID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to check membership: %w", err)
+	}
+	if !isMember {
+		return ErrNotProjectMember
+	}
+
+	if err := s.repo.UnpinMessage(message.TopicID, message.ID); err != nil {
+		return fmt.Errorf("failed to unpin message: %w", err)
+	}
+
+	return nil
+}
+
+// Get pinned messages by topic
+func (s *Service) GetPinnedByTopicID(topicID, userID uuid.UUID) ([]MessageWithUser, error) {
+	topicObj, err := s.topicRepo.GetByID(topicID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("topic not found")
+		}
+		return nil, fmt.Errorf("failed to get topic: %w", err)
+	}
+
+	isMember, err := s.projectRepo.IsUserMember(topicObj.ProjectID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check membership: %w", err)
+	}
+	if !isMember {
+		return nil, ErrNotProjectMember
+	}
+
+	messages, err := s.repo.GetPinnedByTopicID(topicID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pinned messages: %w", err)
+	}
+
+	for i := range messages {
+		reactions, err := s.repo.GetReactions(messages[i].ID, userID)
+		if err != nil {
+			continue
+		}
+		messages[i].Reactions = reactions
+	}
+
+	return messages, nil
+}

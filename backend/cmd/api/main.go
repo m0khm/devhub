@@ -185,6 +185,7 @@ func main() {
 	// Message routes (внутри топика)
 	topicRoutes.Post("/:topicId/messages", messageHandler.Create)
 	topicRoutes.Get("/:topicId/messages", messageHandler.GetByTopicID)
+	topicRoutes.Get("/:topicId/pins", messageHandler.GetPinnedByTopicID)
 	topicRoutes.Get("/:topicId/search", messageHandler.SearchMessages)
 	topicRoutes.Post("/:topicId/upload", fileHandler.UploadFile)
 
@@ -196,6 +197,8 @@ func main() {
 	messageRoutes.Put("/:id", messageHandler.Update)
 	messageRoutes.Delete("/:id", messageHandler.Delete)
 	messageRoutes.Post("/:id/reactions", messageHandler.ToggleReaction)
+	messageRoutes.Post("/:id/pin", messageHandler.PinMessage)
+	messageRoutes.Delete("/:id/pin", messageHandler.UnpinMessage)
 
 	// Direct message routes
 	dmRoutes := protected.Group("/dm")

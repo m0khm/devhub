@@ -32,6 +32,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
   const { theme, toggleTheme } = useThemeStore();
 
   const [loading, setLoading] = useState(true);
+  const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
@@ -84,7 +85,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
   useEffect(() => {
     clearMessages();
     setHighlightedMessageId(null);
+    setPinnedMessages([]);
     loadMessages();
+    loadPinnedMessages();
 
     if (token) {
       wsClient.connect(topic.id, token, {
@@ -93,9 +96,17 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
         },
         onMessageUpdated: (payload) => {
           updateMessage(payload.message.id, payload.message);
+          setPinnedMessages((prev) =>
+            prev.map((message) =>
+              message.id === payload.message.id ? { ...message, ...payload.message } : message
+            )
+          );
         },
         onMessageDeleted: (payload) => {
           deleteMessage(payload.message_id);
+          setPinnedMessages((prev) =>
+            prev.filter((message) => message.id !== payload.message_id)
+          );
         },
         onTyping: (payload) => {
           handleTyping(payload);
@@ -128,6 +139,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
     return () => {
       wsClient.disconnect();
       clearMessages();
+      setPinnedMessages([]);
 
       Object.values(typingTimeoutRef.current).forEach((t) => clearTimeout(t));
       typingTimeoutRef.current = {};
@@ -146,6 +158,15 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
       toast.error('Failed to load messages');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPinnedMessages = async () => {
+    try {
+      const response = await apiClient.get<Message[]>(`/topics/${topic.id}/pins`);
+      setPinnedMessages(response.data);
+    } catch (error) {
+      toast.error('Failed to load pinned messages');
     }
   };
 
