@@ -1,6 +1,8 @@
 package dm
 
 import (
+	"log"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
@@ -32,6 +34,7 @@ func (r *Repository) GetThreadByUsers(projectID, userID, otherUserID uuid.UUID) 
 		Where("topics.project_id = ? AND topics.type = 'direct'", projectID).
 		Take(&thread).Error
 	if err != nil {
+		log.Printf("dm repo: GetThreadByUsers failed project %s users %s/%s: %v", projectID, userID, otherUserID, err)
 		return nil, err
 	}
 	return &thread, nil
@@ -55,6 +58,7 @@ func (r *Repository) ListThreads(projectID, userID uuid.UUID) ([]DirectMessageTh
 		Order("topics.updated_at DESC").
 		Scan(&threads).Error
 	if err != nil {
+		log.Printf("dm repo: ListThreads failed project %s user %s: %v", projectID, userID, err)
 		return nil, err
 	}
 	return threads, nil
@@ -91,6 +95,7 @@ func (r *Repository) CreateThread(projectID, userID, otherUserID uuid.UUID, thre
 		return nil
 	})
 	if err != nil {
+		log.Printf("dm repo: CreateThread failed project %s users %s/%s: %v", projectID, userID, otherUserID, err)
 		return nil, err
 	}
 	return &created, nil
@@ -103,6 +108,7 @@ func (r *Repository) GetUserSummary(userID uuid.UUID) (*UserSummary, error) {
 		Where("id = ?", userID).
 		Take(&user).Error
 	if err != nil {
+		log.Printf("dm repo: GetUserSummary failed user %s: %v", userID, err)
 		return nil, err
 	}
 	return &user, nil

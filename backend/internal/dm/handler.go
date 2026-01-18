@@ -2,6 +2,7 @@ package dm
 
 import (
 	"errors"
+	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -56,22 +57,27 @@ func (h *Handler) CreateOrGet(c *fiber.Ctx) error {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrNotProjectMember):
+			log.Printf("dm create/get: user %s is not member of project %s: %v", userID, req.ProjectID, err)
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error": "Not a project member",
 			})
 		case errors.Is(err, ErrInvalidUser):
+			log.Printf("dm create/get: invalid user %s for project %s: %v", req.UserID, req.ProjectID, err)
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "User not found",
 			})
 		case errors.Is(err, ErrInvalidThread):
+			log.Printf("dm create/get: invalid thread for project %s user %s other %s: %v", req.ProjectID, userID, req.UserID, err)
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": "Invalid direct message",
 			})
 		case errors.Is(err, gorm.ErrRecordNotFound):
+			log.Printf("dm create/get: thread not found for project %s user %s other %s: %v", req.ProjectID, userID, req.UserID, err)
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Direct thread not found",
 			})
 		default:
+			log.Printf("dm create/get: failed for project %s user %s other %s: %v", req.ProjectID, userID, req.UserID, err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Failed to create direct thread",
 			})
@@ -96,9 +102,16 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	if projectIDParam == "" {
 		projectIDParam = c.Params("projectId")
 	}
+	if projectIDParam == "" {
+		log.Printf("dm list: missing project ID for user %s", userID)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Project ID is required",
+		})
+	}
 
 	projectID, err := uuid.Parse(projectIDParam)
 	if err != nil {
+		log.Printf("dm list: invalid project ID %q for user %s: %v", projectIDParam, userID, err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid project ID",
 		})
@@ -107,10 +120,12 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	threads, err := h.service.ListThreads(projectID, userID)
 	if err != nil {
 		if errors.Is(err, ErrNotProjectMember) {
+			log.Printf("dm list: user %s not member of project %s: %v", userID, projectID, err)
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error": "Not a project member",
 			})
 		}
+		log.Printf("dm list: failed for user %s project %s: %v", userID, projectID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to load direct threads",
 		})
