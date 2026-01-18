@@ -79,7 +79,7 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
       </div>
 
       {/* Topics list */}
-      <div className="flex-1 space-y-5 overflow-y-auto p-3">
+      <div className="flex-1 space-y-4 overflow-y-auto px-3 py-3">
         <div>
           <p className="px-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
             Темы
@@ -89,7 +89,7 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
               <button
                 key={topic.id}
                 onClick={() => onSelectTopic(topic.id)}
-                className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 transition ${
+                className={`w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-left transition ${
                   selectedTopicId === topic.id
                     ? 'bg-surface-muted/90 text-text shadow-sm'
                     : 'text-text hover:bg-surface-muted/60'
@@ -101,7 +101,7 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
                   }
                 >
                   {typeof getTopicIcon(topic.type, topic.icon) === 'string' ? (
-                    <span className="text-xl">{getTopicIcon(topic.type, topic.icon)}</span>
+                    <span className="text-lg">{getTopicIcon(topic.type, topic.icon)}</span>
                   ) : (
                     getTopicIcon(topic.type, topic.icon)
                   )}
@@ -129,7 +129,7 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
               <button
                 key={thread.id}
                 onClick={() => onSelectTopic(thread.id)}
-                className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 transition ${
+                className={`w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-left transition ${
                   selectedTopicId === thread.id
                     ? 'bg-surface-muted/90 text-text shadow-sm'
                     : 'text-text hover:bg-surface-muted/60'
