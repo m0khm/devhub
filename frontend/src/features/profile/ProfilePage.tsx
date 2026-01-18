@@ -36,7 +36,15 @@ export const ProfilePage: React.FC = () => {
       return;
     }
 
-    const payload: { name?: string; handle?: string; avatar_url?: string } = {};
+    const payload: {
+      name?: string;
+      handle?: string;
+      avatar_url?: string;
+      bio?: string;
+      company?: string;
+      location?: string;
+      phone?: string;
+    } = {};
 
     if (name.trim() && name.trim() !== user.name) {
       payload.name = name.trim();
@@ -64,10 +72,6 @@ export const ProfilePage: React.FC = () => {
 
     if (phone.trim() && phone.trim() !== (user.phone ?? '')) {
       payload.phone = phone.trim();
-    }
-
-    if (handle.trim() && handle.trim() !== (user.handle ?? '')) {
-      payload.handle = handle.trim();
     }
 
     if (Object.keys(payload).length === 0) {
@@ -183,19 +187,6 @@ export const ProfilePage: React.FC = () => {
               onChange={(event) => setAvatarUrl(event.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               placeholder="https://example.com/avatar.png"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Handle
-            </label>
-            <input
-              type="text"
-              value={handle}
-              onChange={(event) => setHandle(event.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              placeholder="@yourhandle"
             />
           </div>
 
