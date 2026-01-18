@@ -1,15 +1,18 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useProjectStore } from '../../../store/projectStore';
 import {
   ChatBubbleLeftRightIcon,
   StarIcon,
   PlusIcon,
   Cog6ToothIcon,
+  UserCircleIcon,
 } from '@heroicons/react/24/outline';
 
 export const ProjectSidebar: React.FC = () => {
   const { projects, currentProject } = useProjectStore();
+  const location = useLocation();
+  const isProfileActive = location.pathname === '/profile';
 
   return (
     <div className="flex h-full flex-col items-center justify-between py-4">
@@ -76,6 +79,17 @@ export const ProjectSidebar: React.FC = () => {
         >
           <PlusIcon className="h-5 w-5" />
         </button>
+        <Link
+          to="/profile"
+          className={`flex h-11 w-11 items-center justify-center rounded-2xl border transition ${
+            isProfileActive
+              ? 'border-blue-500/80 bg-slate-900 text-white shadow-[0_0_12px_rgba(37,99,235,0.35)]'
+              : 'border-slate-800 bg-slate-900/70 text-slate-300 hover:border-slate-700 hover:bg-slate-900'
+          }`}
+          aria-label="Профиль"
+        >
+          <UserCircleIcon className="h-5 w-5" />
+        </Link>
         <button
           type="button"
           className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/70 text-slate-300 transition hover:border-slate-700 hover:bg-slate-900"
