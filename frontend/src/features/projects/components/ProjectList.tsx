@@ -44,14 +44,14 @@ export const ProjectList: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Your Projects</h1>
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-slate-100">Your Projects</h1>
           <button
             type="button"
             onClick={openCreate}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
           >
             <PlusIcon className="w-5 h-5" />
             New Project
@@ -59,34 +59,36 @@ export const ProjectList: React.FC = () => {
         </div>
 
         {projects.length === 0 ? (
-          <div className="text-center py-12">
-            <FolderIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h2 className="text-xl font-semibold text-gray-700 mb-2">No projects yet</h2>
-            <p className="text-gray-500 mb-6">Create your first project to get started</p>
+          <div className="py-12 text-center">
+            <FolderIcon className="mx-auto mb-4 h-16 w-16 text-slate-500" />
+            <h2 className="mb-2 text-xl font-semibold text-slate-200">No projects yet</h2>
+            <p className="mb-6 text-slate-400">Create your first project to get started</p>
             <button
               type="button"
               onClick={openCreate}
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white transition hover:bg-blue-700"
             >
               <PlusIcon className="w-5 h-5" />
               Create Project
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((p) => (
               <Link
                 key={p.id}
                 to={`/projects/${p.id}`}
-                className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition border border-gray-200"
+                className="rounded-xl border border-slate-800/80 bg-slate-900/70 p-6 shadow-sm transition hover:border-slate-700 hover:bg-slate-900/90"
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <FolderIcon className="w-6 h-6 text-blue-600" />
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-blue-500/20">
+                    <FolderIcon className="h-6 w-6 text-blue-300" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate mb-1">{p.name}</h3>
-                    {p.description && <p className="text-sm text-gray-600 line-clamp-2">{p.description}</p>}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="mb-1 truncate font-semibold text-slate-100">{p.name}</h3>
+                    {p.description && (
+                      <p className="line-clamp-2 text-sm text-slate-400">{p.description}</p>
+                    )}
                   </div>
                 </div>
               </Link>
@@ -189,7 +191,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ open, onClose, 
   const dialogStyle: React.CSSProperties = {
     width: '100%',
     maxWidth: 480,
-    background: '#fff',
+    background: '#0f172a',
     borderRadius: 16,
     boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
     padding: 24,
@@ -205,6 +207,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ open, onClose, 
           role="dialog"
           aria-modal="true"
           style={dialogStyle}
+          className="text-slate-100"
           onMouseDown={(e) => e.stopPropagation()}
         >
           <div className="flex items-start justify-between mb-4">
@@ -212,33 +215,37 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ open, onClose, 
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-2 hover:bg-gray-100"
+              className="rounded-lg p-2 text-slate-300 hover:bg-slate-800"
               aria-label="Close"
             >
-              <XMarkIcon className="w-5 h-5 text-gray-600" />
+              <XMarkIcon className="w-5 h-5 text-slate-300" />
             </button>
           </div>
 
           <form onSubmit={submit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Project Name</label>
+              <label className="mb-2 block text-sm font-medium text-slate-300">
+                Project Name
+              </label>
               <input
                 ref={nameRef}
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-2 text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="My Awesome Project"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
+              <label className="mb-2 block text-sm font-medium text-slate-300">
+                Description (optional)
+              </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-2 text-slate-100 outline-none focus:ring-2 focus:ring-blue-500"
                 rows={3}
                 placeholder="What's this project about?"
               />
@@ -248,7 +255,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ open, onClose, 
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                className="flex-1 rounded-lg border border-slate-700 px-4 py-2 text-slate-200 transition hover:bg-slate-800"
                 disabled={submitting}
               >
                 Cancel
