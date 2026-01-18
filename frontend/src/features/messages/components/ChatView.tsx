@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { Topic, Message } from '../../../shared/types';
+import React, { useEffect, useState, useRef } from 'react';
+import type { Mention, Topic, Message } from '../../../shared/types';
 import { apiClient } from '../../../api/client';
 import { wsClient } from '../../../api/websocket';
 import { useAuthStore } from '../../../store/authStore';
 import { useMessageStore } from '../../../store/messageStore';
+import { useNotificationStore } from '../../../store/notificationStore';
 import { useThemeStore } from '../../../store/themeStore';
 import toast from 'react-hot-toast';
 import { MessageList } from './MessageList';
@@ -14,9 +15,10 @@ import { VideoCallButton } from '../../video/components/VideoCallButton';
 
 interface ChatViewProps {
   topic: Topic;
+  onOpenProfile?: () => void;
 }
 
-export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
+export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
   const { token } = useAuthStore();
   const {
     messages,
@@ -26,6 +28,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
     deleteMessage,
     clearMessages,
   } = useMessageStore();
+  const { addNotification } = useNotificationStore();
   const { theme, toggleTheme } = useThemeStore();
 
   const [loading, setLoading] = useState(true);
@@ -100,6 +103,16 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
         onReactionUpdated: (payload) => {
           updateMessage(payload.message_id, { reactions: payload.reactions });
         },
+        onNotificationCreated: (payload) => {
+          const notification = payload?.notification;
+          if (!notification) {
+            return;
+          }
+          if (user?.id && notification.user_id !== user.id) {
+            return;
+          }
+          addNotification(notification);
+        },
         onConnect: () => {
           console.log('WebSocket connected');
         },
@@ -156,12 +169,14 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
     }, 3000);
   };
 
-  const handleSendMessage = async (content: string, parentId?: string) => {
+  const handleSendMessage = async (content: string, mentions: Mention[]) => {
     try {
+      const metadata =
+        mentions.length > 0 ? JSON.stringify({ mentions }) : undefined;
       await apiClient.post(`/topics/${topic.id}/messages`, {
         content,
         type: 'text',
-        parent_id: parentId,
+        metadata,
       });
       // добавится через WS
       setReplyToMessage(null);
@@ -192,6 +207,18 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
         </div>
 
         <div className="flex items-center gap-2">
+          {onOpenProfile && (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-text transition hover:bg-surface"
+              aria-label="Настройки профиля"
+              title="Настройки профиля"
+            >
+              <span aria-hidden>👤</span>
+              <span className="hidden sm:inline">Профиль</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={toggleTheme}
@@ -234,36 +261,12 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic }) => {
           />
         </div>
 
-        {threadRoot && (
-          <aside className="w-full max-w-sm border-l border-slate-800/70 bg-slate-900/80 flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/70">
-              <div>
-                <p className="text-sm font-semibold text-slate-200">Thread</p>
-                <p className="text-xs text-slate-400">Replies to this message</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleCloseThread}
-                className="text-xs text-slate-400 hover:text-slate-100 transition"
-              >
-                Close
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-              <MessageItem message={threadRoot} onReply={handleReply} />
-              {threadMessages.length === 0 ? (
-                <p className="text-xs text-slate-500">No replies yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {threadMessages.map((message) => (
-                    <MessageItem key={message.id} message={message} onReply={handleReply} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </aside>
-        )}
-      </div>
+      {/* Message input */}
+      <MessageInput
+        topicId={topic.id}
+        projectId={topic.project_id}
+        onSend={handleSendMessage}
+      />
     </div>
   );
 };
