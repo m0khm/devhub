@@ -3,22 +3,26 @@ services:
     image: coturn/coturn:latest
     restart: unless-stopped
     network_mode: "host"
-    command: ["-n",
-      "--realm=dvhub.tech",
-      "--server-name=dvhub.tech",
-      "--listening-ip=0.0.0.0",
-      "--listening-port=3478",
-      "--external-ip=91.184.243.98",
-      "--min-port=49160",
-      "--max-port=49200",
-      "--fingerprint",
-      "--lt-cred-mech",
-      "--user=devhub:devhub_turn_password",
-      "--cli-password=devhub_cli",
-      "--log-file=stdout",
-      "--verbose",
-      "--no-tls",
-      "--no-dtls" ]
+    command:
+      [
+        "-n",
+        "--realm=dvhub.tech",
+        "--server-name=dvhub.tech",
+        "--listening-ip=0.0.0.0",
+        "--listening-port=3478",
+        "--external-ip=91.184.243.98",
+        "--min-port=49160",
+        "--max-port=49200",
+        "--fingerprint",
+        "--lt-cred-mech",
+        "--user=devhub:devhub_turn_password",
+        "--cli-password=devhub_cli",
+        "--log-file=stdout",
+        "--verbose",
+        "--no-tls",
+        "--no-dtls"
+      ]
+
   postgres:
     image: postgres:15-alpine
     container_name: devhub-postgres-prod
@@ -69,6 +73,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: devhub-backend-prod
+    command: ["sh","-lc","until wget -qO- http://minio:9000/minio/health/live >/dev/null 2>&1; do echo waiting for minio; sleep 2; done; exec ./api"]
     environment:
       PORT: 8080
       ENVIRONMENT: production
@@ -135,4 +140,3 @@ volumes:
 networks:
   devhub-network:
     driver: bridge
-

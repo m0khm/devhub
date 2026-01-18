@@ -8,7 +8,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o api ./cmd/api
 RUN CGO_ENABLED=0 GOOS=linux go build -o migrate ./cmd/migrate
 
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates wget
 WORKDIR /app
 COPY --from=builder /app/api ./api
 COPY --from=builder /app/migrate ./migrate
