@@ -45,7 +45,7 @@ export const ProjectList: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-base text-text">
-      <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="w-full px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-text">Your Projects</h1>
           <button
@@ -74,26 +74,26 @@ export const ProjectList: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col gap-2">
             {projects.map((p) => (
               <Link
                 key={p.id}
                 to={`/projects/${p.id}`}
-                className="rounded-xl border border-border/80 bg-surface/70 p-6 shadow-sm transition hover:border-border hover:bg-surface/90"
+                className="flex items-center gap-3 rounded-lg border border-border/70 bg-surface/70 px-3 py-2 transition hover:border-border hover:bg-surface/90"
               >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-accent/15">
-                    <FolderIcon className="h-6 w-6 text-accent" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="mb-1 truncate font-semibold text-text">{p.name}</h3>
-                    {p.description && (
-                      <p className="line-clamp-2 text-sm text-text-muted">
-                        {p.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                <span className="text-text-muted">
+                  <FolderIcon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-text">
+                    {p.name}
+                  </span>
+                  {p.description && (
+                    <span className="block truncate text-xs text-text-muted">
+                      {p.description}
+                    </span>
+                  )}
+                </span>
               </Link>
             ))}
           </div>
