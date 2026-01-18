@@ -162,9 +162,6 @@ services:
       - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/grafana/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - GF_SERVER_DOMAIN=dvhub.tech
-      - GF_SERVER_PROTOCOL=http
-      - GF_SERVER_HTTP_TLS_ENABLED=false
-      - GF_SERVER_HTTP_TLS_ENABLED=false
 volumes:
   grafana_data:
   prometheus_data:

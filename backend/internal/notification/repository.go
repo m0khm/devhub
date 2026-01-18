@@ -63,3 +63,24 @@ func (r *Repository) MarkRead(id, userID uuid.UUID) (*Notification, error) {
 	notification.ReadAt = &now
 	return &notification, nil
 }
+
+func (r *Repository) CreateMentionNotifications(messageID uuid.UUID, topicID uuid.UUID, userIDs []uuid.UUID) error {
+	link := "/topics/" + topicID.String()
+	if messageID != uuid.Nil {
+		link = link + "?message=" + messageID.String()
+	}
+
+	notifications := make([]Notification, 0, len(userIDs))
+	for _, uid := range userIDs {
+		l := link
+		notifications = append(notifications, Notification{
+			UserID: uid,
+			Title:  "Mention",
+			Body:   "You were mentioned in a message.",
+			Link:   &l,
+			Type:   "mention",
+		})
+	}
+
+	return r.CreateMany(notifications)
+}

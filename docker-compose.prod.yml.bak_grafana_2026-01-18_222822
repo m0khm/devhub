@@ -147,26 +147,7 @@ services:
     ports:
       - "9090:9090"
 
-  grafana:
-    image: grafana/grafana:latest
-    container_name: devhub-grafana-prod
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-    networks:
-      - devhub-network
-    restart: unless-stopped
-
-    environment:
-      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/grafana/
-      - GF_SERVER_SERVE_FROM_SUB_PATH=true
-      - GF_SERVER_DOMAIN=dvhub.tech
-      - GF_SERVER_PROTOCOL=http
-      - GF_SERVER_HTTP_TLS_ENABLED=false
-      - GF_SERVER_HTTP_TLS_ENABLED=false
 volumes:
-  grafana_data:
   prometheus_data:
   postgres_data:
   redis_data:

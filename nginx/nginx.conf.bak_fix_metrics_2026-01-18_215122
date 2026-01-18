@@ -22,8 +22,13 @@ http {
       return 200 "OK\n";
     }
 
-    # на 80 только редирект на https
-    location / { return 301 https://$host$request_uri; }
+    location /metrics {
+    proxy_pass http://backend:8080/metrics;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+}
+
+  location / { return 301 https://$host$request_uri; }
   }
 
   server {
@@ -33,8 +38,18 @@ http {
     ssl_certificate     /etc/letsencrypt/live/dvhub.tech/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/dvhub.tech/privkey.pem;
 
+    # чтобы WS не рвался
     proxy_read_timeout 3600s;
     proxy_send_timeout 3600s;
+
+      location /metrics {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass http://backend:8080/metrics;
+      }
+
 
     location = /health {
       access_log off;
@@ -42,43 +57,33 @@ http {
       return 200 "OK\n";
     }
 
-    # Prometheus metrics (backend)
-    location = /metrics {
-        allow 127.0.0.1;
-        allow 172.19.0.0/16;
-        deny all;
-
+      location /metrics {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-
         proxy_pass http://backend:8080/metrics;
       }
 
-      location ^~ /metrics/ {
-        return 403;
-      }
 
-    # Grafana под /grafana/
-    location /grafana/ {
-        proxy_http_version 1.1;
-
+      location /metrics {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Prefix /grafana;
-
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-
-        proxy_redirect off;
-        proxy_pass http://grafana:3000;
+        proxy_pass http://backend:8080/metrics;
       }
 
-    # API + WebSocket
+
+    # ВАЖНО: WS у тебя на /api/.../ws — поэтому Upgrade должен быть здесь
+      location /metrics {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass http://backend:8080/metrics;
+      }
+
     location /api/ {
       proxy_http_version 1.1;
       proxy_set_header Upgrade $http_upgrade;
@@ -89,17 +94,18 @@ http {
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header X-Forwarded-Proto $scheme;
 
-      proxy_pass http://backend:8080;
+      set $api http://backend:8080;
+      proxy_pass $api;
     }
 
-    # Frontend
     location / {
       proxy_set_header Host $host;
       proxy_set_header X-Real-IP $remote_addr;
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header X-Forwarded-Proto $scheme;
 
-      proxy_pass http://frontend:80;
+      set $up http://frontend:80;
+      proxy_pass $up;
     }
   }
 }

@@ -69,7 +69,6 @@ func main() {
 	messageRepo := message.NewRepository(db)
 	notificationRepo := notification.NewRepository(db)
 	dmRepo := dm.NewRepository(db)
-	notificationRepo := notification.NewRepository(db)
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager)

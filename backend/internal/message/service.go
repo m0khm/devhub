@@ -13,6 +13,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/notification"
 	"github.com/m0khm/devhub/backend/internal/project"
 	"github.com/m0khm/devhub/backend/internal/topic"
+	"strings"
 )
 
 var (
