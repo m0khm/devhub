@@ -14,6 +14,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/database"
 	"github.com/m0khm/devhub/backend/internal/dm"
 	"github.com/m0khm/devhub/backend/internal/message"
+	"github.com/m0khm/devhub/backend/internal/metrics"
 	"github.com/m0khm/devhub/backend/internal/middleware"
 	"github.com/m0khm/devhub/backend/internal/project"
 	"github.com/m0khm/devhub/backend/internal/storage"
@@ -100,6 +101,9 @@ func main() {
 	app.Use(recover.New())
 	app.Use(middleware.Logger())
 	app.Use(middleware.CORS(cfg.Server.AllowOrigins))
+	app.Use(metrics.Middleware())
+
+	app.Get("/metrics", metrics.Handler)
 
 	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
