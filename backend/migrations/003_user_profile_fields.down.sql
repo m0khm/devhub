@@ -1,0 +1,6 @@
+ALTER TABLE users
+    DROP COLUMN IF EXISTS bio,
+    DROP COLUMN IF EXISTS company,
+    DROP COLUMN IF EXISTS location,
+    DROP COLUMN IF EXISTS phone,
+    DROP COLUMN IF EXISTS handle;

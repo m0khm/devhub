@@ -14,6 +14,11 @@ type User struct {
 	Name           string    `json:"name" gorm:"not null"`
 	Handle         *string   `json:"handle" gorm:"column:handle;uniqueIndex"`
 	AvatarURL      *string   `json:"avatar_url"`
+	Bio            *string   `json:"bio" gorm:"type:text"`
+	Company        *string   `json:"company"`
+	Location       *string   `json:"location"`
+	Phone          *string   `json:"phone"`
+	Handle         *string   `json:"handle"`
 	GitHubID       *string   `json:"github_id" gorm:"column:github_id;uniqueIndex"`
 	GitHubUsername *string   `json:"github_username" gorm:"column:github_username"`
 	CreatedAt      time.Time `json:"created_at"`
@@ -42,6 +47,11 @@ type UpdateUserRequest struct {
 	Name      *string `json:"name" validate:"omitempty,min=2"`
 	Handle    *string `json:"handle" validate:"omitempty,min=2,max=32"`
 	AvatarURL *string `json:"avatar_url" validate:"omitempty,url"`
+	Bio       *string `json:"bio" validate:"omitempty,max=500"`
+	Company   *string `json:"company" validate:"omitempty,max=255"`
+	Location  *string `json:"location" validate:"omitempty,max=255"`
+	Phone     *string `json:"phone" validate:"omitempty,max=50"`
+	Handle    *string `json:"handle" validate:"omitempty,max=50"`
 }
 
 func (User) TableName() string {
