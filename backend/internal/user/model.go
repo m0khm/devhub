@@ -12,12 +12,16 @@ type User struct {
 	PasswordHash   *string   `json:"-" gorm:"column:password_hash"`
 	Name           string    `json:"name" gorm:"not null"`
 	AvatarURL      *string   `json:"avatar_url"`
+	Bio            *string   `json:"bio" gorm:"type:text"`
+	Company        *string   `json:"company"`
+	Location       *string   `json:"location"`
+	Phone          *string   `json:"phone"`
+	Handle         *string   `json:"handle"`
 	GitHubID       *string   `json:"github_id" gorm:"column:github_id;uniqueIndex"`
 	GitHubUsername *string   `json:"github_username" gorm:"column:github_username"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
-
 
 // Request/Response DTOs
 type RegisterRequest struct {
@@ -39,6 +43,11 @@ type LoginResponse struct {
 type UpdateUserRequest struct {
 	Name      *string `json:"name" validate:"omitempty,min=2"`
 	AvatarURL *string `json:"avatar_url" validate:"omitempty,url"`
+	Bio       *string `json:"bio" validate:"omitempty,max=500"`
+	Company   *string `json:"company" validate:"omitempty,max=255"`
+	Location  *string `json:"location" validate:"omitempty,max=255"`
+	Phone     *string `json:"phone" validate:"omitempty,max=50"`
+	Handle    *string `json:"handle" validate:"omitempty,max=50"`
 }
 
 func (User) TableName() string {
