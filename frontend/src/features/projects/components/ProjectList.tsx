@@ -2,13 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { PlusIcon, FolderIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Link } from 'react-router-dom';
 
 import { apiClient } from '../../../api/client';
 import { useProjectStore } from '../../../store/projectStore';
 import type { Project } from '../../../shared/types';
 
 export const ProjectList: React.FC = () => {
-  const { projects, currentProject, setProjects, setCurrentProject } = useProjectStore();
+  const { projects, setProjects } = useProjectStore();
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -56,17 +57,6 @@ export const ProjectList: React.FC = () => {
             Create Project
           </button>
         </div>
-      ) : (
-        <div className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
-          {projects.map((project) => {
-            const isActive = currentProject?.id === project.id;
-            const initials = project.name
-              .split(' ')
-              .map((word) => word[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase();
-
         {projects.length === 0 ? (
           <div className="py-12 text-center">
             <FolderIcon className="mx-auto mb-4 h-16 w-16 text-text-muted" />
@@ -103,20 +93,12 @@ export const ProjectList: React.FC = () => {
                       </p>
                     )}
                   </div>
-                )}
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{project.name}</p>
-                  {project.description ? (
-                    <p className="truncate text-xs text-slate-400">{project.description}</p>
-                  ) : (
-                    <p className="text-xs text-slate-500">Team workspace</p>
-                  )}
                 </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
 
       <CreateProjectModal
         open={showCreateModal}
