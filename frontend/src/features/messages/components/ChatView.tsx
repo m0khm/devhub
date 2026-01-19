@@ -153,7 +153,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
       const response = await apiClient.get<Message[]>(
         `/topics/${topic.id}/messages?limit=50`
       );
-      setMessages(response.data.reverse()); // oldest first
+      const list = Array.isArray(response.data) ? response.data : [];
+      setMessages(list.reverse()); // oldest first
     } catch (error) {
       toast.error('Failed to load messages');
     } finally {
@@ -164,7 +165,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
   const loadPinnedMessages = async () => {
     try {
       const response = await apiClient.get<Message[]>(`/topics/${topic.id}/pins`);
-      setPinnedMessages(response.data);
+      setPinnedMessages(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       toast.error('Failed to load pinned messages');
     }
@@ -203,6 +204,21 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
       setReplyToMessage(null);
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to send message');
+    }
+  };
+
+  const handleTogglePin = async (message: Message) => {
+    const isPinned = pinnedMessages.some((item) => item.id === message.id);
+    try {
+      if (isPinned) {
+        await apiClient.delete(`/messages/${message.id}/pin`);
+        setPinnedMessages((prev) => prev.filter((item) => item.id !== message.id));
+      } else {
+        await apiClient.post(`/messages/${message.id}/pin`);
+        setPinnedMessages((prev) => [...prev, message]);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to update pin');
     }
   };
 
@@ -261,9 +277,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
           {/* Messages */}
           <MessageList
             messages={messages}
+            pinnedMessages={pinnedMessages}
             loading={loading}
             highlightedMessageId={highlightedMessageId}
             onReply={handleReply}
+            onTogglePin={handleTogglePin}
           />
 
           {/* Typing indicator */}
@@ -281,14 +299,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
             onCancelReply={() => setReplyToMessage(null)}
           />
         </div>
-
-      {/* Message input */}
-      <MessageInput
-        topicId={topic.id}
-        projectId={topic.project_id}
-        onSend={handleSendMessage}
-      />
-    </div>
+      </div>
     </div>
   );
 };

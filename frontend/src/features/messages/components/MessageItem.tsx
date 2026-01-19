@@ -12,8 +12,10 @@ import {
 
 interface MessageItemProps {
   message: Message;
+  isPinned?: boolean;
   isHighlighted?: boolean;
   onReply?: (message: Message) => void;
+  onTogglePin?: (message: Message) => void;
 }
 
 interface CodeMetadata {
@@ -30,7 +32,7 @@ interface FileMetadata {
 }
 
 export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
-  ({ message, isHighlighted = false, onReply }, ref) => {
+  ({ message, isPinned = false, isHighlighted = false, onReply, onTogglePin }, ref) => {
     const { user: currentUser } = useAuthStore();
     const isOwnMessage = message.user_id === currentUser?.id;
     const [menuOpen, setMenuOpen] = useState(false);
