@@ -153,7 +153,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
       const response = await apiClient.get<Message[]>(
         `/topics/${topic.id}/messages?limit=50`
       );
-      setMessages(response.data.reverse()); // oldest first
+      const list = Array.isArray(response.data) ? response.data : [];
+      setMessages(list.reverse()); // oldest first
     } catch (error) {
       toast.error('Failed to load messages');
     } finally {
@@ -164,7 +165,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
   const loadPinnedMessages = async () => {
     try {
       const response = await apiClient.get<Message[]>(`/topics/${topic.id}/pins`);
-      setPinnedMessages(response.data);
+      setPinnedMessages(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       toast.error('Failed to load pinned messages');
     }
