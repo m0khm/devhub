@@ -3,8 +3,8 @@ import type { Message } from '../../../shared/types';
 import { MessageItem } from './MessageItem';
 
 interface MessageListProps {
-  messages: Message[];
-  pinnedMessages: Message[];
+  messages?: Message[] | null;
+  pinnedMessages?: Message[] | null;
   loading: boolean;
   highlightedMessageId?: string | null;
   onReply?: (message: Message) => void;
@@ -12,8 +12,8 @@ interface MessageListProps {
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
-  messages,
-  pinnedMessages,
+  messages = [],
+  pinnedMessages = [],
   loading,
   highlightedMessageId,
   onReply,
@@ -21,20 +21,24 @@ export const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const pinnedIds = new Set(pinnedMessages.map((message) => message.id));
-  const visibleMessages = messages.filter((message) => !pinnedIds.has(message.id));
+  const normalizedPinnedMessages = pinnedMessages ?? [];
+  const normalizedMessages = messages ?? [];
+  const pinnedIds = new Set(normalizedPinnedMessages.map((message) => message.id));
+  const visibleMessages = normalizedMessages.filter(
+    (message) => !pinnedIds.has(message.id),
+  );
 
   useEffect(() => {
     if (!highlightedMessageId) {
       scrollToBottom();
     }
-  }, [messages, highlightedMessageId]);
+  }, [normalizedMessages, highlightedMessageId]);
 
   useEffect(() => {
     if (!highlightedMessageId) return;
     const node = messageRefs.current.get(highlightedMessageId);
     node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [highlightedMessageId, messages]);
+  }, [highlightedMessageId, normalizedMessages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -57,7 +61,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     );
   }
 
-  if (messages.length === 0 && pinnedMessages.length === 0) {
+  if (normalizedMessages.length === 0 && normalizedPinnedMessages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
@@ -70,13 +74,13 @@ export const MessageList: React.FC<MessageListProps> = ({
 
   return (
     <div className="flex-1 overflow-y-auto px-5 py-3 space-y-3 bg-slate-900/60">
-      {pinnedMessages.length > 0 && (
+      {normalizedPinnedMessages.length > 0 && (
         <div className="rounded-2xl border border-slate-700/50 bg-slate-900/80 p-3">
           <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
             📌 Pinned
           </div>
           <div className="space-y-3">
-            {pinnedMessages.map((message) => (
+            {normalizedPinnedMessages.map((message) => (
               <MessageItem
                 key={message.id}
                 ref={setMessageRef(message.id)}
