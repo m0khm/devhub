@@ -276,8 +276,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
         <div className="flex-1 min-h-0 flex flex-col">
           {/* Messages */}
           <MessageList
-            messages={messages}
-            pinnedMessages={pinnedMessages}
+            messages={messages ?? []}
+            pinnedMessages={pinnedMessages ?? []}
             loading={loading}
             highlightedMessageId={highlightedMessageId}
             onReply={handleReply}
