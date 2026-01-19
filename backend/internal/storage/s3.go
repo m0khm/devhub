@@ -14,7 +14,8 @@ import (
 
 type S3Client struct {
 	client *minio.Client
-	bucket string
+        bucket string
+        endpoint string
 }
 
 func NewS3Client(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*S3Client, error) {
@@ -43,6 +44,7 @@ func NewS3Client(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*S
 	return &S3Client{
 		client: client,
 		bucket: bucket,
+                endpoint: endpoint,
 	}, nil
 }
 
@@ -67,7 +69,7 @@ func (s *S3Client) Upload(ctx context.Context, reader io.Reader, filename string
 	}
 
 	// Generate URL (assuming public bucket)
-	url := fmt.Sprintf("http://localhost:9000/%s/%s", s.bucket, key)
+	url := fmt.Sprintf("http://%s/%s/%s", s.endpoint, s.bucket, key)
 
 	return &UploadResult{
 		Key:      key,
@@ -82,7 +84,7 @@ func (s *S3Client) Delete(ctx context.Context, key string) error {
 }
 
 func (s *S3Client) GetURL(key string) string {
-	return fmt.Sprintf("http://localhost:9000/%s/%s", s.bucket, key)
+	return fmt.Sprintf("http://%s/%s/%s", s.endpoint, s.bucket, key)
 }
 
 func (s *S3Client) IsReady() bool {

@@ -90,10 +90,10 @@ func (r *Repository) GetMembers(projectID uuid.UUID) ([]ProjectMemberWithUser, e
 	err := r.db.Table("project_members").
 		Select(`
 			project_members.*,
-			users.id as user__id,
-			users.email as user__email,
-			users.name as user__name,
-			users.avatar_url as user__avatar_url
+			users.id as "user.id",
+			users.email as "user.email",
+			users.name as "user.name",
+			users.avatar_url as "user.avatar_url"
 		`).
 		Joins("JOIN users ON users.id = project_members.user_id").
 		Where("project_members.project_id = ?", projectID).
