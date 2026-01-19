@@ -1,6 +1,6 @@
 module github.com/m0khm/devhub/backend
 
-go 1.24.0
+go 1.22.0
 
 require (
 	github.com/go-playground/validator/v10 v10.30.1
