@@ -207,6 +207,21 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
     }
   };
 
+  const handleTogglePin = async (message: Message) => {
+    const isPinned = pinnedMessages.some((item) => item.id === message.id);
+    try {
+      if (isPinned) {
+        await apiClient.delete(`/messages/${message.id}/pin`);
+        setPinnedMessages((prev) => prev.filter((item) => item.id !== message.id));
+      } else {
+        await apiClient.post(`/messages/${message.id}/pin`);
+        setPinnedMessages((prev) => [...prev, message]);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to update pin');
+    }
+  };
+
   const handleReply = (message: Message) => {
     setReplyToMessage(message);
     setThreadRootId(resolveThreadRoot(message).id);
@@ -262,9 +277,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
           {/* Messages */}
           <MessageList
             messages={messages}
+            pinnedMessages={pinnedMessages}
             loading={loading}
             highlightedMessageId={highlightedMessageId}
             onReply={handleReply}
+            onTogglePin={handleTogglePin}
           />
 
           {/* Typing indicator */}
@@ -282,14 +299,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
             onCancelReply={() => setReplyToMessage(null)}
           />
         </div>
-
-      {/* Message input */}
-      <MessageInput
-        topicId={topic.id}
-        projectId={topic.project_id}
-        onSend={handleSendMessage}
-      />
-    </div>
+      </div>
     </div>
   );
 };
