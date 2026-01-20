@@ -3,13 +3,15 @@ import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { apiClient } from '../../../api/client';
 import { wsClient } from '../../../api/websocket';
 import { useAuthStore } from '../../../store/authStore';
-import type { Mention, ProjectMemberWithUser } from '../../../shared/types';
+import type { Mention, ProjectMemberWithUser, Message } from '../../../shared/types';
 import { FileUploadButton } from './FileUploadButton';
 
 interface MessageInputProps {
   topicId: string;
   projectId: string;
   onSend: (content: string, mentions: Mention[]) => void;
+  replyTo?: Message | null;  // Добавлено для replyTo
+  onCancelReply?: () => void;  // Добавлено для onCancelReply
 }
 
 interface MentionState {
@@ -60,6 +62,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   topicId,
   projectId,
   onSend,
+  replyTo,
+  onCancelReply,
 }) => {
   const [content, setContent] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -142,8 +146,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     const before = content.slice(0, mentionState.start);
     const after = content.slice(mentionState.end);
     const needsSpace = after.length === 0 || !after.startsWith(' ');
-    const insertion = `@${token}${needsSpace ? ' ' : ''}`;
-    const nextContent = `${before}${insertion}${after}`;
+    const insertion = `@\( {token} \){needsSpace ? ' ' : ''}`;
+    const nextContent = `\( {before} \){insertion}${after}`;
     const nextCursor = before.length + insertion.length;
 
     setContent(nextContent);
@@ -179,7 +183,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!content.trim()) return;
 
     const mentions = extractMentions(content.trim(), members, user?.id);
@@ -253,9 +257,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         <div className="mb-3 flex items-center justify-between rounded-lg border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs text-slate-300">
           <div className="min-w-0">
             <p className="font-medium text-slate-200">
-              Replying to {replyTo.user?.name ?? 'Unknown'}
+              Replying to {replyTo?.user?.name ?? 'Unknown'}
             </p>
-            <p className="truncate text-slate-400">{replyTo.content}</p>
+            <p className="truncate text-slate-400">
+              {replyTo?.content ?? '(Сообщение недоступно)'}
+            </p>
           </div>
           {onCancelReply && (
             <button
@@ -333,7 +339,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         <button
           type="submit"
           disabled={!content.trim()}
-          className="rounded-xl bg-sky-500/90 p-3 text-white shadow hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50 transition"
+          className="rounded-xl bg-sky-500/90 bg-sky-500/90 p-3 text-white shadow hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50 transition"
         >
           <PaperAirplaneIcon className="w-5 h-5" />
         </button>
