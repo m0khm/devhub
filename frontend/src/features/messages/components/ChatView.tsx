@@ -1,12 +1,14 @@
-import React, { useEffect, useState, useRef } from 'react';
-import type { Topic, Message } from '../../../shared/types';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import type { Mention, Topic, Message } from '../../../shared/types';
 import { apiClient } from '../../../api/client';
 import { wsClient } from '../../../api/websocket';
 import { useAuthStore } from '../../../store/authStore';
 import { useMessageStore } from '../../../store/messageStore';
+import { useNotificationStore } from '../../../store/notificationStore';
 import { useThemeStore } from '../../../store/themeStore';
 import toast from 'react-hot-toast';
 import { MessageList } from './MessageList';
+import { MessageItem } from './MessageItem';
 import { MessageInput } from './MessageInput';
 import { SearchBar } from './SearchBar';
 import { VideoCallButton } from '../../video/components/VideoCallButton';
@@ -26,17 +28,66 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
     deleteMessage,
     clearMessages,
   } = useMessageStore();
+  const { addNotification } = useNotificationStore();
   const { theme, toggleTheme } = useThemeStore();
 
   const [loading, setLoading] = useState(true);
+  const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [threadRootId, setThreadRootId] = useState<string | null>(null);
   const typingTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
+  const messageMap = useMemo(
+    () => new Map(messages.map((message) => [message.id, message])),
+    [messages]
+  );
+
+  const resolveThreadRoot = (message: Message) => {
+    let current = message;
+    while (current.parent_id && messageMap.has(current.parent_id)) {
+      const next = messageMap.get(current.parent_id);
+      if (!next) break;
+      current = next;
+    }
+    return current;
+  };
+
+  const threadRoot = threadRootId ? messageMap.get(threadRootId) ?? null : null;
+  const threadMessages = useMemo(() => {
+    if (!threadRootId) return [];
+    const childrenMap = new Map<string, Message[]>();
+    messages.forEach((message) => {
+      if (!message.parent_id) return;
+      const list = childrenMap.get(message.parent_id) ?? [];
+      list.push(message);
+      childrenMap.set(message.parent_id, list);
+    });
+
+    const sortByTime = (items: Message[]) =>
+      items.sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+
+    const result: Message[] = [];
+    const visit = (parentId: string) => {
+      const children = sortByTime(childrenMap.get(parentId) ?? []);
+      children.forEach((child) => {
+        result.push(child);
+        visit(child.id);
+      });
+    };
+
+    visit(threadRootId);
+    return result;
+  }, [messages, threadRootId]);
 
   useEffect(() => {
     clearMessages();
     setHighlightedMessageId(null);
+    setPinnedMessages([]);
     loadMessages();
+    loadPinnedMessages();
 
     if (token) {
       wsClient.connect(topic.id, token, {
@@ -45,15 +96,33 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
         },
         onMessageUpdated: (payload) => {
           updateMessage(payload.message.id, payload.message);
+          setPinnedMessages((prev) =>
+            prev.map((message) =>
+              message.id === payload.message.id ? { ...message, ...payload.message } : message
+            )
+          );
         },
         onMessageDeleted: (payload) => {
           deleteMessage(payload.message_id);
+          setPinnedMessages((prev) =>
+            prev.filter((message) => message.id !== payload.message_id)
+          );
         },
         onTyping: (payload) => {
           handleTyping(payload);
         },
         onReactionUpdated: (payload) => {
           updateMessage(payload.message_id, { reactions: payload.reactions });
+        },
+        onNotificationCreated: (payload) => {
+          const notification = payload?.notification;
+          if (!notification) {
+            return;
+          }
+          if (user?.id && notification.user_id !== user.id) {
+            return;
+          }
+          addNotification(notification);
         },
         onConnect: () => {
           console.log('WebSocket connected');
@@ -70,6 +139,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
     return () => {
       wsClient.disconnect();
       clearMessages();
+      setPinnedMessages([]);
 
       Object.values(typingTimeoutRef.current).forEach((t) => clearTimeout(t));
       typingTimeoutRef.current = {};
@@ -83,11 +153,21 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
       const response = await apiClient.get<Message[]>(
         `/topics/${topic.id}/messages?limit=50`
       );
-      setMessages(response.data.reverse()); // oldest first
+      const list = Array.isArray(response.data) ? response.data : [];
+      setMessages(list.reverse()); // oldest first
     } catch (error) {
       toast.error('Failed to load messages');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPinnedMessages = async () => {
+    try {
+      const response = await apiClient.get<Message[]>(`/topics/${topic.id}/pins`);
+      setPinnedMessages(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      toast.error('Failed to load pinned messages');
     }
   };
 
@@ -111,16 +191,45 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
     }, 3000);
   };
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, mentions: Mention[]) => {
     try {
+      const metadata =
+        mentions.length > 0 ? JSON.stringify({ mentions }) : undefined;
       await apiClient.post(`/topics/${topic.id}/messages`, {
         content,
         type: 'text',
+        metadata,
       });
       // добавится через WS
+      setReplyToMessage(null);
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to send message');
     }
+  };
+
+  const handleTogglePin = async (message: Message) => {
+    const isPinned = pinnedMessages.some((item) => item.id === message.id);
+    try {
+      if (isPinned) {
+        await apiClient.delete(`/messages/${message.id}/pin`);
+        setPinnedMessages((prev) => prev.filter((item) => item.id !== message.id));
+      } else {
+        await apiClient.post(`/messages/${message.id}/pin`);
+        setPinnedMessages((prev) => [...prev, message]);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to update pin');
+    }
+  };
+
+  const handleReply = (message: Message) => {
+    setReplyToMessage(message);
+    setThreadRootId(resolveThreadRoot(message).id);
+  };
+
+  const handleCloseThread = () => {
+    setThreadRootId(null);
+    setReplyToMessage(null);
   };
 
   return (
@@ -163,22 +272,34 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
         </div>
       </div>
 
-      {/* Messages */}
-      <MessageList
-        messages={messages}
-        loading={loading}
-        highlightedMessageId={highlightedMessageId}
-      />
+      <div className="flex-1 min-h-0 flex">
+        <div className="flex-1 min-h-0 flex flex-col">
+          {/* Messages */}
+          <MessageList
+            messages={messages ?? []}
+            pinnedMessages={pinnedMessages ?? []}
+            loading={loading}
+            highlightedMessageId={highlightedMessageId}
+            onReply={handleReply}
+            onTogglePin={handleTogglePin}
+          />
 
-      {/* Typing indicator */}
-      {typingUsers.size > 0 && (
-        <div className="px-6 py-2 text-sm text-text-muted italic">
-          Someone is typing...
+          {/* Typing indicator */}
+          {typingUsers.size > 0 && (
+            <div className="px-6 py-2 text-sm text-text-muted italic">
+              Someone is typing...
+            </div>
+          )}
+
+          {/* Message input */}
+          <MessageInput
+            topicId={topic.id}
+            onSend={handleSendMessage}
+            replyTo={replyToMessage}
+            onCancelReply={() => setReplyToMessage(null)}
+          />
         </div>
-      )}
-
-      {/* Message input */}
-      <MessageInput topicId={topic.id} onSend={handleSendMessage} />
+      </div>
     </div>
   );
 };

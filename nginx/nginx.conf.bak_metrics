@@ -1,0 +1,85 @@
+events { worker_connections 1024; }
+
+http {
+  resolver 127.0.0.11 ipv6=off valid=10s;
+
+  map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+  }
+
+  server {
+    proxy_hide_header X-Frame-Options;
+    add_header X-Frame-Options "" always;
+    listen 80;
+    server_name dvhub.tech www.dvhub.tech;
+
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+
+    location = /health {
+      access_log off;
+      add_header Content-Type text/plain;
+      return 200 "OK\n";
+    }
+
+    location /metrics {
+    proxy_pass http://backend:8080/metrics;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+}
+
+  location / { return 301 https://$host$request_uri; }
+  }
+
+  server {
+    listen 443 ssl http2;
+    server_name dvhub.tech www.dvhub.tech;
+
+    ssl_certificate     /etc/letsencrypt/live/dvhub.tech/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/dvhub.tech/privkey.pem;
+
+    # чтобы WS не рвался
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+
+      location /metrics {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass http://backend:8080/metrics;
+      }
+
+
+    location = /health {
+      access_log off;
+      add_header Content-Type text/plain;
+      return 200 "OK\n";
+    }
+
+    # ВАЖНО: WS у тебя на /api/.../ws — поэтому Upgrade должен быть здесь
+    location /api/ {
+      proxy_http_version 1.1;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection $connection_upgrade;
+
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+
+      set $api http://backend:8080;
+      proxy_pass $api;
+    }
+
+    location / {
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+
+      set $up http://frontend:80;
+      proxy_pass $up;
+    }
+  }
+}

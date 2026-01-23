@@ -49,11 +49,11 @@ type ProjectWithMembers struct {
 type ProjectMemberWithUser struct {
 	ProjectMember
 	User struct {
-		ID        uuid.UUID `json:"id"`
-		Email     string    `json:"email"`
-		Name      string    `json:"name"`
-		AvatarURL *string   `json:"avatar_url"`
-	} `json:"user"`
+                ID        uuid.UUID `json:"id" gorm:"column:user__id"`
+                Email     string    `json:"email" gorm:"column:user__email"`
+                Name      string    `json:"name" gorm:"column:user__name"`
+                AvatarURL *string   `json:"avatar_url" gorm:"column:user__avatar_url"`
+        } `json:"user" gorm:"embedded"`
 }
 
 func (Project) TableName() string {

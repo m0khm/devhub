@@ -139,6 +139,45 @@ func (r *Repository) GetReactions(messageID uuid.UUID, currentUserID uuid.UUID) 
 	return result, nil
 }
 
+// Pin message
+func (r *Repository) PinMessage(topicID, messageID uuid.UUID) error {
+	return r.db.Exec(
+		"INSERT INTO pinned_messages (topic_id, message_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
+		topicID,
+		messageID,
+	).Error
+}
+
+// Unpin message
+func (r *Repository) UnpinMessage(topicID, messageID uuid.UUID) error {
+	return r.db.Exec(
+		"DELETE FROM pinned_messages WHERE topic_id = ? AND message_id = ?",
+		topicID,
+		messageID,
+	).Error
+}
+
+// Get pinned messages by topic
+func (r *Repository) GetPinnedByTopicID(topicID uuid.UUID) ([]MessageWithUser, error) {
+	var messages []MessageWithUser
+
+	err := r.db.Table("pinned_messages").
+		Select(`
+			messages.*,
+			users.id as "user__id",
+			users.name as "user__name",
+			users.email as "user__email",
+			users.avatar_url as "user__avatar_url"
+		`).
+		Joins("JOIN messages ON messages.id = pinned_messages.message_id").
+		Joins("LEFT JOIN users ON users.id = messages.user_id").
+		Where("pinned_messages.topic_id = ?", topicID).
+		Order("messages.created_at DESC").
+		Scan(&messages).Error
+
+	return messages, err
+}
+
 // Search messages
 func (r *Repository) Search(topicID uuid.UUID, query string, limit int) ([]MessageWithUser, error) {
 	var messages []MessageWithUser

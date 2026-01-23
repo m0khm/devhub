@@ -90,13 +90,24 @@ func (r *Repository) GetMembers(projectID uuid.UUID) ([]ProjectMemberWithUser, e
 	err := r.db.Table("project_members").
 		Select(`
 			project_members.*,
-			users.id as "user__id",
-			users.email as "user__email",
-			users.name as "user__name",
-			users.avatar_url as "user__avatar_url"
+			users.id as user__id,
+			users.email as user__email,
+			users.name as user__name,
+			users.avatar_url as user__avatar_url
 		`).
 		Joins("JOIN users ON users.id = project_members.user_id").
 		Where("project_members.project_id = ?", projectID).
 		Scan(&members).Error
 	return members, err
+}
+
+
+// Get project member IDs
+func (r *Repository) GetMemberIDs(projectID uuid.UUID) ([]uuid.UUID, error) {
+	var memberIDs []uuid.UUID
+	err := r.db.Model(&ProjectMember{}).
+		Select("user_id").
+		Where("project_id = ?", projectID).
+		Scan(&memberIDs).Error
+	return memberIDs, err
 }

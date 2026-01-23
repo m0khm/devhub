@@ -23,8 +23,8 @@ interface TopicSidebarProps {
 }
 
 export const TopicSidebar: React.FC<TopicSidebarProps> = ({
-  topics,
-  directThreads,
+  topics = [], // Дефолт на пустой массив, чтобы избежать undefined
+  directThreads = [], // Дефолт на пустой массив
   selectedTopicId,
   onSelectTopic,
   onTopicCreated,
@@ -85,7 +85,7 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
             Темы
           </p>
           <div className="mt-2">
-            {topics.map((topic) => (
+            {topics?.map((topic) => ( // Optional chaining для map
               <button
                 key={topic.id}
                 onClick={() => onSelectTopic(topic.id)}
@@ -125,7 +125,7 @@ export const TopicSidebar: React.FC<TopicSidebarProps> = ({
             Личные чаты
           </p>
           <div className="mt-2">
-            {directThreads.map((thread) => (
+            {directThreads?.map((thread) => ( // Optional chaining для map
               <button
                 key={thread.id}
                 onClick={() => onSelectTopic(thread.id)}

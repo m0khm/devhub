@@ -6,6 +6,7 @@ interface WSHandlers {
   onMessageDeleted?: WSMessageHandler;
   onTyping?: WSMessageHandler;
   onReactionUpdated?: WSMessageHandler;
+  onNotificationCreated?: WSMessageHandler;
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: Event) => void;
@@ -89,6 +90,9 @@ export class WebSocketClient {
         break;
       case 'reaction_updated':
         this.handlers.onReactionUpdated?.(data.payload);
+        break;
+      case 'notification_created':
+        this.handlers.onNotificationCreated?.(data.payload);
         break;
       case 'pong':
         break;

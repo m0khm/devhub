@@ -1,20 +1,41 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Message } from '../../../shared/types';
 import { useAuthStore } from '../../../store/authStore';
 import { apiClient } from '../../../api/client';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
-import { DocumentIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import {
+  DocumentIcon,
+  MapPinIcon,
+  EllipsisVerticalIcon,
+} from '@heroicons/react/24/outline';
 
 interface MessageItemProps {
   message: Message;
+  isPinned?: boolean;
   isHighlighted?: boolean;
+  onReply?: (message: Message) => void;
+  onTogglePin?: (message: Message) => void;
+}
+
+interface CodeMetadata {
+  language?: string;
+  filename?: string;
+  content?: string;
+}
+
+interface FileMetadata {
+  filename?: string;
+  mime_type?: string;
+  size?: number;
+  url?: string;
 }
 
 export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
-  ({ message, isHighlighted = false }, ref) => {
+  ({ message, isPinned = false, isHighlighted = false, onReply, onTogglePin }, ref) => {
     const { user: currentUser } = useAuthStore();
     const isOwnMessage = message.user_id === currentUser?.id;
+    const [menuOpen, setMenuOpen] = useState(false);
 
     const handleReaction = async (emoji: string) => {
       try {
@@ -39,7 +60,7 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
       const metadata =
         typeof message.metadata === 'string'
           ? JSON.parse(message.metadata)
-          : message.metadata;
+          : (message.metadata as FileMetadata | undefined);
 
       const isImage = metadata.mime_type?.startsWith('image/');
 
@@ -73,6 +94,47 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
       );
     };
 
+    const renderCodeContent = () => {
+      if (message.type !== 'code') return null;
+
+      const metadata =
+        typeof message.metadata === 'string'
+          ? JSON.parse(message.metadata)
+          : message.metadata;
+
+      const codeContent = metadata?.content ?? message.content;
+      const language = metadata?.language;
+      const filename = metadata?.filename;
+
+      const highlightedCode =
+        language && hljs.getLanguage(language)
+          ? hljs.highlight(codeContent, { language }).value
+          : hljs.highlightAuto(codeContent).value;
+
+      return (
+        <div className="mt-2 w-full">
+          {filename && (
+            <div className="rounded-t-lg bg-slate-900/80 px-3 py-2 text-xs text-slate-300 font-mono">
+              {filename}
+            </div>
+          )}
+          <pre
+            className={`overflow-x-auto rounded-lg bg-slate-900/90 p-3 text-sm ${
+              filename ? 'rounded-t-none' : ''
+            }`}
+          >
+            <code
+              className="hljs"
+              dangerouslySetInnerHTML={{ __html: highlightedCode }}
+            />
+          </pre>
+          {language && (
+            <div className="mt-1 text-xs text-slate-400">{language}</div>
+          )}
+        </div>
+      );
+    };
+
     return (
       <div
         ref={ref}
@@ -97,15 +159,63 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
 
         {/* Message content */}
         <div className={`flex-1 ${isOwnMessage ? 'text-right' : ''}`}>
-          <div className="flex items-baseline gap-2 mb-1">
-            <span
-              className={`font-semibold text-sm text-slate-200 ${isOwnMessage ? 'order-2' : ''}`}
-            >
-              {message.user?.name || 'Unknown'}
-            </span>
-            <span className={`text-xs text-slate-400 ${isOwnMessage ? 'order-1' : ''}`}>
-              {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
-            </span>
+          <div
+            className={`flex items-baseline gap-2 mb-1 ${
+              isOwnMessage ? 'justify-end' : 'justify-between'
+            }`}
+          >
+            <div className={`flex items-baseline gap-2 ${isOwnMessage ? 'order-2' : ''}`}>
+              <span
+                className={`font-semibold text-sm text-slate-200 ${
+                  isOwnMessage ? 'order-2' : ''
+                }`}
+              >
+                {message.user?.name || 'Unknown'}
+              </span>
+              <span
+                className={`text-xs text-slate-400 ${isOwnMessage ? 'order-1' : ''}`}
+              >
+                {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+              </span>
+              {isPinned && (
+                <span className="inline-flex items-center gap-1 text-xs text-sky-300">
+                  <MapPinIcon className="h-3 w-3" />
+                  pinned
+                </span>
+              )}
+            </div>
+
+            {onTogglePin && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  className="rounded-full p-1 text-slate-300 hover:text-slate-100 hover:bg-slate-800/80 transition"
+                  aria-label="Message actions"
+                >
+                  <EllipsisVerticalIcon className="h-4 w-4" />
+                </button>
+                {menuOpen && (
+                  <div
+                    className={`absolute z-10 mt-2 w-36 rounded-lg border border-slate-700/60 bg-slate-900/95 py-1 text-left shadow-lg ${
+                      isOwnMessage ? 'right-0' : 'left-0'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onTogglePin(message);
+                        setMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800/80"
+                    >
+                      <MapPinIcon className="h-4 w-4 text-sky-300" />
+                      {isPinned ? 'Unpin' : 'Pin'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div
@@ -115,8 +225,14 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
                 : 'bg-slate-800/80 text-slate-100 shadow'
             }`}
           >
-            <p className="whitespace-pre-wrap break-words">{message.content}</p>
-            {renderFileContent()}
+            {message.type === 'code' ? (
+              renderCodeContent()
+            ) : (
+              <>
+                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                {renderFileContent()}
+              </>
+            )}
           </div>
 
           {/* Reactions */}
@@ -141,6 +257,18 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
                 className="px-2 py-1 rounded-full text-sm bg-slate-800/60 text-slate-200 hover:bg-slate-800 transition"
               >
                 +
+              </button>
+            </div>
+          )}
+
+          {onReply && (
+            <div className={`mt-2 flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+              <button
+                type="button"
+                onClick={() => onReply(message)}
+                className="text-xs font-medium text-slate-400 hover:text-slate-200 transition"
+              >
+                Reply
               </button>
             </div>
           )}

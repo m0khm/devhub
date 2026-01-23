@@ -8,17 +8,19 @@ import (
 
 	"github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
+
+	"github.com/m0khm/devhub/backend/internal/metrics"
 )
 
 // Client represents a WebSocket client
 type Client struct {
-	ID        string
-	UserID    uuid.UUID
-	TopicID   uuid.UUID
-	Conn      *websocket.Conn
-	Hub       *Hub
-	Send      chan []byte
-	mu        sync.Mutex
+	ID      string
+	UserID  uuid.UUID
+	TopicID uuid.UUID
+	Conn    *websocket.Conn
+	Hub     *Hub
+	Send    chan []byte
+	mu      sync.Mutex
 }
 
 // Hub maintains active clients and broadcasts messages
@@ -54,9 +56,9 @@ type WSMessagePayload struct {
 }
 
 type WSTypingPayload struct {
-	UserID uuid.UUID `json:"user_id"`
-	Name   string    `json:"name"`
-	IsTyping bool    `json:"is_typing"`
+	UserID   uuid.UUID `json:"user_id"`
+	Name     string    `json:"name"`
+	IsTyping bool      `json:"is_typing"`
 }
 
 type WSReactionPayload struct {
@@ -85,6 +87,7 @@ func (h *Hub) Run() {
 			}
 			h.topics[client.TopicID][client] = true
 			h.mu.Unlock()
+			metrics.WebsocketConnected()
 			log.Printf("Client %s registered to topic %s", client.ID, client.TopicID)
 
 		case client := <-h.unregister:
@@ -99,6 +102,7 @@ func (h *Hub) Run() {
 				}
 			}
 			h.mu.Unlock()
+			metrics.WebsocketDisconnected()
 			log.Printf("Client %s unregistered from topic %s", client.ID, client.TopicID)
 
 		case message := <-h.broadcast:
