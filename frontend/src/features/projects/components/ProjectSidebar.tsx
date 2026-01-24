@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useProjectStore } from '../../../store/projectStore';
 import { useAuthStore } from '../../../store/authStore';
 import {
@@ -21,9 +21,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
 }) => {
   const { projects, currentProject } = useProjectStore();
   const user = useAuthStore((state) => state.user);
-  const location = useLocation();
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const isProfileActive = location.pathname === '/profile';
   const userDisplayName = user?.name ?? user?.handle ?? user?.email ?? 'User';
   const userInitials = userDisplayName
     .split(' ')
@@ -95,51 +93,40 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
         })}
         </div>
       </div>
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex w-full flex-col items-center gap-2 px-3">
         <button
           type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/70 text-slate-300 transition hover:border-slate-700 hover:bg-slate-900"
-          aria-label="Все сообщения"
+          className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
+          aria-label="Сообщения"
         >
-          <ChatBubbleLeftRightIcon className="h-5 w-5" />
+          <ChatBubbleLeftRightIcon className="h-4 w-4 text-slate-300" />
+          <span>Сообщения</span>
         </button>
         <button
           type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/70 text-slate-300 transition hover:border-slate-700 hover:bg-slate-900"
+          className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
           aria-label="Избранное"
         >
-          <StarIcon className="h-5 w-5" />
+          <StarIcon className="h-4 w-4 text-slate-300" />
+          <span>Избранное</span>
         </button>
         <button
           type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/70 text-slate-300 transition hover:border-slate-700 hover:bg-slate-900"
+          className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
           aria-label="Добавить проект"
           onClick={() => setShowCreateModal(true)}
           title="Добавить проект"
         >
-          <PlusIcon className="h-5 w-5" />
+          <PlusIcon className="h-4 w-4 text-slate-300" />
+          <span>Добавить проект</span>
         </button>
         <button
           type="button"
-          onClick={onOpenProfile}
-          className={`flex h-11 w-11 items-center justify-center rounded-2xl border transition ${
-            isProfileActive
-              ? 'border-blue-500/80 bg-slate-900 text-white shadow-[0_0_12px_rgba(37,99,235,0.35)]'
-              : 'border-slate-800 bg-slate-900/70 text-slate-300 hover:border-slate-700 hover:bg-slate-900'
-          }`}
-          aria-label="Профиль и настройки"
-          title="Профиль и настройки"
-        >
-          <span aria-hidden className="text-base">
-            👤
-          </span>
-        </button>
-        <button
-          type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/70 text-slate-300 transition hover:border-slate-700 hover:bg-slate-900"
+          className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
           aria-label="Настройки"
         >
-          <Cog6ToothIcon className="h-5 w-5" />
+          <Cog6ToothIcon className="h-4 w-4 text-slate-300" />
+          <span>Настройки</span>
         </button>
       </div>
       <CreateProjectModal
