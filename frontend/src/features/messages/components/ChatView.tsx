@@ -12,6 +12,7 @@ import { MessageItem } from './MessageItem';
 import { MessageInput } from './MessageInput';
 import { SearchBar } from './SearchBar';
 import { VideoCallButton } from '../../video/components/VideoCallButton';
+import { TopicSettingsModal } from '../../topics/components/TopicSettingsModal';
 
 interface ChatViewProps {
   topic: Topic;
@@ -37,6 +38,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [threadRootId, setThreadRootId] = useState<string | null>(null);
+  const [isTopicSettingsOpen, setIsTopicSettingsOpen] = useState(false);
   const typingTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
   const messageMap = useMemo(
     () => new Map(messages.map((message) => [message.id, message])),
@@ -237,7 +239,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
       {/* Topic header */}
       <div className="flex items-center justify-between border-b border-border/70 bg-surface/80 px-6 py-4 shadow-sm">
         <div>
-          <h2 className="text-xl font-semibold text-text">{topic.name}</h2>
+          <button
+            type="button"
+            onClick={() => setIsTopicSettingsOpen(true)}
+            className="text-left text-xl font-semibold text-text hover:text-accent"
+          >
+            {topic.name}
+          </button>
           {topic.description && (
             <p className="text-sm text-text-muted mt-1">{topic.description}</p>
           )}
@@ -271,6 +279,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
           <SearchBar topicId={topic.id} onJumpToMessage={setHighlightedMessageId} />
         </div>
       </div>
+      <TopicSettingsModal
+        open={isTopicSettingsOpen}
+        onClose={() => setIsTopicSettingsOpen(false)}
+        topicId={topic.id}
+      />
 
       <div className="flex-1 min-h-0 flex">
         <div className="flex-1 min-h-0 flex flex-col">

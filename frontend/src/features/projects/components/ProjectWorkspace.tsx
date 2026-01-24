@@ -9,11 +9,13 @@ import type { Project } from '../../../shared/types';
 import { ProfileModal } from '../../profile/ProfileModal';
 import { ProjectSidebar } from './ProjectSidebar';
 import { ProjectView } from './ProjectView';
+import { ProjectSettingsModal } from './ProjectSettingsModal';
 
 export const ProjectWorkspace: React.FC = () => {
   const { projectId: routeProjectId } = useParams<{ projectId: string }>();
   const { projects, currentProject, setCurrentProject, setProjects } = useProjectStore();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -51,9 +53,17 @@ export const ProjectWorkspace: React.FC = () => {
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
         <div className="text-sm text-text-muted">Workspace</div>
-        <div className="text-lg font-semibold text-text">
-          {currentProject?.name || 'Select a project'}
-        </div>
+        {currentProject ? (
+          <button
+            type="button"
+            onClick={() => setIsProjectSettingsOpen(true)}
+            className="text-lg font-semibold text-text hover:text-accent"
+          >
+            {currentProject.name}
+          </button>
+        ) : (
+          <div className="text-lg font-semibold text-text">Select a project</div>
+        )}
       </div>
       <div className="flex items-center gap-3">
         <NotificationBell />
@@ -65,17 +75,26 @@ export const ProjectWorkspace: React.FC = () => {
     <>
       <ProjectView projectId={activeProjectId} onOpenProfile={openProfileModal}>
         {(slots) => (
-          <AppShell
-            left={
-              <ProjectSidebar
-                onOpenProfile={openProfileModal}
-                onProjectCreated={loadProjects}
-              />
-            }
-            middle={slots.middle}
-            main={slots.main}
-            right={slots.right}
-          />
+          <>
+            <AppShell
+              left={
+                <ProjectSidebar
+                  onOpenProfile={openProfileModal}
+                  onProjectCreated={loadProjects}
+                />
+              }
+              middle={slots.middle}
+              main={slots.main}
+              header={header}
+            />
+            <ProjectSettingsModal
+              open={isProjectSettingsOpen}
+              onClose={() => setIsProjectSettingsOpen(false)}
+              project={currentProject}
+              members={slots.members}
+              membersLoading={slots.membersLoading}
+            />
+          </>
         )}
       </ProjectView>
       <ProfileModal open={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
