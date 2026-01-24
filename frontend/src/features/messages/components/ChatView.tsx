@@ -273,7 +273,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
       </div>
 
       <div className="flex-1 min-h-0 flex">
-        <div className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {/* Messages */}
           <MessageList
             messages={messages ?? []}
