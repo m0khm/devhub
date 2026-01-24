@@ -16,9 +16,14 @@ import { VideoCallButton } from '../../video/components/VideoCallButton';
 interface ChatViewProps {
   topic: Topic;
   onOpenProfile?: () => void;
+  onTopicDeleted?: (topicId: string) => void | Promise<void>;
 }
 
-export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
+export const ChatView: React.FC<ChatViewProps> = ({
+  topic,
+  onOpenProfile,
+  onTopicDeleted,
+}) => {
   const { token } = useAuthStore();
   const {
     messages,
@@ -37,6 +42,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [threadRootId, setThreadRootId] = useState<string | null>(null);
+  const [showTopicSettings, setShowTopicSettings] = useState(false);
+  const [deleteTopicLoading, setDeleteTopicLoading] = useState(false);
   const typingTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
   const messageMap = useMemo(
     () => new Map(messages.map((message) => [message.id, message])),
@@ -86,6 +93,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
     clearMessages();
     setHighlightedMessageId(null);
     setPinnedMessages([]);
+    setShowTopicSettings(false);
     loadMessages();
     loadPinnedMessages();
 
@@ -232,6 +240,32 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
     setReplyToMessage(null);
   };
 
+  const handleDeleteTopic = async () => {
+    const confirmed = window.confirm(
+      'Удалить тему? Все сообщения и связанные данные будут удалены.'
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleteTopicLoading(true);
+    try {
+      await apiClient.delete(`/topics/${topic.id}`);
+      toast.success('Тема удалена');
+      setShowTopicSettings(false);
+      await onTopicDeleted?.(topic.id);
+    } catch (error: unknown) {
+      const message =
+        error && typeof error === 'object' && 'response' in error
+          ? (error as { response?: { data?: { error?: string } } }).response?.data
+              ?.error
+          : undefined;
+      toast.error(message || 'Не удалось удалить тему');
+    } finally {
+      setDeleteTopicLoading(false);
+    }
+  };
+
   return (
     <div className="flex-1 flex min-h-0 flex-col">
       {/* Topic header */}
@@ -244,6 +278,18 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
         </div>
 
         <div className="flex items-center gap-2">
+          {topic.type !== 'direct' && (
+            <button
+              type="button"
+              onClick={() => setShowTopicSettings(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-text transition hover:bg-surface"
+              aria-label="Настройки темы"
+              title="Настройки темы"
+            >
+              <span aria-hidden>⚙️</span>
+              <span className="hidden sm:inline">Тема</span>
+            </button>
+          )}
           {onOpenProfile && (
             <button
               type="button"
@@ -300,6 +346,60 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
           />
         </div>
       </div>
+
+      {showTopicSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-surface p-6 text-text shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-semibold text-text">Настройки темы</h3>
+                <p className="text-sm text-text-muted">
+                  Управляйте параметрами выбранной темы.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTopicSettings(false)}
+                className="rounded-full border border-border p-2 text-text-muted transition hover:text-text"
+                aria-label="Закрыть настройки темы"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-6">
+              <section className="rounded-xl border border-border/70 bg-surface-muted/40 p-4">
+                <h4 className="text-sm font-semibold text-text">Общие</h4>
+                <div className="mt-3 space-y-2 text-sm text-text-muted">
+                  <div>
+                    <span className="font-medium text-text">Название:</span>{' '}
+                    {topic.name}
+                  </div>
+                  <div>
+                    <span className="font-medium text-text">Описание:</span>{' '}
+                    {topic.description || 'Не задано'}
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-xl border border-red-400/40 bg-red-500/10 p-4">
+                <h4 className="text-sm font-semibold text-red-300">Danger Zone</h4>
+                <p className="mt-2 text-sm text-red-200/90">
+                  Удаление темы необратимо и приведёт к удалению всех сообщений.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleDeleteTopic}
+                  disabled={deleteTopicLoading}
+                  className="mt-4 inline-flex items-center justify-center rounded-lg border border-red-400/60 bg-red-500/20 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/30 disabled:opacity-60"
+                >
+                  {deleteTopicLoading ? 'Удаляем...' : 'Удалить тему'}
+                </button>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

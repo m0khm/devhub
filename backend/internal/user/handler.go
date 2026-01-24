@@ -93,3 +93,41 @@ func (h *Handler) UpdateMe(c *fiber.Ctx) error {
 
 	return c.JSON(updatedUser)
 }
+
+// DeleteMe deletes current authenticated user
+// DELETE /api/users/me
+func (h *Handler) DeleteMe(c *fiber.Ctx) error {
+	userID := c.Locals("userID")
+	if userID == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid user ID format",
+		})
+	}
+
+	userUUID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
+	}
+
+	if err := h.service.Delete(userUUID); err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "User not found",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to delete user",
+		})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}

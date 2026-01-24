@@ -162,6 +162,12 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     }
   };
 
+  const handleTopicDeleted = async (topicId: string) => {
+    if (!resolvedProjectId) return;
+    await loadTopics(resolvedProjectId);
+    setSelectedTopicId((current) => (current === topicId ? null : current));
+  };
+
   const selectedTopic =
     currentTopics.find((t) => t.id === selectedTopicId) ||
     directThreads.find((thread) => thread.id === selectedTopicId);
@@ -201,7 +207,11 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                 <div className="text-slate-300">Loading...</div>
               </div>
             ) : selectedTopic ? (
-              <ChatView topic={selectedTopic} onOpenProfile={onOpenProfile} />
+              <ChatView
+                topic={selectedTopic}
+                onOpenProfile={onOpenProfile}
+                onTopicDeleted={handleTopicDeleted}
+              />
             ) : (
               <div className="flex flex-1 items-center justify-center">
                 <div className="text-center">

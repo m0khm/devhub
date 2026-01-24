@@ -11,6 +11,7 @@ interface ProfileFormProps {
 
 export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const updateUser = useAuthStore((state) => state.updateUser);
+  const logout = useAuthStore((state) => state.logout);
   const [name, setName] = useState(user?.name ?? '');
   const [handle, setHandle] = useState(user?.handle ?? '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url ?? '');
@@ -19,6 +20,19 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const [location, setLocation] = useState(user?.location ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState<
+    'general' | 'privacy' | 'security'
+  >('general');
+
+  const resolveErrorMessage = (error: unknown, fallback: string) => {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const response = (error as { response?: { data?: { error?: string } } })
+        .response;
+      return response?.data?.error ?? fallback;
+    }
+    return fallback;
+  };
 
   useEffect(() => {
     if (user) {
@@ -84,11 +98,31 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
       updateUser(response.data);
       toast.success('Profile updated');
       onSaved?.();
-    } catch (error: any) {
-      const message = error.response?.data?.error || 'Failed to update profile';
-      toast.error(message);
+    } catch (error: unknown) {
+      toast.error(resolveErrorMessage(error, 'Failed to update profile'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Вы уверены, что хотите удалить аккаунт? Это действие нельзя отменить.'
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      await apiClient.delete('/users/me');
+      toast.success('Аккаунт удалён');
+      logout();
+      onSaved?.();
+    } catch (error: unknown) {
+      toast.error(resolveErrorMessage(error, 'Не удалось удалить аккаунт'));
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -126,117 +160,170 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email
-          </label>
-          <input
-            type="email"
-            value={user.email}
-            readOnly
-            className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
-          />
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: 'general', label: 'Общие' },
+            { id: 'privacy', label: 'Приватность' },
+            { id: 'security', label: 'Безопасность' },
+          ].map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() =>
+                setActiveSection(section.id as 'general' | 'privacy' | 'security')
+              }
+              className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                activeSection === section.id
+                  ? 'border-blue-500 bg-blue-50 text-blue-600'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-800'
+              }`}
+            >
+              {section.label}
+            </button>
+          ))}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="Your name"
-            required
-          />
-        </div>
+        {activeSection === 'general' && (
+          <section className="space-y-4 rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-900">Общие данные</h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="Your name"
+                required
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Handle
-          </label>
-          <input
-            type="text"
-            value={handle}
-            onChange={(event) => setHandle(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="@devhub"
-          />
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Handle
+              </label>
+              <input
+                type="text"
+                value={handle}
+                onChange={(event) => setHandle(event.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="@devhub"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Avatar URL
-          </label>
-          <input
-            type="url"
-            value={avatarUrl}
-            onChange={(event) => setAvatarUrl(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="https://example.com/avatar.png"
-          />
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Avatar URL
+              </label>
+              <input
+                type="url"
+                value={avatarUrl}
+                onChange={(event) => setAvatarUrl(event.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="https://example.com/avatar.png"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Company
-          </label>
-          <input
-            type="text"
-            value={company}
-            onChange={(event) => setCompany(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="Your company"
-          />
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Bio
+              </label>
+              <textarea
+                value={bio}
+                onChange={(event) => setBio(event.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="Tell us a little about yourself"
+                rows={4}
+              />
+            </div>
+          </section>
+        )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Location
-          </label>
-          <input
-            type="text"
-            value={location}
-            onChange={(event) => setLocation(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="City, Country"
-          />
-        </div>
+        {activeSection === 'privacy' && (
+          <section className="space-y-4 rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-900">Приватность</h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                value={user.email}
+                readOnly
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Phone
-          </label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="+1 555 123 4567"
-          />
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company
+              </label>
+              <input
+                type="text"
+                value={company}
+                onChange={(event) => setCompany(event.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="Your company"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Bio
-          </label>
-          <textarea
-            value={bio}
-            onChange={(event) => setBio(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="Tell us a little about yourself"
-            rows={4}
-          />
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Location
+              </label>
+              <input
+                type="text"
+                value={location}
+                onChange={(event) => setLocation(event.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="City, Country"
+              />
+            </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Saving...' : 'Save changes'}
-        </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Phone
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="+1 555 123 4567"
+              />
+            </div>
+          </section>
+        )}
+
+        {activeSection === 'security' && (
+          <section className="space-y-4 rounded-xl border border-red-100 bg-red-50/60 p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-red-700">Danger Zone</h3>
+            <p className="text-sm text-red-700/80">
+              Удаление аккаунта приведёт к каскадному удалению ваших данных и
+              отключит доступ к проектам. Действие необратимо.
+            </p>
+            <button
+              type="button"
+              onClick={handleDeleteAccount}
+              disabled={deleteLoading}
+              className="inline-flex items-center justify-center rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+            >
+              {deleteLoading ? 'Удаляем...' : 'Удалить аккаунт'}
+            </button>
+          </section>
+        )}
+
+        {activeSection !== 'security' && (
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Saving...' : 'Save changes'}
+          </button>
+        )}
       </form>
     </>
   );

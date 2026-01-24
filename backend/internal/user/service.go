@@ -73,3 +73,14 @@ func (s *Service) Update(userID uuid.UUID, req UpdateUserRequest) (*User, error)
 
 	return &foundUser, nil
 }
+
+func (s *Service) Delete(userID uuid.UUID) error {
+	result := s.db.Delete(&User{}, "id = ?", userID)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrUserNotFound
+	}
+	return nil
+}
