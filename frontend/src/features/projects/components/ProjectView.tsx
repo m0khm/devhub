@@ -15,7 +15,8 @@ import { ChatView } from '../../messages/components/ChatView';
 interface ProjectViewSlots {
   middle: React.ReactNode;
   main: React.ReactNode;
-  right: React.ReactNode;
+  members: ProjectMemberWithUser[];
+  membersLoading: boolean;
 }
 
 interface ProjectViewProps {
@@ -43,9 +44,6 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<ProjectMemberWithUser[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
-  const [inviteUserId, setInviteUserId] = useState('');
-  const [inviteRole, setInviteRole] = useState<'member' | 'admin'>('member');
-  const [inviteSubmitting, setInviteSubmitting] = useState(false);
 
   useEffect(() => {
     if (!resolvedProjectId) return;
@@ -127,41 +125,6 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     setMembersLoading(false);
   };
 
-  const handleInvite = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!resolvedProjectId) return;
-    if (!inviteUserId.trim()) {
-      toast.error('Enter a user ID to invite');
-      return;
-    }
-
-    try {
-      setInviteSubmitting(true);
-      await apiClient.post(`/projects/${resolvedProjectId}/members`, {
-        user_id: inviteUserId.trim(),
-        role: inviteRole,
-      });
-      setInviteUserId('');
-      toast.success('Member invited');
-      await loadMembers(resolvedProjectId);
-    } catch (error) {
-      toast.error('Failed to invite member');
-    } finally {
-      setInviteSubmitting(false);
-    }
-  };
-
-  const handleRemoveMember = async (memberId: string) => {
-    if (!resolvedProjectId) return;
-    try {
-      await apiClient.delete(`/projects/${resolvedProjectId}/members/${memberId}`);
-      toast.success('Member removed');
-      await loadMembers(resolvedProjectId);
-    } catch (error) {
-      toast.error('Failed to remove member');
-    }
-  };
-
   const selectedTopic =
     currentTopics.find((t) => t.id === selectedTopicId) ||
     directThreads.find((thread) => thread.id === selectedTopicId);
@@ -178,11 +141,8 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
             Choose a project from the left to view topics and chat.
           </div>
         ),
-        right: (
-          <div className="flex h-full items-center justify-center text-sm text-slate-500">
-            Project details will appear here.
-          </div>
-        ),
+        members,
+        membersLoading,
       }
     : {
         middle: (
@@ -211,90 +171,8 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
             )}
           </div>
         ),
-        right: (
-          <div className="flex h-full flex-col text-slate-100">
-            <div className="border-b border-slate-800/70 pb-3">
-              <h2 className="text-sm font-semibold text-slate-200">Members</h2>
-              {currentProject && (
-                <p className="mt-1 text-xs text-slate-400">Project: {currentProject.name}</p>
-              )}
-            </div>
-            <div className="flex-1 space-y-4 overflow-y-auto pt-4">
-              <form onSubmit={handleInvite} className="space-y-3">
-                <div>
-                  <label className="mb-1 block text-xs text-slate-400" htmlFor="invite-user-id">
-                    Invite by user ID or @handle
-                  </label>
-                  <input
-                    id="invite-user-id"
-                    className="w-full rounded border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={inviteUserId}
-                    onChange={(event) => setInviteUserId(event.target.value)}
-                    placeholder="@devhub_user or UUID"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-slate-400" htmlFor="invite-role">
-                    Role
-                  </label>
-                  <select
-                    id="invite-role"
-                    className="w-full rounded border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={inviteRole}
-                    onChange={(event) => setInviteRole(event.target.value as 'member' | 'admin')}
-                  >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-                <button
-                  type="submit"
-                  className="w-full rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-                  disabled={inviteSubmitting}
-                >
-                  {inviteSubmitting ? 'Inviting...' : 'Invite'}
-                </button>
-              </form>
-
-              <div>
-                <h3 className="mb-2 text-xs uppercase tracking-wide text-slate-500">
-                  Current members
-                </h3>
-                {membersLoading ? (
-                  <div className="text-sm text-slate-400">Loading members...</div>
-                ) : members.length === 0 ? (
-                  <div className="text-sm text-slate-400">No members yet.</div>
-                ) : (
-                  <div className="space-y-3">
-                    {members.map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex items-start justify-between rounded border border-slate-800/80 bg-slate-900/60 p-3"
-                      >
-                        <div>
-                          <div className="text-sm font-medium text-slate-100">
-                            {member.user?.name || member.user?.email || member.user_id}
-                          </div>
-                          <div className="text-xs text-slate-400">{member.user?.email}</div>
-                          <span className="mt-2 inline-flex items-center rounded-full bg-slate-800/80 px-2 py-0.5 text-xs text-slate-300">
-                            {member.role}
-                          </span>
-                        </div>
-                        <button
-                          className="text-xs text-red-400 hover:text-red-300"
-                          onClick={() => handleRemoveMember(member.user_id)}
-                          type="button"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ),
+        members,
+        membersLoading,
       };
 
   if (children) {
@@ -307,9 +185,6 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
         {slots.middle}
       </aside>
       <div className="flex-1 min-w-0 bg-slate-900/60">{slots.main}</div>
-      <aside className="hidden w-80 border-l border-slate-800/80 bg-slate-950/60 p-4 backdrop-blur lg:block">
-        {slots.right}
-      </aside>
     </div>
   );
 };
