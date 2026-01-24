@@ -101,7 +101,6 @@ func (r *Repository) GetMembers(projectID uuid.UUID) ([]ProjectMemberWithUser, e
 	return members, err
 }
 
-
 // Get project member IDs
 func (r *Repository) GetMemberIDs(projectID uuid.UUID) ([]uuid.UUID, error) {
 	var memberIDs []uuid.UUID
@@ -110,4 +109,26 @@ func (r *Repository) GetMemberIDs(projectID uuid.UUID) ([]uuid.UUID, error) {
 		Where("project_id = ?", projectID).
 		Scan(&memberIDs).Error
 	return memberIDs, err
+}
+
+func (r *Repository) CreateInvitation(invitation *ProjectInvitation) error {
+	return r.db.Create(invitation).Error
+}
+
+func (r *Repository) GetInvitationByID(id uuid.UUID) (*ProjectInvitation, error) {
+	var invitation ProjectInvitation
+	err := r.db.First(&invitation, "id = ?", id).Error
+	return &invitation, err
+}
+
+func (r *Repository) GetPendingInvitation(projectID, inviteeID uuid.UUID) (*ProjectInvitation, error) {
+	var invitation ProjectInvitation
+	err := r.db.
+		Where("project_id = ? AND invitee_id = ? AND status = ?", projectID, inviteeID, "pending").
+		First(&invitation).Error
+	return &invitation, err
+}
+
+func (r *Repository) UpdateInvitation(invitation *ProjectInvitation) error {
+	return r.db.Save(invitation).Error
 }

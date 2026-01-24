@@ -103,6 +103,7 @@ export interface Notification {
   body: string;
   link?: string;
   type: string;
+  metadata?: Record<string, unknown> | null;
   is_read: boolean;
   read_at?: string;
   created_at: string;
