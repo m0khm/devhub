@@ -6,9 +6,10 @@ import { useNotificationStore } from '../../../store/notificationStore';
 
 export const NotificationBell: React.FC = () => {
   const navigate = useNavigate();
-  const { notifications, setNotifications, markRead } = useNotificationStore();
+  const { notifications, setNotifications, markRead, removeNotification } = useNotificationStore();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -55,6 +56,26 @@ export const NotificationBell: React.FC = () => {
       setOpen(false);
     } catch (error) {
       console.error('Failed to mark notification read', error);
+    }
+  };
+
+  const handleInviteAction = async (item: Notification, action: 'accept' | 'decline') => {
+    const metadata = item.metadata ?? {};
+    const invitationId = typeof metadata === 'object' ? (metadata as Record<string, string>).invitation_id : undefined;
+    if (!invitationId) {
+      return;
+    }
+
+    try {
+      setActionLoading(item.id);
+      await apiClient.post(`/project-invitations/${invitationId}/${action}`);
+      await apiClient.patch(`/notifications/${item.id}/read`);
+      markRead(item.id);
+      removeNotification(item.id);
+    } catch (error) {
+      console.error(`Failed to ${action} invitation`, error);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -109,25 +130,65 @@ export const NotificationBell: React.FC = () => {
               </div>
             ) : (
               <div className="divide-y divide-border/70">
-                {notifications.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleItemClick(item)}
-                    className="flex w-full flex-col gap-1 px-4 py-3 text-left transition hover:bg-surface"
-                  >
-                    <span className="flex items-center gap-2 text-sm font-medium text-text">
-                      {!item.is_read && (
-                        <span className="h-2 w-2 rounded-full bg-blue-500" />
-                      )}
-                      {item.title}
-                    </span>
-                    <span className="text-xs text-text-muted">{item.body}</span>
-                    <span className="text-[11px] text-text-muted/80">
-                      {new Date(item.created_at).toLocaleString()}
-                    </span>
-                  </button>
-                ))}
+                {notifications.map((item) => {
+                  if (item.type === 'invite') {
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex w-full flex-col gap-2 px-4 py-3 text-left transition hover:bg-surface"
+                      >
+                        <div className="flex items-center gap-2 text-sm font-medium text-text">
+                          {!item.is_read && (
+                            <span className="h-2 w-2 rounded-full bg-blue-500" />
+                          )}
+                          {item.title}
+                        </div>
+                        <span className="text-xs text-text-muted">{item.body}</span>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleInviteAction(item, 'accept')}
+                            disabled={actionLoading === item.id}
+                            className="rounded-md bg-emerald-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Принять
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleInviteAction(item, 'decline')}
+                            disabled={actionLoading === item.id}
+                            className="rounded-md border border-border px-3 py-1 text-xs font-semibold text-text transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Отклонить
+                          </button>
+                        </div>
+                        <span className="text-[11px] text-text-muted/80">
+                          {new Date(item.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleItemClick(item)}
+                      className="flex w-full flex-col gap-1 px-4 py-3 text-left transition hover:bg-surface"
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium text-text">
+                        {!item.is_read && (
+                          <span className="h-2 w-2 rounded-full bg-blue-500" />
+                        )}
+                        {item.title}
+                      </span>
+                      <span className="text-xs text-text-muted">{item.body}</span>
+                      <span className="text-[11px] text-text-muted/80">
+                        {new Date(item.created_at).toLocaleString()}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
