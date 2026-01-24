@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/websocket/v2"
 
+	"github.com/m0khm/devhub/backend/internal/admin"
 	"github.com/m0khm/devhub/backend/internal/auth"
 	"github.com/m0khm/devhub/backend/internal/config"
 	"github.com/m0khm/devhub/backend/internal/database"
@@ -73,6 +75,11 @@ func main() {
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager)
+	adminService := admin.NewService(
+		cfg.Admin.User,
+		cfg.Admin.Password,
+		time.Duration(cfg.Admin.SessionTTLInMinute)*time.Minute,
+	)
 	projectService := project.NewService(projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
 	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo)
@@ -83,6 +90,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := auth.NewHandler(authService)
+	adminHandler := admin.NewHandler(adminService)
 	projectHandler := project.NewHandler(projectService)
 	invitationHandler := project.NewInvitationHandler(invitationService)
 	topicHandler := topic.NewHandler(topicService)
@@ -129,6 +137,11 @@ func main() {
 	authRoutes.Post("/register", authHandler.Register)
 	authRoutes.Post("/login", authHandler.Login)
 	authRoutes.Get("/me", middleware.Auth(jwtManager), authHandler.GetMe)
+
+	// Admin routes (public login + protected dashboard)
+	adminRoutes := api.Group("/admin")
+	adminRoutes.Post("/login", adminHandler.Login)
+	adminRoutes.Get("/", middleware.Admin(adminService), adminHandler.Dashboard)
 
 	// ---- WebSocket routes (НЕ через protected) ----
 	wsRoutes := api.Group("/topics")

@@ -5,6 +5,7 @@ import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { RegisterPage } from './features/auth/components/RegisterPage';
+import { AdminPage } from './features/admin/AdminPage';
 import { ProjectWorkspace } from './features/projects/components/ProjectWorkspace';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { LandingPage } from './features/landing/LandingPage';
@@ -41,6 +42,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/admin" element={<AdminPage />} />
         <Route
           path="/app"
           element={
