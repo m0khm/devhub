@@ -5,7 +5,6 @@ interface AppShellProps {
   middle: React.ReactNode;
   header?: React.ReactNode;
   main: React.ReactNode;
-  right?: React.ReactNode;
 }
 
 export const AppShell: React.FC<AppShellProps> = ({
@@ -13,7 +12,6 @@ export const AppShell: React.FC<AppShellProps> = ({
   middle,
   header,
   main,
-  right,
 }) => {
   return (
     <div className="min-h-screen w-full bg-base text-text overflow-x-hidden">
@@ -34,11 +32,6 @@ export const AppShell: React.FC<AppShellProps> = ({
             <div className="flex-1 min-w-0 min-h-0 bg-surface/60 overflow-y-auto">
               {main}
             </div>
-            {right && (
-              <aside className="hidden w-80 border-l border-border/80 bg-base/60 p-4 backdrop-blur lg:block overflow-y-auto">
-                {right}
-              </aside>
-            )}
           </div>
         </section>
       </div>
