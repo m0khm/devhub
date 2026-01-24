@@ -14,8 +14,8 @@ export const AppShell: React.FC<AppShellProps> = ({
   main,
 }) => {
   return (
-    <div className="min-h-screen w-full bg-base text-text overflow-x-hidden">
-      <div className="flex min-h-screen">
+    <div className="h-screen w-full bg-base text-text overflow-hidden">
+      <div className="flex h-full min-h-0">
         <aside className="w-64 border-r border-border/80 bg-base/70 backdrop-blur overflow-y-auto">
           {left}
         </aside>
