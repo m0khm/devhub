@@ -25,6 +25,7 @@ export const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [pinnedHighlightId, setPinnedHighlightId] = useState<string | null>(null);
   const normalizedPinnedMessages = pinnedMessages ?? [];
   const normalizedMessages = messages ?? [];
   const [currentPinnedIndex, setCurrentPinnedIndex] = useState(0);
@@ -34,10 +35,10 @@ export const MessageList: React.FC<MessageListProps> = ({
   );
 
   useEffect(() => {
-    if (!highlightedMessageId) {
+    if (!highlightedMessageId && !pinnedHighlightId) {
       scrollToBottom();
     }
-  }, [normalizedMessages, highlightedMessageId]);
+  }, [normalizedMessages, highlightedMessageId, pinnedHighlightId]);
 
   useEffect(() => {
     if (!highlightedMessageId) return;
@@ -110,6 +111,17 @@ export const MessageList: React.FC<MessageListProps> = ({
       }
     };
 
+  const handlePinnedClick = (
+    message: Message,
+    event: React.MouseEvent<HTMLDivElement>,
+  ) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button, a')) return;
+    setPinnedHighlightId(message.id);
+    const node = messageRefs.current.get(message.id);
+    node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -130,7 +142,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   }
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto px-5 py-3 space-y-3 bg-slate-900/60">
+    <div className="relative flex-1 min-h-0 overflow-y-auto bg-slate-900/60">
       {normalizedPinnedMessages.length > 0 && (
         <div className="rounded-2xl border border-slate-700/50 bg-slate-900/80 p-3">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
