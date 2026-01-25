@@ -9,6 +9,8 @@ import { AdminPage } from './features/admin/AdminPage';
 import { ProjectWorkspace } from './features/projects/components/ProjectWorkspace';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { LandingPage } from './features/landing/LandingPage';
+import { CodePage } from './features/code/CodePage';
+import { DeployPage } from './features/deploy/DeployPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -56,6 +58,22 @@ function App() {
           element={
             <ProtectedRoute>
               <ProjectWorkspace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/code"
+          element={
+            <ProtectedRoute>
+              <CodePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/deploy"
+          element={
+            <ProtectedRoute>
+              <DeployPage />
             </ProtectedRoute>
           }
         />

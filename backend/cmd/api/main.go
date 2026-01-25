@@ -14,6 +14,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/auth"
 	"github.com/m0khm/devhub/backend/internal/config"
 	"github.com/m0khm/devhub/backend/internal/database"
+	"github.com/m0khm/devhub/backend/internal/deploy"
 	"github.com/m0khm/devhub/backend/internal/dm"
 	"github.com/m0khm/devhub/backend/internal/message"
 	"github.com/m0khm/devhub/backend/internal/metrics"
@@ -87,6 +88,12 @@ func main() {
 	dmService := dm.NewService(dmRepo, projectRepo)
 	notificationService := notification.NewService(notificationRepo, projectRepo, topicRepo)
 	invitationService := project.NewInvitationService(projectRepo, userRepo)
+	deployRepo := deploy.NewRepository(db)
+	deployEncryptor, err := deploy.NewEncryptor(cfg.Deploy.SecretsKey)
+	if err != nil {
+		log.Fatalf("Failed to init deploy encryptor: %v", err)
+	}
+	deployService := deploy.NewService(deployRepo, projectRepo, deployEncryptor)
 
 	// Initialize handlers
 	authHandler := auth.NewHandler(authService)
@@ -105,6 +112,8 @@ func main() {
 	notificationHandler := notification.NewHandler(notificationService)
 
 	videoHandler := video.NewHandler() // NEW
+	deployHandler := deploy.NewHandler(deployService)
+	deployWSHandler := deploy.NewWSHandler(deployService)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -175,6 +184,34 @@ func main() {
 
 	wsRoutes.Get("/:topicId/ws", websocket.New(wsHandler.HandleWebSocket))
 
+	deployWsRoutes := api.Group("/projects")
+	deployWsRoutes.Use("/:projectId/deploy/servers/:serverId/terminal/ws", func(c *fiber.Ctx) error {
+		if !websocket.IsWebSocketUpgrade(c) {
+			return fiber.ErrUpgradeRequired
+		}
+
+		token := c.Query("token")
+		if token == "" {
+			authHeader := c.Get("Authorization")
+			if strings.HasPrefix(authHeader, "Bearer ") {
+				token = strings.TrimPrefix(authHeader, "Bearer ")
+			}
+		}
+
+		if token == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing token"})
+		}
+
+		claims, err := jwtManager.Verify(token)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token"})
+		}
+
+		c.Locals("userID", claims.UserID.String())
+		return c.Next()
+	})
+	deployWsRoutes.Get("/:projectId/deploy/servers/:serverId/terminal/ws", websocket.New(deployWSHandler.HandleTerminal))
+
 	// ---- Protected routes (JWT middleware) ----
 	protected := api.Group("/", middleware.Auth(jwtManager))
 
@@ -191,6 +228,9 @@ func main() {
 	projectRoutes.Post("/:id/invitations", invitationHandler.Create)
 	projectRoutes.Post("/:projectId/dm", dmHandler.CreateOrGet)
 	projectRoutes.Get("/:projectId/dm", dmHandler.List)
+	projectRoutes.Post("/:projectId/deploy/servers", deployHandler.CreateServer)
+	projectRoutes.Get("/:projectId/deploy/servers", deployHandler.ListServers)
+	projectRoutes.Get("/:projectId/deploy/servers/:serverId", deployHandler.GetServer)
 
 	// Topic routes (внутри проекта)
 	projectRoutes.Post("/:projectId/topics", topicHandler.Create)

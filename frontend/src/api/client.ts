@@ -95,3 +95,16 @@ export function getTopicWsUrl(topicId: string, token?: string) {
   const url = `${wsBase}/topics/${topicId}/ws${t ? `?token=${encodeURIComponent(t)}` : ""}`;
   return url;
 }
+
+export function getDeployTerminalWsUrl(projectId: string, serverId: string, token?: string) {
+  const t = token || getAuthToken() || "";
+  const api = API_BASE_URL;
+
+  const wsBase = api.startsWith("https://")
+    ? api.replace(/^https:\/\//, "wss://")
+    : api.replace(/^http:\/\//, "ws://");
+
+  return `${wsBase}/projects/${projectId}/deploy/servers/${serverId}/terminal/ws${
+    t ? `?token=${encodeURIComponent(t)}` : ""
+  }`;
+}
