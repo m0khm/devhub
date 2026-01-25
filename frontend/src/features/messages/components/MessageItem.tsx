@@ -16,6 +16,7 @@ interface MessageItemProps {
   isHighlighted?: boolean;
   onReply?: (message: Message) => void;
   onTogglePin?: (message: Message) => void;
+  onDelete?: (message: Message) => void;
 }
 
 interface CodeMetadata {
@@ -32,7 +33,10 @@ interface FileMetadata {
 }
 
 export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
-  ({ message, isPinned = false, isHighlighted = false, onReply, onTogglePin }, ref) => {
+  (
+    { message, isPinned = false, isHighlighted = false, onReply, onTogglePin, onDelete },
+    ref
+  ) => {
     const { user: currentUser } = useAuthStore();
     const isOwnMessage = message.user_id === currentUser?.id;
     const [menuOpen, setMenuOpen] = useState(false);
@@ -185,7 +189,7 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
               )}
             </div>
 
-            {onTogglePin && (
+            {(onTogglePin || (onDelete && isOwnMessage)) && (
               <div className="relative">
                 <button
                   type="button"
@@ -201,17 +205,32 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
                       isOwnMessage ? 'right-0' : 'left-0'
                     }`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onTogglePin(message);
-                        setMenuOpen(false);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800/80"
-                    >
-                      <MapPinIcon className="h-4 w-4 text-sky-300" />
-                      {isPinned ? 'Unpin' : 'Pin'}
-                    </button>
+                    {onTogglePin && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onTogglePin(message);
+                          setMenuOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800/80"
+                      >
+                        <MapPinIcon className="h-4 w-4 text-sky-300" />
+                        {isPinned ? 'Unpin' : 'Pin'}
+                      </button>
+                    )}
+                    {onDelete && isOwnMessage && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onDelete(message);
+                          setMenuOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-200 hover:bg-red-500/20"
+                      >
+                        <span aria-hidden>🗑️</span>
+                        Delete
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

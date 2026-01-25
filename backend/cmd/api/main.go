@@ -229,6 +229,7 @@ func main() {
 	userRoutes := protected.Group("/users")
 	userRoutes.Get("/", userHandler.Search)
 	userRoutes.Patch("/me", userHandler.UpdateMe)
+	userRoutes.Delete("/me", userHandler.DeleteMe)
 
 	// Notification routes
 	notificationRoutes := protected.Group("/notifications")
