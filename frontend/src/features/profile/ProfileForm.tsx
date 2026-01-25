@@ -11,6 +11,7 @@ interface ProfileFormProps {
 
 export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const updateUser = useAuthStore((state) => state.updateUser);
+  const logout = useAuthStore((state) => state.logout);
   const [name, setName] = useState(user?.name ?? '');
   const [handle, setHandle] = useState(user?.handle ?? '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url ?? '');
@@ -25,6 +26,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const [productUpdates, setProductUpdates] = useState(false);
   const [weeklyDigest, setWeeklyDigest] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -95,6 +97,26 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
       toast.error(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Delete your account? This will disable your profile and sign you out.'
+    );
+    if (!confirmed) return;
+
+    setDeleteLoading(true);
+    try {
+      await apiClient.delete('/users/me');
+      toast.success('Account deleted');
+      logout();
+      onSaved?.();
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Failed to delete account';
+      toast.error(message);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -332,6 +354,22 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
           {loading ? 'Saving...' : 'Save changes'}
         </button>
       </form>
+
+      <div className="mt-8 rounded-xl border border-red-100 bg-red-50/60 p-6">
+        <h2 className="text-lg font-semibold text-red-700">Danger zone</h2>
+        <p className="mt-2 text-sm text-red-600">
+          Deleting your account will remove your access. You can&apos;t undo this
+          action.
+        </p>
+        <button
+          type="button"
+          onClick={handleDeleteAccount}
+          disabled={deleteLoading}
+          className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {deleteLoading ? 'Deleting...' : 'Delete account'}
+        </button>
+      </div>
     </>
   );
 };

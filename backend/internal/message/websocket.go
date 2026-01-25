@@ -37,12 +37,21 @@ type Hub struct {
 	// Broadcast message to all clients in a topic
 	broadcast chan *BroadcastMessage
 
+	// Active users across WebSocket connections.
+	activeUsers           map[string]activeUserState
+	activeUserConnections int
+
 	mu sync.RWMutex
 }
 
 type BroadcastMessage struct {
 	TopicID uuid.UUID
 	Data    []byte
+}
+
+type activeUserState struct {
+	count    int
+	lastSeen time.Time
 }
 
 // WebSocket message types
@@ -69,10 +78,12 @@ type WSReactionPayload struct {
 // NewHub creates a new Hub
 func NewHub() *Hub {
 	return &Hub{
-		topics:     make(map[uuid.UUID]map[*Client]bool),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		broadcast:  make(chan *BroadcastMessage, 256),
+		topics:                make(map[uuid.UUID]map[*Client]bool),
+		register:              make(chan *Client),
+		unregister:            make(chan *Client),
+		broadcast:             make(chan *BroadcastMessage, 256),
+		activeUsers:           make(map[string]activeUserState),
+		activeUserConnections: 0,
 	}
 }
 
@@ -86,8 +97,12 @@ func (h *Hub) Run() {
 				h.topics[client.TopicID] = make(map[*Client]bool)
 			}
 			h.topics[client.TopicID][client] = true
+			h.trackActiveUser(client.UserID.String(), true)
+			activeUsersTotal := len(h.activeUsers)
+			activeConnectionsTotal := h.activeUserConnections
 			h.mu.Unlock()
 			metrics.WebsocketConnected()
+			metrics.UpdateActiveUsers(activeUsersTotal, activeConnectionsTotal)
 			log.Printf("Client %s registered to topic %s", client.ID, client.TopicID)
 
 		case client := <-h.unregister:
@@ -101,8 +116,12 @@ func (h *Hub) Run() {
 					}
 				}
 			}
+			h.trackActiveUser(client.UserID.String(), false)
+			activeUsersTotal := len(h.activeUsers)
+			activeConnectionsTotal := h.activeUserConnections
 			h.mu.Unlock()
 			metrics.WebsocketDisconnected()
+			metrics.UpdateActiveUsers(activeUsersTotal, activeConnectionsTotal)
 			log.Printf("Client %s unregistered from topic %s", client.ID, client.TopicID)
 
 		case message := <-h.broadcast:
@@ -121,6 +140,34 @@ func (h *Hub) Run() {
 				}
 			}
 		}
+	}
+}
+
+func (h *Hub) trackActiveUser(userID string, connected bool) {
+	if userID == "" {
+		return
+	}
+	if connected {
+		entry := h.activeUsers[userID]
+		entry.count++
+		entry.lastSeen = time.Now()
+		h.activeUsers[userID] = entry
+		h.activeUserConnections++
+		return
+	}
+
+	entry, ok := h.activeUsers[userID]
+	if ok {
+		if entry.count > 1 {
+			entry.count--
+			entry.lastSeen = time.Now()
+			h.activeUsers[userID] = entry
+		} else {
+			delete(h.activeUsers, userID)
+		}
+	}
+	if h.activeUserConnections > 0 {
+		h.activeUserConnections--
 	}
 }
 

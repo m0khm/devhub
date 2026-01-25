@@ -12,9 +12,11 @@ import (
 
 	"github.com/m0khm/devhub/backend/internal/admin"
 	"github.com/m0khm/devhub/backend/internal/auth"
+	"github.com/m0khm/devhub/backend/internal/community"
 	"github.com/m0khm/devhub/backend/internal/config"
 	"github.com/m0khm/devhub/backend/internal/database"
 	"github.com/m0khm/devhub/backend/internal/dm"
+	"github.com/m0khm/devhub/backend/internal/group"
 	"github.com/m0khm/devhub/backend/internal/message"
 	"github.com/m0khm/devhub/backend/internal/metrics"
 	"github.com/m0khm/devhub/backend/internal/middleware"
@@ -84,6 +86,8 @@ func main() {
 	topicService := topic.NewService(topicRepo, projectRepo)
 	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo)
 	userService := user.NewService(db)
+	groupService := group.NewService(db)
+	communityService := community.NewService(db)
 	dmService := dm.NewService(dmRepo, projectRepo)
 	notificationService := notification.NewService(notificationRepo, projectRepo, topicRepo)
 	invitationService := project.NewInvitationService(projectRepo, userRepo)
@@ -102,6 +106,8 @@ func main() {
 	fileHandler := message.NewFileHandler(messageService, s3Client)
 	fileHandler.SetWSHandler(wsHandler)
 	userHandler := user.NewHandler(userService)
+	groupHandler := group.NewHandler(groupService)
+	communityHandler := community.NewHandler(communityService)
 	notificationHandler := notification.NewHandler(notificationService)
 
 	videoHandler := video.NewHandler() // NEW
@@ -220,6 +226,10 @@ func main() {
 	messageRoutes.Post("/:id/pin", messageHandler.PinMessage)
 	messageRoutes.Delete("/:id/pin", messageHandler.UnpinMessage)
 
+	// File routes
+	fileRoutes := protected.Group("/files")
+	fileRoutes.Get("/:id/download", fileHandler.DownloadFile)
+
 	// Direct message routes
 	dmRoutes := protected.Group("/dm")
 	dmRoutes.Post("/", dmHandler.CreateOrGet)
@@ -229,6 +239,15 @@ func main() {
 	userRoutes := protected.Group("/users")
 	userRoutes.Get("/", userHandler.Search)
 	userRoutes.Patch("/me", userHandler.UpdateMe)
+	userRoutes.Delete("/me", userHandler.DeleteMe)
+
+	// Group search routes
+	groupRoutes := protected.Group("/groups")
+	groupRoutes.Get("/", groupHandler.Search)
+
+	// Community search routes
+	communityRoutes := protected.Group("/communities")
+	communityRoutes.Get("/", communityHandler.Search)
 
 	// Notification routes
 	notificationRoutes := protected.Group("/notifications")

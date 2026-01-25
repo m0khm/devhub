@@ -3,11 +3,13 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
+	"github.com/m0khm/devhub/backend/internal/metrics"
 	"github.com/m0khm/devhub/backend/internal/user"
 )
 
@@ -55,6 +57,8 @@ func (s *Service) Register(req user.RegisterRequest) (*user.User, string, error)
 		return nil, "", fmt.Errorf("failed to create user: %w", err)
 	}
 
+	metrics.RecordRegistration(time.Now())
+
 	// Generate JWT token
 	token, err := s.jwtManager.Generate(newUser.ID, newUser.Email)
 	if err != nil {
@@ -67,7 +71,7 @@ func (s *Service) Register(req user.RegisterRequest) (*user.User, string, error)
 // Login user
 func (s *Service) Login(req user.LoginRequest) (*user.User, string, error) {
 	var foundUser user.User
-	if err := s.db.Where("email = ?", req.Email).First(&foundUser).Error; err != nil {
+	if err := s.db.Where("email = ? AND is_deleted = false", req.Email).First(&foundUser).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, "", ErrInvalidCredentials
 		}
@@ -95,7 +99,7 @@ func (s *Service) Login(req user.LoginRequest) (*user.User, string, error) {
 // GetUserByID
 func (s *Service) GetUserByID(userID uuid.UUID) (*user.User, error) {
 	var foundUser user.User
-	if err := s.db.First(&foundUser, "id = ?", userID).Error; err != nil {
+	if err := s.db.First(&foundUser, "id = ? AND is_deleted = false", userID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotFound
 		}

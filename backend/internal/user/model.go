@@ -8,20 +8,22 @@ import (
 )
 
 type User struct {
-	ID             uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
-	Email          string    `json:"email" gorm:"uniqueIndex;not null"`
-	PasswordHash   *string   `json:"-" gorm:"column:password_hash"`
-	Name           string    `json:"name" gorm:"not null"`
-	Handle         *string   `json:"handle" gorm:"column:handle;uniqueIndex"`
-	AvatarURL      *string   `json:"avatar_url"`
-	Bio            *string   `json:"bio" gorm:"type:text"`
-	Company        *string   `json:"company"`
-	Location       *string   `json:"location"`
-	Phone          *string   `json:"phone"`
-	GitHubID       *string   `json:"github_id" gorm:"column:github_id;uniqueIndex"`
-	GitHubUsername *string   `json:"github_username" gorm:"column:github_username"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID             uuid.UUID  `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
+	Email          string     `json:"email" gorm:"uniqueIndex;not null"`
+	PasswordHash   *string    `json:"-" gorm:"column:password_hash"`
+	Name           string     `json:"name" gorm:"not null"`
+	Handle         *string    `json:"handle" gorm:"column:handle;uniqueIndex"`
+	AvatarURL      *string    `json:"avatar_url"`
+	Bio            *string    `json:"bio" gorm:"type:text"`
+	Company        *string    `json:"company"`
+	Location       *string    `json:"location"`
+	Phone          *string    `json:"phone"`
+	GitHubID       *string    `json:"github_id" gorm:"column:github_id;uniqueIndex"`
+	GitHubUsername *string    `json:"github_username" gorm:"column:github_username"`
+	IsDeleted      bool       `json:"-" gorm:"column:is_deleted;default:false"`
+	DeletedAt      *time.Time `json:"-" gorm:"column:deleted_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 // Request/Response DTOs
