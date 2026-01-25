@@ -62,6 +62,22 @@ function App() {
           }
         />
         <Route
+          path="/projects/:projectId/code"
+          element={
+            <ProtectedRoute>
+              <CodePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/deploy"
+          element={
+            <ProtectedRoute>
+              <DeployPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <ProtectedRoute>

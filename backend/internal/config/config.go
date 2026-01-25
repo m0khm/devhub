@@ -18,6 +18,7 @@ type Config struct {
 	SMTP     SMTPConfig
 	GitHub   GitHubConfig
 	Admin    AdminConfig
+	Deploy   DeployConfig
 }
 
 type ServerConfig struct {
@@ -75,6 +76,10 @@ type AdminConfig struct {
 	SessionTTLInMinute int
 }
 
+type DeployConfig struct {
+	SecretsKey string
+}
+
 func Load() (*Config, error) {
 	_ = godotenv.Load()
 
@@ -129,10 +134,17 @@ func Load() (*Config, error) {
 			Password:           getEnv("ADMIN_PASSWORD", "admin"),
 			SessionTTLInMinute: getEnvAsInt("ADMIN_SESSION_TTL_MINUTES", 60),
 		},
+		Deploy: DeployConfig{
+			SecretsKey: getEnv("DEPLOY_SECRETS_KEY", "change-me-in-production"),
+		},
 	}
 
 	if cfg.JWT.Secret == "change-me-in-production" && cfg.Server.Environment == "production" {
 		return nil, fmt.Errorf("JWT_SECRET must be set in production")
+	}
+
+	if cfg.Deploy.SecretsKey == "change-me-in-production" && cfg.Server.Environment == "production" {
+		return nil, fmt.Errorf("DEPLOY_SECRETS_KEY must be set in production")
 	}
 
 	return cfg, nil
