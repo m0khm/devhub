@@ -23,19 +23,24 @@ type durationSummary struct {
 }
 
 type store struct {
-	mu        sync.Mutex
-	requests  map[labelKey]uint64
-	errors    map[labelKey]uint64
-	durations map[labelKey]durationSummary
+	mu                 sync.Mutex
+	requests           map[labelKey]uint64
+	errors             map[labelKey]uint64
+	durations          map[labelKey]durationSummary
+	registrationsTotal uint64
+	registrationsByDay map[string]uint64
 }
 
 var metricsStore = store{
-	requests:  make(map[labelKey]uint64),
-	errors:    make(map[labelKey]uint64),
-	durations: make(map[labelKey]durationSummary),
+	requests:           make(map[labelKey]uint64),
+	errors:             make(map[labelKey]uint64),
+	durations:          make(map[labelKey]durationSummary),
+	registrationsByDay: make(map[string]uint64),
 }
 
 var wsConnections int64
+var activeUsersTotal int64
+var activeUserConnections int64
 
 func Middleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -78,6 +83,19 @@ func WebsocketDisconnected() {
 	atomic.AddInt64(&wsConnections, -1)
 }
 
+func UpdateActiveUsers(totalUsers int, totalConnections int) {
+	atomic.StoreInt64(&activeUsersTotal, int64(totalUsers))
+	atomic.StoreInt64(&activeUserConnections, int64(totalConnections))
+}
+
+func RecordRegistration(at time.Time) {
+	day := at.Format("2006-01-02")
+	metricsStore.mu.Lock()
+	metricsStore.registrationsTotal++
+	metricsStore.registrationsByDay[day]++
+	metricsStore.mu.Unlock()
+}
+
 func Handler(c *fiber.Ctx) error {
 	c.Set("Content-Type", "text/plain; version=0.0.4")
 
@@ -105,11 +123,30 @@ func Handler(c *fiber.Ctx) error {
 		summary := metricsStore.durations[key]
 		builder.WriteString(formatSummaryLine("devhub_http_request_duration_seconds", key, summary))
 	}
+
+	builder.WriteString("# HELP devhub_user_registrations_total Total number of user registrations.\n")
+	builder.WriteString("# TYPE devhub_user_registrations_total counter\n")
+	builder.WriteString(fmt.Sprintf("devhub_user_registrations_total %d\n", metricsStore.registrationsTotal))
+
+	builder.WriteString("# HELP devhub_user_registrations_daily_total Total number of user registrations per day.\n")
+	builder.WriteString("# TYPE devhub_user_registrations_daily_total counter\n")
+	dayKeys := sortedDayKeys(metricsStore.registrationsByDay)
+	for _, day := range dayKeys {
+		builder.WriteString(fmt.Sprintf("devhub_user_registrations_daily_total{day=%q} %d\n", escapeLabelValue(day), metricsStore.registrationsByDay[day]))
+	}
 	metricsStore.mu.Unlock()
 
 	builder.WriteString("# HELP devhub_ws_connections Number of active WebSocket connections.\n")
 	builder.WriteString("# TYPE devhub_ws_connections gauge\n")
 	builder.WriteString(fmt.Sprintf("devhub_ws_connections %d\n", atomic.LoadInt64(&wsConnections)))
+
+	builder.WriteString("# HELP devhub_active_users Number of active users with at least one WebSocket connection.\n")
+	builder.WriteString("# TYPE devhub_active_users gauge\n")
+	builder.WriteString(fmt.Sprintf("devhub_active_users %d\n", atomic.LoadInt64(&activeUsersTotal)))
+
+	builder.WriteString("# HELP devhub_active_user_connections Number of active WebSocket connections associated with authenticated users.\n")
+	builder.WriteString("# TYPE devhub_active_user_connections gauge\n")
+	builder.WriteString(fmt.Sprintf("devhub_active_user_connections %d\n", atomic.LoadInt64(&activeUserConnections)))
 
 	return c.SendString(builder.String())
 }
@@ -128,6 +165,15 @@ func sortedKeys[T any](input map[labelKey]T) []labelKey {
 		}
 		return keys[i].Path < keys[j].Path
 	})
+	return keys
+}
+
+func sortedDayKeys(input map[string]uint64) []string {
+	keys := make([]string, 0, len(input))
+	for key := range input {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
 	return keys
 }
 
