@@ -225,6 +225,20 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
     }
   };
 
+  const handleDeleteMessage = async (message: Message) => {
+    const confirmed = window.confirm('Delete this message?');
+    if (!confirmed) return;
+
+    try {
+      await apiClient.delete(`/messages/${message.id}`);
+      deleteMessage(message.id);
+      setPinnedMessages((prev) => prev.filter((item) => item.id !== message.id));
+      toast.success('Message deleted');
+    } catch (error) {
+      toast.error('Failed to delete message');
+    }
+  };
+
   const handleTogglePin = async (message: Message) => {
     const isPinned = pinnedMessages.some((item) => item.id === message.id);
     try {
@@ -309,8 +323,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
             pinnedMessages={pinnedMessages ?? []}
             loading={loading}
             highlightedMessageId={highlightedMessageId}
+            onHighlightMessage={setHighlightedMessageId}
             onReply={handleReply}
             onTogglePin={handleTogglePin}
+            onDelete={handleDeleteMessage}
           />
           {quickLink && (
             <Link

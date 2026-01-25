@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiClient } from '../../../api/client';
 import { useAuthStore } from '../../../store/authStore';
@@ -13,8 +13,22 @@ export const RegisterPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [confirm, setConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
+
+  useEffect(() => {
+    if (resendCountdown <= 0) {
+      return undefined;
+    }
+
+    const timer = setInterval(() => {
+      setResendCountdown((prev) => Math.max(prev - 1, 0));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [resendCountdown]);
 
   const validateStep = () => {
     if (step === 1 && !name.trim()) {
@@ -39,16 +53,50 @@ export const RegisterPage: React.FC = () => {
       }
     }
 
-    if (step === 3 && !confirm) {
-      toast.error('Please confirm to create your account');
-      return false;
+    if (step === 3) {
+      if (!code.trim()) {
+        toast.error('Please enter the verification code');
+        return false;
+      }
+
+      if (!confirm) {
+        toast.error('Please accept the user agreement');
+        return false;
+      }
     }
 
     return true;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!validateStep()) {
+      return;
+    }
+
+    if (step === 2) {
+      setLoading(true);
+      try {
+        const response = await apiClient.post<{ expires_at: string }>('/auth/register', {
+          name,
+          email,
+          password,
+        });
+        setResendCountdown(60);
+        toast.success('Verification code sent to your email');
+        setStep(3);
+        if (response.data.expires_at) {
+          const expiresAt = new Date(response.data.expires_at);
+          const remaining = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+          if (remaining > 0) {
+            setResendCountdown(Math.min(remaining, 60));
+          }
+        }
+      } catch (error: any) {
+        const message = error.response?.data?.error || 'Failed to send verification code';
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -69,10 +117,11 @@ export const RegisterPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await apiClient.post<AuthResponse>('/auth/register', {
+      const response = await apiClient.post<AuthResponse>('/auth/register/confirm', {
         name,
         email,
         password,
+        code,
       });
 
       setAuth(response.data.user, response.data.token);
@@ -80,6 +129,25 @@ export const RegisterPage: React.FC = () => {
       navigate('/app');
     } catch (error: any) {
       const message = error.response?.data?.error || 'Registration failed';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!email.trim()) {
+      toast.error('Please enter your email first');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await apiClient.post('/auth/register/resend', { email });
+      setResendCountdown(60);
+      toast.success('Verification code resent');
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Failed to resend code';
       toast.error(message);
     } finally {
       setLoading(false);
@@ -156,9 +224,39 @@ export const RegisterPage: React.FC = () => {
           {step === 3 && (
             <div className="space-y-4">
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                <p className="font-medium text-slate-700">Confirm details</p>
-                <p className="mt-1">Name: {name || '—'}</p>
-                <p>Email: {email || '—'}</p>
+                <p className="font-medium text-slate-700">Check your inbox</p>
+                <p className="mt-1">We sent a 6-digit code to {email || 'your email'}.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Verification code
+                </label>
+                <input
+                  type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="Enter the code"
+                  inputMode="numeric"
+                  maxLength={6}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-sm text-slate-500">
+                <span>
+                  {resendCountdown > 0
+                    ? `Resend available in ${resendCountdown}s`
+                    : 'Didn’t receive a code?'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resendCountdown > 0 || loading}
+                  className="font-medium text-blue-600 hover:text-blue-700 disabled:text-slate-400 disabled:cursor-not-allowed"
+                >
+                  Resend
+                </button>
               </div>
 
               <label className="flex items-start gap-3 text-sm text-slate-600">
@@ -168,7 +266,13 @@ export const RegisterPage: React.FC = () => {
                   onChange={(e) => setConfirm(e.target.checked)}
                   className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
-                I confirm the information is correct and want to create my account.
+                <span>
+                  Я принимаю{' '}
+                  <Link to="/terms" className="text-blue-600 hover:text-blue-700 font-medium">
+                    Пользовательское соглашение
+                  </Link>
+                  .
+                </span>
               </label>
             </div>
           )}
@@ -188,9 +292,10 @@ export const RegisterPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleNext}
+                disabled={loading}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-500 focus:ring-4 focus:ring-blue-200 transition"
               >
-                Next
+                {loading && step === 2 ? 'Sending code...' : 'Next'}
               </button>
             ) : (
               <button
