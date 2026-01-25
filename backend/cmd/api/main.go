@@ -220,6 +220,10 @@ func main() {
 	messageRoutes.Post("/:id/pin", messageHandler.PinMessage)
 	messageRoutes.Delete("/:id/pin", messageHandler.UnpinMessage)
 
+	// File routes
+	fileRoutes := protected.Group("/files")
+	fileRoutes.Get("/:id/download", fileHandler.DownloadFile)
+
 	// Direct message routes
 	dmRoutes := protected.Group("/dm")
 	dmRoutes.Post("/", dmHandler.CreateOrGet)

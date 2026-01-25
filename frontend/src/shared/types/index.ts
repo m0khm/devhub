@@ -69,7 +69,7 @@ export interface Message {
   user_id?: string;
   content: string;
   type: 'text' | 'file' | 'system' | 'code' | 'integration';
-  metadata?: any;
+  metadata?: MessageMetadata | string | null;
   parent_id?: string;
   created_at: string;
   updated_at: string;
@@ -82,6 +82,22 @@ export interface Message {
   };
   reactions?: ReactionGroup[];
 }
+
+export interface FileMetadata {
+  filename?: string;
+  mime_type?: string;
+  size?: number;
+  url?: string;
+  storage_key?: string;
+}
+
+export interface CodeMetadata {
+  language?: string;
+  filename?: string;
+  content?: string;
+}
+
+export type MessageMetadata = FileMetadata | CodeMetadata | Record<string, unknown>;
 
 export interface Mention {
   id: string;

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"path/filepath"
 	"time"
 
@@ -13,9 +14,9 @@ import (
 )
 
 type S3Client struct {
-	client *minio.Client
-        bucket string
-        endpoint string
+	client   *minio.Client
+	bucket   string
+	endpoint string
 }
 
 func NewS3Client(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*S3Client, error) {
@@ -42,9 +43,9 @@ func NewS3Client(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*S
 	}
 
 	return &S3Client{
-		client: client,
-		bucket: bucket,
-                endpoint: endpoint,
+		client:   client,
+		bucket:   bucket,
+		endpoint: endpoint,
 	}, nil
 }
 
@@ -85,6 +86,23 @@ func (s *S3Client) Delete(ctx context.Context, key string) error {
 
 func (s *S3Client) GetURL(key string) string {
 	return fmt.Sprintf("http://%s/%s/%s", s.endpoint, s.bucket, key)
+}
+
+func (s *S3Client) GetPresignedDownloadURL(ctx context.Context, key, filename, mimeType string) (string, error) {
+	params := url.Values{}
+	if filename != "" {
+		params.Set("response-content-disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	}
+	if mimeType != "" {
+		params.Set("response-content-type", mimeType)
+	}
+
+	downloadURL, err := s.client.PresignedGetObject(ctx, s.bucket, key, time.Minute*15, params)
+	if err != nil {
+		return "", fmt.Errorf("failed to presign download url: %w", err)
+	}
+
+	return downloadURL.String(), nil
 }
 
 func (s *S3Client) IsReady() bool {
