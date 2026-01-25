@@ -38,13 +38,29 @@ func (s *Service) Create(projectID, userID uuid.UUID, req CreateTopicRequest) (*
 		return nil, ErrNotProjectMember
 	}
 
+	accessLevel := "members"
+	if req.AccessLevel != nil && *req.AccessLevel != "" {
+		accessLevel = *req.AccessLevel
+	}
+	visibility := "visible"
+	if req.Visibility != nil && *req.Visibility != "" {
+		visibility = *req.Visibility
+	}
+	notificationsMuted := false
+	if req.NotificationsMuted != nil {
+		notificationsMuted = *req.NotificationsMuted
+	}
+
 	topic := Topic{
-		ProjectID:   projectID,
-		Name:        req.Name,
-		Description: req.Description,
-		Type:        req.Type,
-		Icon:        req.Icon,
-		CreatedBy:   userID,
+		ProjectID:          projectID,
+		Name:               req.Name,
+		Description:        req.Description,
+		Type:               req.Type,
+		Icon:               req.Icon,
+		AccessLevel:        accessLevel,
+		Visibility:         visibility,
+		NotificationsMuted: notificationsMuted,
+		CreatedBy:          userID,
 	}
 
 	if err := s.repo.Create(&topic); err != nil {
@@ -133,6 +149,15 @@ func (s *Service) Update(topicID, userID uuid.UUID, req UpdateTopicRequest) (*To
 	}
 	if req.Position != nil {
 		topic.Position = *req.Position
+	}
+	if req.AccessLevel != nil {
+		topic.AccessLevel = *req.AccessLevel
+	}
+	if req.Visibility != nil {
+		topic.Visibility = *req.Visibility
+	}
+	if req.NotificationsMuted != nil {
+		topic.NotificationsMuted = *req.NotificationsMuted
 	}
 
 	if err := s.repo.Update(topic); err != nil {

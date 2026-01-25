@@ -27,10 +27,26 @@ func NewService(repo *Repository) *Service {
 
 // Create project
 func (s *Service) Create(userID uuid.UUID, req CreateProjectRequest) (*Project, error) {
+	accessLevel := "private"
+	if req.AccessLevel != nil && *req.AccessLevel != "" {
+		accessLevel = *req.AccessLevel
+	}
+	visibility := "visible"
+	if req.Visibility != nil && *req.Visibility != "" {
+		visibility = *req.Visibility
+	}
+	notificationsMuted := false
+	if req.NotificationsMuted != nil {
+		notificationsMuted = *req.NotificationsMuted
+	}
+
 	project := Project{
-		Name:        req.Name,
-		Description: req.Description,
-		OwnerID:     userID,
+		Name:               req.Name,
+		Description:        req.Description,
+		AccessLevel:        accessLevel,
+		Visibility:         visibility,
+		NotificationsMuted: notificationsMuted,
+		OwnerID:            userID,
 	}
 
 	// Start transaction
@@ -152,6 +168,15 @@ func (s *Service) Update(projectID, userID uuid.UUID, req UpdateProjectRequest) 
 	}
 	if req.AvatarURL != nil {
 		project.AvatarURL = req.AvatarURL
+	}
+	if req.AccessLevel != nil {
+		project.AccessLevel = *req.AccessLevel
+	}
+	if req.Visibility != nil {
+		project.Visibility = *req.Visibility
+	}
+	if req.NotificationsMuted != nil {
+		project.NotificationsMuted = *req.NotificationsMuted
 	}
 
 	// Save
