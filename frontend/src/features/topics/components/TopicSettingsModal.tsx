@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { apiClient } from '../../../api/client';
+import { useProjectStore } from '../../../store/projectStore';
 import type { Topic } from '../../../shared/types';
 
 interface TopicSettingsModalProps {
@@ -19,8 +20,10 @@ export const TopicSettingsModal: React.FC<TopicSettingsModalProps> = ({
   const prevOverflow = useRef<string>('');
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [muteNotifications, setMuteNotifications] = useState(false);
   const [autoJoinThreads, setAutoJoinThreads] = useState(true);
+  const { currentTopics, setCurrentTopics } = useProjectStore();
 
   useEffect(() => {
     if (!open || !topicId) return;
@@ -37,6 +40,26 @@ export const TopicSettingsModal: React.FC<TopicSettingsModalProps> = ({
         setLoading(false);
       });
   }, [open, topicId]);
+
+  const handleDeleteTopic = async () => {
+    if (!topicId) return;
+    const confirmed = window.confirm(
+      'Delete this topic? Messages will be removed for everyone.'
+    );
+    if (!confirmed) return;
+
+    setDeleteLoading(true);
+    try {
+      await apiClient.delete(`/topics/${topicId}`);
+      toast.success('Topic deleted');
+      setCurrentTopics(currentTopics.filter((item) => item.id !== topicId));
+      onClose();
+    } catch (error) {
+      toast.error('Failed to delete topic');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -156,6 +179,21 @@ export const TopicSettingsModal: React.FC<TopicSettingsModalProps> = ({
                   />
                 </label>
               </div>
+            </section>
+
+            <section className="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
+              <h3 className="text-sm font-semibold text-red-200">Danger zone</h3>
+              <p className="mt-2 text-sm text-red-200/80">
+                Deleting a topic removes its messages for all participants.
+              </p>
+              <button
+                type="button"
+                onClick={handleDeleteTopic}
+                disabled={deleteLoading}
+                className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-red-500/40 bg-red-500/20 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deleteLoading ? 'Deleting...' : 'Delete topic'}
+              </button>
             </section>
           </div>
         </div>

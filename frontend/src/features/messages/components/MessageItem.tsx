@@ -17,6 +17,7 @@ interface MessageItemProps {
   onSelect?: (message: Message) => void;
   onReply?: (message: Message) => void;
   onTogglePin?: (message: Message) => void;
+  onDelete?: (message: Message) => void;
 }
 
 export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
@@ -267,7 +268,7 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
               )}
             </div>
 
-            {onTogglePin && (
+            {(onTogglePin || (onDelete && isOwnMessage)) && (
               <div className="relative">
                 <button
                   type="button"
