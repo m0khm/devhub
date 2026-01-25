@@ -16,6 +16,7 @@ type Config struct {
 	JWT      JWTConfig
 	S3       S3Config
 	GitHub   GitHubConfig
+	Admin    AdminConfig
 }
 
 type ServerConfig struct {
@@ -59,6 +60,12 @@ type GitHubConfig struct {
 	CallbackURL  string
 }
 
+type AdminConfig struct {
+	User               string
+	Password           string
+	SessionTTLInMinute int
+}
+
 func Load() (*Config, error) {
 	_ = godotenv.Load()
 
@@ -100,6 +107,11 @@ func Load() (*Config, error) {
 			ClientID:     getEnv("GITHUB_CLIENT_ID", ""),
 			ClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
 			CallbackURL:  getEnv("GITHUB_CALLBACK_URL", "http://localhost:8080/api/auth/github/callback"),
+		},
+		Admin: AdminConfig{
+			User:               getEnv("ADMIN_USER", "admin"),
+			Password:           getEnv("ADMIN_PASSWORD", "admin"),
+			SessionTTLInMinute: getEnvAsInt("ADMIN_SESSION_TTL_MINUTES", 60),
 		},
 	}
 

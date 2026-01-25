@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/websocket/v2"
 
+	"github.com/m0khm/devhub/backend/internal/admin"
 	"github.com/m0khm/devhub/backend/internal/auth"
 	"github.com/m0khm/devhub/backend/internal/config"
 	"github.com/m0khm/devhub/backend/internal/database"
@@ -69,19 +71,28 @@ func main() {
 	messageRepo := message.NewRepository(db)
 	notificationRepo := notification.NewRepository(db)
 	dmRepo := dm.NewRepository(db)
+	userRepo := user.NewRepository(db)
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager)
+	adminService := admin.NewService(
+		cfg.Admin.User,
+		cfg.Admin.Password,
+		time.Duration(cfg.Admin.SessionTTLInMinute)*time.Minute,
+	)
 	projectService := project.NewService(projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
 	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo)
 	userService := user.NewService(db)
 	dmService := dm.NewService(dmRepo, projectRepo)
 	notificationService := notification.NewService(notificationRepo, projectRepo, topicRepo)
+	invitationService := project.NewInvitationService(projectRepo, userRepo)
 
 	// Initialize handlers
 	authHandler := auth.NewHandler(authService)
+	adminHandler := admin.NewHandler(adminService)
 	projectHandler := project.NewHandler(projectService)
+	invitationHandler := project.NewInvitationHandler(invitationService)
 	topicHandler := topic.NewHandler(topicService)
 	messageHandler := message.NewHandler(messageService)
 	dmHandler := dm.NewHandler(dmService)
@@ -126,6 +137,11 @@ func main() {
 	authRoutes.Post("/register", authHandler.Register)
 	authRoutes.Post("/login", authHandler.Login)
 	authRoutes.Get("/me", middleware.Auth(jwtManager), authHandler.GetMe)
+
+	// Admin routes (public login + protected dashboard)
+	adminRoutes := api.Group("/admin")
+	adminRoutes.Post("/login", adminHandler.Login)
+	adminRoutes.Get("/", middleware.Admin(adminService), adminHandler.Dashboard)
 
 	// ---- WebSocket routes (НЕ через protected) ----
 	wsRoutes := api.Group("/topics")
@@ -172,6 +188,7 @@ func main() {
 	projectRoutes.Get("/:id/members", projectHandler.GetMembers)
 	projectRoutes.Post("/:id/members", projectHandler.AddMember)
 	projectRoutes.Delete("/:id/members/:userId", projectHandler.RemoveMember)
+	projectRoutes.Post("/:id/invitations", invitationHandler.Create)
 	projectRoutes.Post("/:projectId/dm", dmHandler.CreateOrGet)
 	projectRoutes.Get("/:projectId/dm", dmHandler.List)
 
@@ -217,6 +234,11 @@ func main() {
 	notificationRoutes := protected.Group("/notifications")
 	notificationRoutes.Get("/", notificationHandler.List)
 	notificationRoutes.Patch("/:id/read", notificationHandler.MarkRead)
+
+	// Project invitation routes
+	invitationRoutes := protected.Group("/project-invitations")
+	invitationRoutes.Post("/:id/accept", invitationHandler.Accept)
+	invitationRoutes.Post("/:id/decline", invitationHandler.Decline)
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)

@@ -56,9 +56,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => 
   const dialogStyle: React.CSSProperties = {
     width: '100%',
     maxWidth: 720,
+    maxHeight: '90vh',
     background: '#fff',
     borderRadius: 20,
     boxShadow: '0 24px 80px rgba(15, 23, 42, 0.25)',
+    overflowY: 'auto',
     padding: 28,
     pointerEvents: 'auto',
   };
