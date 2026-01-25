@@ -18,7 +18,26 @@ export interface Project {
   name: string;
   description?: string;
   avatar_url?: string;
+  access_level?: 'private' | 'members' | 'public';
+  visibility?: 'visible' | 'hidden' | 'archived';
+  notifications_muted?: boolean;
   owner_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Community {
+  id: string;
+  name: string;
+  description?: string;
   created_at: string;
   updated_at: string;
 }
@@ -48,6 +67,9 @@ export interface Topic {
   description?: string;
   type: 'chat' | 'code' | 'deploy' | 'bugs' | 'planning' | 'custom' | 'direct';
   icon?: string;
+  access_level?: 'members' | 'admins' | 'public';
+  visibility?: 'visible' | 'hidden' | 'archived';
+  notifications_muted?: boolean;
   position: number;
   created_by: string;
   created_at: string;
@@ -69,7 +91,7 @@ export interface Message {
   user_id?: string;
   content: string;
   type: 'text' | 'file' | 'system' | 'code' | 'integration';
-  metadata?: any;
+  metadata?: MessageMetadata | string | null;
   parent_id?: string;
   created_at: string;
   updated_at: string;
@@ -82,6 +104,22 @@ export interface Message {
   };
   reactions?: ReactionGroup[];
 }
+
+export interface FileMetadata {
+  filename?: string;
+  mime_type?: string;
+  size?: number;
+  url?: string;
+  storage_key?: string;
+}
+
+export interface CodeMetadata {
+  language?: string;
+  filename?: string;
+  content?: string;
+}
+
+export type MessageMetadata = FileMetadata | CodeMetadata | Record<string, unknown>;
 
 export interface Mention {
   id: string;

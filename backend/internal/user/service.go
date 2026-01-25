@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -31,7 +32,13 @@ func (s *Service) Search(query string) ([]User, error) {
 	like := fmt.Sprintf("%%%s%%", trimmed)
 	var users []User
 	if err := s.db.
-		Where("email ILIKE ? OR name ILIKE ? OR handle ILIKE ? OR github_username ILIKE ?", like, like, like, like).
+		Where(
+			"(email ILIKE ? OR name ILIKE ? OR handle ILIKE ? OR github_username ILIKE ?) AND is_deleted = false",
+			like,
+			like,
+			like,
+			like,
+		).
 		Order("name ASC").
 		Limit(10).
 		Find(&users).Error; err != nil {
@@ -43,7 +50,7 @@ func (s *Service) Search(query string) ([]User, error) {
 
 func (s *Service) Update(userID uuid.UUID, req UpdateUserRequest) (*User, error) {
 	var foundUser User
-	if err := s.db.First(&foundUser, "id = ?", userID).Error; err != nil {
+	if err := s.db.First(&foundUser, "id = ? AND is_deleted = false", userID).Error; err != nil {
 		return nil, err
 	}
 
@@ -72,4 +79,21 @@ func (s *Service) Update(userID uuid.UUID, req UpdateUserRequest) (*User, error)
 	}
 
 	return &foundUser, nil
+}
+
+func (s *Service) Delete(userID uuid.UUID) error {
+	now := time.Now()
+	result := s.db.Model(&User{}).
+		Where("id = ? AND is_deleted = false", userID).
+		Updates(map[string]interface{}{
+			"is_deleted": true,
+			"deleted_at": now,
+		})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }

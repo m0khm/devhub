@@ -172,7 +172,7 @@ func (r *Repository) GetPinnedByTopicID(topicID uuid.UUID) ([]MessageWithUser, e
 		Joins("JOIN messages ON messages.id = pinned_messages.message_id").
 		Joins("LEFT JOIN users ON users.id = messages.user_id").
 		Where("pinned_messages.topic_id = ?", topicID).
-		Order("messages.created_at DESC").
+		Order("pinned_messages.created_at DESC").
 		Scan(&messages).Error
 
 	return messages, err
