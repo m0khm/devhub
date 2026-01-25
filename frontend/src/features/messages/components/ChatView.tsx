@@ -293,6 +293,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
             pinnedMessages={pinnedMessages ?? []}
             loading={loading}
             highlightedMessageId={highlightedMessageId}
+            onHighlightMessage={setHighlightedMessageId}
             onReply={handleReply}
             onTogglePin={handleTogglePin}
           />
