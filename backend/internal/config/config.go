@@ -15,8 +15,10 @@ type Config struct {
 	Redis    RedisConfig
 	JWT      JWTConfig
 	S3       S3Config
+	SMTP     SMTPConfig
 	GitHub   GitHubConfig
 	Admin    AdminConfig
+	Deploy   DeployConfig
 }
 
 type ServerConfig struct {
@@ -54,6 +56,14 @@ type S3Config struct {
 	UseSSL    bool
 }
 
+type SMTPConfig struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	From     string
+}
+
 type GitHubConfig struct {
 	ClientID     string
 	ClientSecret string
@@ -64,6 +74,10 @@ type AdminConfig struct {
 	User               string
 	Password           string
 	SessionTTLInMinute int
+}
+
+type DeployConfig struct {
+	SecretsKey string
 }
 
 func Load() (*Config, error) {
@@ -103,6 +117,13 @@ func Load() (*Config, error) {
 			Bucket:    getEnv("S3_BUCKET", "devhub"),
 			UseSSL:    getEnvAsBool("S3_USE_SSL", false),
 		},
+		SMTP: SMTPConfig{
+			Host:     getEnv("SMTP_HOST", "smtp.resend.com"),
+			Port:     getEnvAsInt("SMTP_PORT", 587),
+			Username: getEnv("SMTP_USERNAME", "resend"),
+			Password: getEnv("SMTP_PASSWORD", ""),
+			From:     getEnv("SMTP_FROM", "no-reply@devhub.local"),
+		},
 		GitHub: GitHubConfig{
 			ClientID:     getEnv("GITHUB_CLIENT_ID", ""),
 			ClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
@@ -113,10 +134,17 @@ func Load() (*Config, error) {
 			Password:           getEnv("ADMIN_PASSWORD", "admin"),
 			SessionTTLInMinute: getEnvAsInt("ADMIN_SESSION_TTL_MINUTES", 60),
 		},
+		Deploy: DeployConfig{
+			SecretsKey: getEnv("DEPLOY_SECRETS_KEY", "change-me-in-production"),
+		},
 	}
 
 	if cfg.JWT.Secret == "change-me-in-production" && cfg.Server.Environment == "production" {
 		return nil, fmt.Errorf("JWT_SECRET must be set in production")
+	}
+
+	if cfg.Deploy.SecretsKey == "change-me-in-production" && cfg.Server.Environment == "production" {
+		return nil, fmt.Errorf("DEPLOY_SECRETS_KEY must be set in production")
 	}
 
 	return cfg, nil
