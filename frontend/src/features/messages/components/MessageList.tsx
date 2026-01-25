@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Message } from '../../../shared/types';
 import { MessageItem } from './MessageItem';
 
@@ -7,6 +7,7 @@ interface MessageListProps {
   pinnedMessages?: Message[] | null;
   loading: boolean;
   highlightedMessageId?: string | null;
+  onHighlightMessage?: (messageId: string | null) => void;
   onReply?: (message: Message) => void;
   onTogglePin?: (message: Message) => void;
   onDelete?: (message: Message) => void;
@@ -17,6 +18,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   pinnedMessages = [],
   loading,
   highlightedMessageId,
+  onHighlightMessage,
   onReply,
   onTogglePin,
   onDelete,
@@ -25,6 +27,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const normalizedPinnedMessages = pinnedMessages ?? [];
   const normalizedMessages = messages ?? [];
+  const [currentPinnedIndex, setCurrentPinnedIndex] = useState(0);
   const pinnedIds = new Set(normalizedPinnedMessages.map((message) => message.id));
   const visibleMessages = normalizedMessages.filter(
     (message) => !pinnedIds.has(message.id),
@@ -42,8 +45,60 @@ export const MessageList: React.FC<MessageListProps> = ({
     node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [highlightedMessageId, normalizedMessages]);
 
+  useEffect(() => {
+    if (normalizedPinnedMessages.length === 0) {
+      setCurrentPinnedIndex(0);
+      return;
+    }
+
+    const highlightedIndex = highlightedMessageId
+      ? normalizedPinnedMessages.findIndex(
+          (message) => message.id === highlightedMessageId,
+        )
+      : -1;
+
+    if (highlightedIndex >= 0) {
+      setCurrentPinnedIndex(highlightedIndex);
+      return;
+    }
+
+    setCurrentPinnedIndex((prev) =>
+      Math.min(prev, normalizedPinnedMessages.length - 1),
+    );
+  }, [highlightedMessageId, normalizedPinnedMessages]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const focusMessage = (messageId: string) => {
+    onHighlightMessage?.(messageId);
+    const node = messageRefs.current.get(messageId);
+    node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  const handlePinnedNavigation = (direction: 'prev' | 'next') => {
+    if (normalizedPinnedMessages.length === 0) return;
+    const delta = direction === 'prev' ? -1 : 1;
+    const nextIndex = Math.min(
+      normalizedPinnedMessages.length - 1,
+      Math.max(0, currentPinnedIndex + delta),
+    );
+    setCurrentPinnedIndex(nextIndex);
+    const nextMessage = normalizedPinnedMessages[nextIndex];
+    if (nextMessage) {
+      focusMessage(nextMessage.id);
+    }
+  };
+
+  const handlePinnedSelect = (messageId: string) => {
+    const index = normalizedPinnedMessages.findIndex(
+      (message) => message.id === messageId,
+    );
+    if (index >= 0) {
+      setCurrentPinnedIndex(index);
+    }
+    focusMessage(messageId);
   };
 
   const setMessageRef =
@@ -78,8 +133,35 @@ export const MessageList: React.FC<MessageListProps> = ({
     <div className="flex-1 min-h-0 overflow-y-auto px-5 py-3 space-y-3 bg-slate-900/60">
       {normalizedPinnedMessages.length > 0 && (
         <div className="rounded-2xl border border-slate-700/50 bg-slate-900/80 p-3">
-          <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
-            📌 Pinned
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
+            <div className="flex items-center gap-2">📌 Pinned</div>
+            <div className="flex items-center gap-2 text-[11px] font-medium normal-case text-slate-400">
+              <span>
+                {currentPinnedIndex + 1}/{normalizedPinnedMessages.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handlePinnedNavigation('prev')}
+                  disabled={currentPinnedIndex === 0}
+                  className="rounded-md border border-slate-700/60 px-2 py-1 text-slate-200 transition hover:bg-slate-800/80 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Предыдущий закреп"
+                >
+                  Пред
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePinnedNavigation('next')}
+                  disabled={
+                    currentPinnedIndex >= normalizedPinnedMessages.length - 1
+                  }
+                  className="rounded-md border border-slate-700/60 px-2 py-1 text-slate-200 transition hover:bg-slate-800/80 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Следующий закреп"
+                >
+                  След
+                </button>
+              </div>
+            </div>
           </div>
           <div className="space-y-3">
             {normalizedPinnedMessages.map((message) => (
@@ -89,6 +171,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                 message={message}
                 isPinned
                 isHighlighted={message.id === highlightedMessageId}
+                onSelect={() => handlePinnedSelect(message.id)}
                 onTogglePin={onTogglePin}
                 onDelete={onDelete}
               />

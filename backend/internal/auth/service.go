@@ -3,11 +3,13 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
+	"github.com/m0khm/devhub/backend/internal/metrics"
 	"github.com/m0khm/devhub/backend/internal/user"
 )
 
@@ -54,6 +56,8 @@ func (s *Service) Register(req user.RegisterRequest) (*user.User, string, error)
 	if err := s.db.Create(&newUser).Error; err != nil {
 		return nil, "", fmt.Errorf("failed to create user: %w", err)
 	}
+
+	metrics.RecordRegistration(time.Now())
 
 	// Generate JWT token
 	token, err := s.jwtManager.Generate(newUser.ID, newUser.Email)
