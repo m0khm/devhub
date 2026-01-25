@@ -23,6 +23,22 @@ export interface Project {
   updated_at: string;
 }
 
+export interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Community {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ProjectMember {
   id: string;
   project_id: string;

@@ -1,6 +1,6 @@
 import { NotificationBell } from "../../notifications/components/NotificationBell";
 import React, { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AppShell } from '../../../components/AppShell';
 import { apiClient } from '../../../api/client';
@@ -66,6 +66,12 @@ export const ProjectWorkspace: React.FC = () => {
         )}
       </div>
       <div className="flex items-center gap-3">
+        <Link
+          to="/hub"
+          className="rounded-full border border-border/80 px-3 py-1 text-xs font-semibold text-text transition hover:border-accent hover:text-accent"
+        >
+          Хаб
+        </Link>
         <NotificationBell />
       </div>
     </div>
