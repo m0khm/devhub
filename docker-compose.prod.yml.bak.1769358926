@@ -75,9 +75,6 @@ services:
     container_name: devhub-backend-prod
     command: ["sh","-lc","until wget -qO- http://minio:9000/minio/health/live >/dev/null 2>&1; do echo waiting for minio; sleep 2; done; exec ./api"]
     environment:
-      RESEND_API_KEY: re_hJToo1eQ_XarfXKe3R4njFD4mao2GmYmv
-      RESEND_FROM: "noreply@dvhub.tech"
-      DEPLOY_SECRETS_KEY: 718e402c5feabec8b480ad91fc72e6f8ecbd39bdcca648636f56159bb0b7e821
       PORT: 8080
       ENVIRONMENT: production
       DB_HOST: postgres
@@ -162,6 +159,7 @@ services:
     restart: unless-stopped
 
     environment:
+      DEPLOY_SECRETS_KEY: 
       - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/grafana/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - GF_SERVER_DOMAIN=dvhub.tech

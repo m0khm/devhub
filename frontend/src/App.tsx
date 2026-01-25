@@ -1,4 +1,7 @@
 import React, { useEffect } from 'react';
+import { DeployPage } from "./features/deploy/DeployPage";
+import { CodePage } from "./features/code/CodePage";
+import { TermsPage } from "./features/legal/TermsPage";
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';

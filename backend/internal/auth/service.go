@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"math/big"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/m0khm/devhub/backend/internal/metrics"
 	"github.com/m0khm/devhub/backend/internal/user"
+	"github.com/m0khm/devhub/backend/internal/mailer"
 )
 
 var (
@@ -68,10 +70,7 @@ func (s *Service) ResendRegistrationCode(email string) (RegisterStartResponse, e
 		return RegisterStartResponse{}, err
 	}
 
-	metrics.RecordRegistration(time.Now())
-
-	// Generate JWT token
-	token, err := s.jwtManager.Generate(newUser.ID, newUser.Email)
+	confirmation, err := s.upsertConfirmation(email)
 	if err != nil {
 		return RegisterStartResponse{}, err
 	}
@@ -79,6 +78,8 @@ func (s *Service) ResendRegistrationCode(email string) (RegisterStartResponse, e
 	if err := s.mailer.SendVerificationCode(email, confirmation.Code); err != nil {
 		return RegisterStartResponse{}, fmt.Errorf("failed to resend verification code: %w", err)
 	}
+
+	metrics.RecordRegistration(time.Now())
 
 	return RegisterStartResponse{ExpiresAt: confirmation.ExpiresAt}, nil
 }

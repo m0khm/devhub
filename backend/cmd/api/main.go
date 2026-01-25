@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/m0khm/devhub/backend/internal/mailer"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -54,7 +56,11 @@ func main() {
 
 	// Initialize mailer
 	var mailerClient mailer.Sender
-	if cfg.SMTP.Password == "" {
+	resendKey := os.Getenv("RESEND_API_KEY")
+	resendFrom := os.Getenv("RESEND_FROM")
+	if resendKey != "" && resendFrom != "" {
+		mailerClient = mailer.NewResendClient(resendKey, resendFrom)
+	} else if cfg.SMTP.Password == "" {
 		log.Printf("SMTP_PASSWORD is not set; email sending is disabled")
 		mailerClient = mailer.NoopMailer{}
 	} else {

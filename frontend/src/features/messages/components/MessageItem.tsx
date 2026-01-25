@@ -92,7 +92,7 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
 
       return (
         <div className="mt-2">
-          {isImage ? (
+          {isImage && (
             <a
               href={metadata.url}
               target="_blank"
