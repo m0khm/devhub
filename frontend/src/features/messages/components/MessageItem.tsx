@@ -14,6 +14,7 @@ interface MessageItemProps {
   message: Message;
   isPinned?: boolean;
   isHighlighted?: boolean;
+  onSelect?: (message: Message) => void;
   onReply?: (message: Message) => void;
   onTogglePin?: (message: Message) => void;
 }
@@ -32,7 +33,10 @@ interface FileMetadata {
 }
 
 export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
-  ({ message, isPinned = false, isHighlighted = false, onReply, onTogglePin }, ref) => {
+  (
+    { message, isPinned = false, isHighlighted = false, onSelect, onReply, onTogglePin },
+    ref,
+  ) => {
     const { user: currentUser } = useAuthStore();
     const isOwnMessage = message.user_id === currentUser?.id;
     const [menuOpen, setMenuOpen] = useState(false);
@@ -67,7 +71,12 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
       return (
         <div className="mt-2">
           {isImage ? (
-            <a href={metadata.url} target="_blank" rel="noopener noreferrer">
+            <a
+              href={metadata.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => event.stopPropagation()}
+            >
               <img
                 src={metadata.url}
                 alt={metadata.filename}
@@ -79,6 +88,7 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
               href={metadata.url}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(event) => event.stopPropagation()}
               className="flex items-center gap-3 rounded-lg bg-slate-800/70 p-3 text-slate-100 hover:bg-slate-800 transition"
             >
               <DocumentIcon className="w-8 h-8 text-slate-400" />
@@ -138,9 +148,24 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
     return (
       <div
         ref={ref}
+        onClick={onSelect ? () => onSelect(message) : undefined}
+        onKeyDown={
+          onSelect
+            ? (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSelect(message);
+                }
+              }
+            : undefined
+        }
+        role={onSelect ? 'button' : undefined}
+        tabIndex={onSelect ? 0 : undefined}
         className={`flex gap-3 rounded-2xl transition ${
           isOwnMessage ? 'flex-row-reverse' : ''
-        } ${isHighlighted ? 'ring-2 ring-sky-400/60 bg-sky-500/10' : ''}`}
+        } ${isHighlighted ? 'ring-2 ring-sky-400/60 bg-sky-500/10' : ''} ${
+          onSelect ? 'cursor-pointer' : ''
+        }`}
       >
         {/* Avatar */}
         <div className="flex-shrink-0">
@@ -189,7 +214,10 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setMenuOpen((prev) => !prev)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setMenuOpen((prev) => !prev);
+                  }}
                   className="rounded-full p-1 text-slate-300 hover:text-slate-100 hover:bg-slate-800/80 transition"
                   aria-label="Message actions"
                 >
@@ -203,7 +231,8 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
                   >
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation();
                         onTogglePin(message);
                         setMenuOpen(false);
                       }}
@@ -241,7 +270,10 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
               {message.reactions.map((reaction) => (
                 <button
                   key={reaction.emoji}
-                  onClick={() => handleReaction(reaction.emoji)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleReaction(reaction.emoji);
+                  }}
                   className={`px-2 py-1 rounded-full text-sm flex items-center gap-1 transition ${
                     reaction.has_self
                       ? 'bg-sky-500/20 border border-sky-500/40 text-slate-100'
@@ -253,7 +285,10 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
                 </button>
               ))}
               <button
-                onClick={() => handleReaction('👍')}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleReaction('👍');
+                }}
                 className="px-2 py-1 rounded-full text-sm bg-slate-800/60 text-slate-200 hover:bg-slate-800 transition"
               >
                 +
@@ -265,7 +300,10 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
             <div className={`mt-2 flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
               <button
                 type="button"
-                onClick={() => onReply(message)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onReply(message);
+                }}
                 className="text-xs font-medium text-slate-400 hover:text-slate-200 transition"
               >
                 Reply
