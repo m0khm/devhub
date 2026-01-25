@@ -18,6 +18,9 @@ export interface Project {
   name: string;
   description?: string;
   avatar_url?: string;
+  access_level?: 'private' | 'members' | 'public';
+  visibility?: 'visible' | 'hidden' | 'archived';
+  notifications_muted?: boolean;
   owner_id: string;
   created_at: string;
   updated_at: string;
@@ -48,6 +51,9 @@ export interface Topic {
   description?: string;
   type: 'chat' | 'code' | 'deploy' | 'bugs' | 'planning' | 'custom' | 'direct';
   icon?: string;
+  access_level?: 'members' | 'admins' | 'public';
+  visibility?: 'visible' | 'hidden' | 'archived';
+  notifications_muted?: boolean;
   position: number;
   created_by: string;
   created_at: string;

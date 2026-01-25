@@ -18,6 +18,12 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const [company, setCompany] = useState(user?.company ?? '');
   const [location, setLocation] = useState(user?.location ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
+  const [profileVisible, setProfileVisible] = useState(true);
+  const [shareContactInfo, setShareContactInfo] = useState(false);
+  const [allowMentions, setAllowMentions] = useState(true);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [productUpdates, setProductUpdates] = useState(false);
+  const [weeklyDigest, setWeeklyDigest] = useState(true);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -94,13 +100,15 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
 
   return (
     <>
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile</h1>
+      <div className="mb-8 text-center">
+        <h1 className="mb-2 text-3xl font-bold text-gray-900">Profile</h1>
         <p className="text-gray-600">Update your personal information</p>
       </div>
 
       <div className="mb-8 rounded-xl border border-gray-100 bg-gray-50 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile details</h2>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
+          Profile details
+        </h2>
         <dl className="grid grid-cols-1 gap-4 text-sm text-gray-700 sm:grid-cols-2">
           <div>
             <dt className="font-medium text-gray-500">Handle</dt>
@@ -125,115 +133,201 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
         </dl>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email
-          </label>
-          <input
-            type="email"
-            value={user.email}
-            readOnly
-            className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
-          />
-        </div>
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold text-gray-900">Основные</h2>
+            <p className="text-sm text-gray-500">
+              Обновите публичные данные профиля и контакты.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <input
+                type="email"
+                value={user.email}
+                readOnly
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="Your name"
-            required
-          />
-        </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                placeholder="Your name"
+                required
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Handle
-          </label>
-          <input
-            type="text"
-            value={handle}
-            onChange={(event) => setHandle(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="@devhub"
-          />
-        </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Handle
+              </label>
+              <input
+                type="text"
+                value={handle}
+                onChange={(event) => setHandle(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                placeholder="@devhub"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Avatar URL
-          </label>
-          <input
-            type="url"
-            value={avatarUrl}
-            onChange={(event) => setAvatarUrl(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="https://example.com/avatar.png"
-          />
-        </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Avatar URL
+              </label>
+              <input
+                type="url"
+                value={avatarUrl}
+                onChange={(event) => setAvatarUrl(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                placeholder="https://example.com/avatar.png"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Company
-          </label>
-          <input
-            type="text"
-            value={company}
-            onChange={(event) => setCompany(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="Your company"
-          />
-        </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Company
+              </label>
+              <input
+                type="text"
+                value={company}
+                onChange={(event) => setCompany(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                placeholder="Your company"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Location
-          </label>
-          <input
-            type="text"
-            value={location}
-            onChange={(event) => setLocation(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="City, Country"
-          />
-        </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Location
+              </label>
+              <input
+                type="text"
+                value={location}
+                onChange={(event) => setLocation(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                placeholder="City, Country"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Phone
-          </label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="+1 555 123 4567"
-          />
-        </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Phone
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                placeholder="+1 555 123 4567"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Bio
-          </label>
-          <textarea
-            value={bio}
-            onChange={(event) => setBio(event.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="Tell us a little about yourself"
-            rows={4}
-          />
-        </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Bio
+              </label>
+              <textarea
+                value={bio}
+                onChange={(event) => setBio(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                placeholder="Tell us a little about yourself"
+                rows={4}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold text-gray-900">Приватность</h2>
+            <p className="text-sm text-gray-500">
+              Управляйте видимостью и тем, какие данные доступны коллегам.
+            </p>
+          </div>
+          <div className="space-y-4 text-sm text-gray-700">
+            <label className="flex items-center justify-between gap-4">
+              <span>Показывать профиль в команде</span>
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-blue-600"
+                checked={profileVisible}
+                onChange={(event) => setProfileVisible(event.target.checked)}
+              />
+            </label>
+            <label className="flex items-center justify-between gap-4">
+              <span>Делиться контактной информацией</span>
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-blue-600"
+                checked={shareContactInfo}
+                onChange={(event) => setShareContactInfo(event.target.checked)}
+              />
+            </label>
+            <label className="flex items-center justify-between gap-4">
+              <span>Разрешить упоминания в темах</span>
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-blue-600"
+                checked={allowMentions}
+                onChange={(event) => setAllowMentions(event.target.checked)}
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold text-gray-900">Уведомления</h2>
+            <p className="text-sm text-gray-500">
+              Настройте, как часто и куда отправлять уведомления.
+            </p>
+          </div>
+          <div className="space-y-4 text-sm text-gray-700">
+            <label className="flex items-center justify-between gap-4">
+              <span>Email-уведомления о сообщениях</span>
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-blue-600"
+                checked={emailNotifications}
+                onChange={(event) => setEmailNotifications(event.target.checked)}
+              />
+            </label>
+            <label className="flex items-center justify-between gap-4">
+              <span>Обновления продукта</span>
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-blue-600"
+                checked={productUpdates}
+                onChange={(event) => setProductUpdates(event.target.checked)}
+              />
+            </label>
+            <label className="flex items-center justify-between gap-4">
+              <span>Еженедельный дайджест</span>
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-blue-600"
+                checked={weeklyDigest}
+                onChange={(event) => setWeeklyDigest(event.target.checked)}
+              />
+            </label>
+          </div>
+        </section>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-lg bg-blue-600 py-3 font-medium text-white transition hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? 'Saving...' : 'Save changes'}
         </button>
