@@ -37,7 +37,7 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 		})
 	}
 
-	newUser, token, err := h.service.Register(req)
+	result, err := h.service.StartRegistration(req)
 	if err != nil {
 		if errors.Is(err, ErrEmailAlreadyExists) {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
@@ -45,14 +45,97 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 			})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to register user",
+			"error": "Failed to start registration",
 		})
+	}
+
+	return c.Status(fiber.StatusAccepted).JSON(result)
+}
+
+// ConfirmRegister handler
+// POST /api/auth/register/confirm
+func (h *Handler) ConfirmRegister(c *fiber.Ctx) error {
+	var req RegisterConfirmRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+	req.Handle = user.NormalizeHandle(req.Handle)
+
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"details": errs,
+		})
+	}
+
+	newUser, token, err := h.service.ConfirmRegistration(req)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrEmailAlreadyExists):
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "Email already exists",
+			})
+		case errors.Is(err, ErrConfirmationNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Confirmation not found",
+			})
+		case errors.Is(err, ErrCodeExpired):
+			return c.Status(fiber.StatusGone).JSON(fiber.Map{
+				"error": "Verification code expired",
+			})
+		case errors.Is(err, ErrTooManyAttempts):
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Too many verification attempts",
+			})
+		case errors.Is(err, ErrInvalidCode):
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid verification code",
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to confirm registration",
+			})
+		}
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(user.LoginResponse{
 		Token: token,
 		User:  *newUser,
 	})
+}
+
+// ResendRegister handler
+// POST /api/auth/register/resend
+func (h *Handler) ResendRegister(c *fiber.Ctx) error {
+	var req RegisterResendRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"details": errs,
+		})
+	}
+
+	result, err := h.service.ResendRegistrationCode(req.Email)
+	if err != nil {
+		if errors.Is(err, ErrEmailAlreadyExists) {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "Email already exists",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to resend code",
+		})
+	}
+
+	return c.JSON(result)
 }
 
 // Login handler

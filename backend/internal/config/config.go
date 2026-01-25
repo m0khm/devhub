@@ -15,6 +15,7 @@ type Config struct {
 	Redis    RedisConfig
 	JWT      JWTConfig
 	S3       S3Config
+	SMTP     SMTPConfig
 	GitHub   GitHubConfig
 	Admin    AdminConfig
 }
@@ -52,6 +53,14 @@ type S3Config struct {
 	SecretKey string
 	Bucket    string
 	UseSSL    bool
+}
+
+type SMTPConfig struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	From     string
 }
 
 type GitHubConfig struct {
@@ -102,6 +111,13 @@ func Load() (*Config, error) {
 			SecretKey: getEnv("S3_SECRET_KEY", "minioadmin"),
 			Bucket:    getEnv("S3_BUCKET", "devhub"),
 			UseSSL:    getEnvAsBool("S3_USE_SSL", false),
+		},
+		SMTP: SMTPConfig{
+			Host:     getEnv("SMTP_HOST", "smtp.resend.com"),
+			Port:     getEnvAsInt("SMTP_PORT", 587),
+			Username: getEnv("SMTP_USERNAME", "resend"),
+			Password: getEnv("SMTP_PASSWORD", ""),
+			From:     getEnv("SMTP_FROM", "no-reply@devhub.local"),
 		},
 		GitHub: GitHubConfig{
 			ClientID:     getEnv("GITHUB_CLIENT_ID", ""),

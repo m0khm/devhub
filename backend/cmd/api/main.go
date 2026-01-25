@@ -15,6 +15,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/config"
 	"github.com/m0khm/devhub/backend/internal/database"
 	"github.com/m0khm/devhub/backend/internal/dm"
+	"github.com/m0khm/devhub/backend/internal/mailer"
 	"github.com/m0khm/devhub/backend/internal/message"
 	"github.com/m0khm/devhub/backend/internal/metrics"
 	"github.com/m0khm/devhub/backend/internal/middleware"
@@ -49,6 +50,21 @@ func main() {
 	// Initialize JWT manager
 	jwtManager := auth.NewJWTManager(cfg.JWT.Secret, cfg.JWT.ExpireHours)
 
+	// Initialize mailer
+	var mailerClient mailer.Sender
+	if cfg.SMTP.Password == "" {
+		log.Printf("SMTP_PASSWORD is not set; email sending is disabled")
+		mailerClient = mailer.NoopMailer{}
+	} else {
+		mailerClient = mailer.NewSMTPClient(mailer.SMTPConfig{
+			Host:     cfg.SMTP.Host,
+			Port:     cfg.SMTP.Port,
+			Username: cfg.SMTP.Username,
+			Password: cfg.SMTP.Password,
+			From:     cfg.SMTP.From,
+		})
+	}
+
 	// Initialize WebSocket hub
 	wsHub := message.NewHub()
 	go wsHub.Run()
@@ -74,7 +90,7 @@ func main() {
 	userRepo := user.NewRepository(db)
 
 	// Initialize services
-	authService := auth.NewService(db, jwtManager)
+	authService := auth.NewService(db, jwtManager, mailerClient)
 	adminService := admin.NewService(
 		cfg.Admin.User,
 		cfg.Admin.Password,
@@ -135,6 +151,8 @@ func main() {
 	// Auth routes (public)
 	authRoutes := api.Group("/auth")
 	authRoutes.Post("/register", authHandler.Register)
+	authRoutes.Post("/register/confirm", authHandler.ConfirmRegister)
+	authRoutes.Post("/register/resend", authHandler.ResendRegister)
 	authRoutes.Post("/login", authHandler.Login)
 	authRoutes.Get("/me", middleware.Auth(jwtManager), authHandler.GetMe)
 
