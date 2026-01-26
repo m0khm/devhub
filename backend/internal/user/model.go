@@ -54,6 +54,20 @@ type UpdateUserRequest struct {
 	Phone     *string `json:"phone" validate:"omitempty,max=50"`
 }
 
+type ChangeEmailRequest struct {
+	NewEmail string `json:"new_email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
+
+type ConfirmEmailChangeRequest struct {
+	NewEmail string `json:"new_email" validate:"required,email"`
+	Code     string `json:"code" validate:"required,len=6"`
+}
+
+type EmailChangeStartResponse struct {
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
 func (User) TableName() string {
 	return "users"
 }

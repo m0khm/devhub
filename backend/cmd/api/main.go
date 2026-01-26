@@ -107,7 +107,7 @@ func main() {
 	projectService := project.NewService(projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
 	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo)
-	userService := user.NewService(db)
+	userService := user.NewService(db, authService, mailerClient)
 	groupService := group.NewService(db)
 	communityService := community.NewService(db)
 	dmService := dm.NewService(dmRepo, projectRepo)
@@ -302,6 +302,8 @@ func main() {
 	userRoutes := protected.Group("/users")
 	userRoutes.Get("/", userHandler.Search)
 	userRoutes.Patch("/me", userHandler.UpdateMe)
+	userRoutes.Post("/me/email", userHandler.StartEmailChange)
+	userRoutes.Post("/me/email/confirm", userHandler.ConfirmEmailChange)
 	userRoutes.Delete("/me", userHandler.DeleteMe)
 
 	// Group search routes
