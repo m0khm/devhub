@@ -33,6 +33,12 @@ export const MessageList: React.FC<MessageListProps> = ({
   const visibleMessages = normalizedMessages.filter(
     (message) => !pinnedIds.has(message.id),
   );
+  const messageMap = new Map(
+    [...normalizedMessages, ...normalizedPinnedMessages].map((message) => [
+      message.id,
+      message,
+    ]),
+  );
 
   useEffect(() => {
     if (!highlightedMessageId && !pinnedHighlightId) {
@@ -181,6 +187,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                 key={message.id}
                 ref={setMessageRef(message.id)}
                 message={message}
+                messageMap={messageMap}
                 isPinned
                 isHighlighted={message.id === highlightedMessageId}
                 onSelect={() => handlePinnedSelect(message.id)}
@@ -196,6 +203,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           key={message.id}
           ref={setMessageRef(message.id)}
           message={message}
+          messageMap={messageMap}
           isHighlighted={message.id === highlightedMessageId}
           onReply={onReply}
           onTogglePin={onTogglePin}

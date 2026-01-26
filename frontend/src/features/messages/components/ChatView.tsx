@@ -217,6 +217,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
         content,
         type: 'text',
         metadata,
+        parent_id: replyToMessage?.id,
       });
       // добавится через WS
       setReplyToMessage(null);

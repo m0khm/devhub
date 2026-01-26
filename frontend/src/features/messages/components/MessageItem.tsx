@@ -12,6 +12,7 @@ import {
 
 interface MessageItemProps {
   message: Message;
+  messageMap?: Map<string, Message>;
   isPinned?: boolean;
   isHighlighted?: boolean;
   onSelect?: (message: Message) => void;
@@ -22,12 +23,23 @@ interface MessageItemProps {
 
 export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
   (
-    { message, isPinned = false, isHighlighted = false, onSelect, onReply, onTogglePin },
+    {
+      message,
+      messageMap,
+      isPinned = false,
+      isHighlighted = false,
+      onSelect,
+      onReply,
+      onTogglePin,
+    },
     ref,
   ) => {
     const { user: currentUser } = useAuthStore();
     const isOwnMessage = message.user_id === currentUser?.id;
     const [menuOpen, setMenuOpen] = useState(false);
+    const parentMessage = message.parent_id
+      ? messageMap?.get(message.parent_id)
+      : undefined;
 
     const handleReaction = async (emoji: string) => {
       try {
@@ -312,6 +324,17 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
                 : 'bg-slate-800/80 text-slate-100 shadow'
             }`}
           >
+            {parentMessage && (
+              <div className="mb-2 rounded-lg border border-slate-700/60 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
+                <span className="font-semibold text-slate-200">
+                  Replying to {parentMessage.user?.name || 'Unknown'}
+                </span>
+                <span className="mx-1 text-slate-500">•</span>
+                <span className="line-clamp-2">
+                  {parentMessage.content || '...'}
+                </span>
+              </div>
+            )}
             {message.type === 'code' ? (
               renderCodeContent()
             ) : (
