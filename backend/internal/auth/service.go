@@ -13,7 +13,6 @@ import (
 
 	"github.com/m0khm/devhub/backend/internal/mailer"
 	"github.com/m0khm/devhub/backend/internal/metrics"
-	"github.com/m0khm/devhub/backend/internal/user"
 )
 
 var (
@@ -51,7 +50,7 @@ func NewService(db *gorm.DB, jwtManager *JWTManager, mailerClient mailer.Sender)
 }
 
 // StartRegistration creates a pending confirmation and sends a code.
-func (s *Service) StartRegistration(req user.RegisterRequest) (RegisterStartResponse, error) {
+func (s *Service) StartRegistration(req RegisterRequest) (RegisterStartResponse, error) {
 	if err := s.ensureEmailAvailable(req.Email); err != nil {
 		return RegisterStartResponse{}, err
 	}
@@ -88,8 +87,8 @@ func (s *Service) ResendRegistrationCode(email string) (RegisterStartResponse, e
 	return RegisterStartResponse{ExpiresAt: confirmation.ExpiresAt}, nil
 }
 
-// ConfirmRegistration verifies the code and creates the user.
-func (s *Service) ConfirmRegistration(req RegisterConfirmRequest) (*user.User, string, error) {
+// ConfirmRegistration verifies the code and creates the 
+func (s *Service) ConfirmRegistration(req RegisterConfirmRequest) (*User, string, error) {
 	if err := s.ensureEmailAvailable(req.Email); err != nil {
 		return nil, "", err
 	}
@@ -118,7 +117,7 @@ func (s *Service) ConfirmRegistration(req RegisterConfirmRequest) (*user.User, s
 		return nil, "", ErrInvalidCode
 	}
 
-	var createdUser *user.User
+	var createdUser *User
 	var token string
 	if err := s.db.Transaction(func(tx *gorm.DB) error {
 		newUser, err := s.createUser(tx, req)
@@ -146,8 +145,8 @@ func (s *Service) ConfirmRegistration(req RegisterConfirmRequest) (*user.User, s
 }
 
 // Login user
-func (s *Service) Login(req user.LoginRequest) (*user.User, string, error) {
-	var foundUser user.User
+func (s *Service) Login(req LoginRequest) (*User, string, error) {
+	var foundUser User
 	if err := s.db.Where("email = ? AND is_deleted = false", req.Email).First(&foundUser).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, "", ErrInvalidCredentials
@@ -174,8 +173,8 @@ func (s *Service) Login(req user.LoginRequest) (*user.User, string, error) {
 }
 
 // GetUserByID
-func (s *Service) GetUserByID(userID uuid.UUID) (*user.User, error) {
-	var foundUser user.User
+func (s *Service) GetUserByID(userID uuid.UUID) (*User, error) {
+	var foundUser User
 	if err := s.db.First(&foundUser, "id = ? AND is_deleted = false", userID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotFound
@@ -203,7 +202,7 @@ func (s *Service) GenerateToken(userID uuid.UUID, email string) (string, error) 
 }
 
 func (s *Service) ensureEmailAvailable(email string) error {
-	var existingUser user.User
+	var existingUser User
 	if err := s.db.Where("email = ?", email).First(&existingUser).Error; err == nil {
 		return ErrEmailAlreadyExists
 	}
@@ -246,18 +245,18 @@ func (s *Service) upsertConfirmation(email string) (*EmailConfirmation, error) {
 	return &confirmation, nil
 }
 
-func (s *Service) createUser(tx *gorm.DB, req RegisterConfirmRequest) (*user.User, error) {
+func (s *Service) createUser(tx *gorm.DB, req RegisterConfirmRequest) (*User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
 	passwordHashStr := string(hashedPassword)
-	newUser := user.User{
+	newUser := User{
 		Email:        req.Email,
 		PasswordHash: &passwordHashStr,
 		Name:         req.Name,
-		Handle:       user.NormalizeHandle(req.Handle),
+		Handle: NormalizeHandle(req.Handle),
 	}
 
 	if err := tx.Create(&newUser).Error; err != nil {

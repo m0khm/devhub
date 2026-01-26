@@ -34,12 +34,14 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
       onSelect,
       onReply,
       onTogglePin,
+      onDelete,
     },
     ref,
   ) => {
     const { user: currentUser } = useAuthStore();
     const isOwnMessage = message.user_id === currentUser?.id;
     const [menuOpen, setMenuOpen] = useState(false);
+    const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
     const parentMessage = message.parent_id
       ? messageMap?.get(message.parent_id)
       : undefined;
@@ -149,98 +151,73 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
       }
     };
 
-    const renderFileContent = () => {
-      if (message.type !== 'file' || !message.metadata) return null;
+  const renderFileContent = () => {
+    if (message.type !== 'file' || !message.metadata) return null;
 
-      const metadata =
-        typeof message.metadata === 'string'
-          ? JSON.parse(message.metadata)
-          : (message.metadata as FileMetadata | undefined);
+    const metadata =
+      typeof message.metadata === 'string'
+        ? JSON.parse(message.metadata)
+        : (message.metadata as FileMetadata | undefined);
 
-      if (!metadata) return null;
+    if (!metadata) return null;
 
-      const mimeType = metadata.mime_type ?? '';
-      const isImage = mimeType.startsWith('image/');
-      const isPdf = mimeType === 'application/pdf' || metadata.filename?.toLowerCase().endsWith('.pdf');
-      const isAudio = mimeType.startsWith('audio/');
-      const isVideo = mimeType.startsWith('video/');
-      const fileSize =
-        typeof metadata.size === 'number' ? `${(metadata.size / 1024).toFixed(1)} KB` : null;
-      const safeUrl = `/api/files/${message.id}/download`;
+    const mimeType = metadata.mime_type ?? '';
+    const isImage = mimeType.startsWith('image/');
+    const isPdf =
+      mimeType === 'application/pdf' ||
+      (metadata.filename?.toLowerCase().endsWith('.pdf') ?? false);
+    const isAudio = mimeType.startsWith('audio/');
+    const isVideo = mimeType.startsWith('video/');
+    const fileSize =
+      typeof metadata.size === 'number'
+        ? `${(metadata.size / 1024).toFixed(1)} KB`
+        : null;
 
-      return (
-        <div className="mt-2">
-          {isImage && (
-            <a
-              href={safeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <img
-                src={safeUrl}
-                alt={metadata.filename}
-                className="max-w-sm rounded-lg cursor-pointer hover:opacity-90 transition"
-              />
-            </a>
-          )}
-
-          {isPdf && (
-            <div className="rounded-lg overflow-hidden border border-slate-700/60 bg-slate-900/60">
-              <embed
-                src={safeUrl}
-                type="application/pdf"
-                className="w-full h-64"
-              />
-            </div>
-          )}
-
-          {isAudio && (
-            <audio controls className="w-full mt-2">
-              <source src={safeUrl} type={mimeType} />
-            </audio>
-          )}
-
-          {isVideo && (
-            <video controls className="w-full mt-2 rounded-lg">
-              <source src={safeUrl} type={mimeType} />
-            </video>
-          )}
-
-          {!isImage && !isPdf && !isAudio && !isVideo && (
-            <a
-              href={safeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => event.stopPropagation()}
-              className="flex items-center gap-3 rounded-lg bg-slate-800/70 p-3 text-slate-100 hover:bg-slate-800 transition"
-            >
-              <DocumentIcon className="w-8 h-8 text-slate-400" />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{metadata.filename}</p>
-                {fileSize && <p className="text-xs text-slate-400">{fileSize}</p>}
-              </div>
-            </a>
-          )}
-
-          <div className="mt-2 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => handleDownload(metadata)}
-              className="text-xs font-medium text-slate-300 hover:text-slate-100 transition underline"
-            >
-              Скачать
-            </button>
-            {metadata.filename && (
-              <span className="text-xs text-slate-500">{metadata.filename}</span>
-            )}
-            {fileSize && <span className="text-xs text-slate-500">{fileSize}</span>}
-          </div>
+    const renderDownloadCard = (hint?: string) => (
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          void handleDownload(metadata);
+        }}
+        className="flex w-full items-center gap-3 rounded-lg bg-slate-800/70 p-3 text-slate-100 hover:bg-slate-800 transition"
+      >
+        <DocumentIcon className="w-8 h-8 text-slate-400" />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm truncate">{metadata.filename}</p>
+          {fileSize && <p className="text-xs text-slate-400">{fileSize}</p>}
+          {hint && <p className="text-xs text-slate-400">{hint}</p>}
         </div>
-      );
-    };
+      </button>
+    );
 
-    const renderCodeContent = () => {
+    return (
+      <div className="mt-2">
+        {isImage && renderDownloadCard('Image (click to download)')}
+        {isPdf && renderDownloadCard('PDF (click to download)')}
+        {isAudio && renderDownloadCard('Audio (click to download)')}
+        {isVideo && renderDownloadCard('Video (click to download)')}
+        {!isImage && !isPdf && !isAudio && !isVideo && renderDownloadCard()}
+
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => handleDownload(metadata)}
+            className="text-xs font-medium text-slate-300 hover:text-slate-100 transition underline"
+          >
+            Скачать
+          </button>
+          {metadata.filename && (
+            <span className="text-xs text-slate-500">{metadata.filename}</span>
+          )}
+          {fileSize && <span className="text-xs text-slate-500">{fileSize}</span>}
+        </div>
+      </div>
+    );
+  };
+
+
+  const renderCodeContent = () => {
       if (message.type !== 'code') return null;
 
       const metadata =

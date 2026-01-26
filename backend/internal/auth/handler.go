@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
-	"github.com/m0khm/devhub/backend/internal/user"
 	"github.com/m0khm/devhub/backend/pkg/validator"
 )
 
@@ -21,13 +20,13 @@ func NewHandler(service *Service) *Handler {
 // Register handler
 // POST /api/auth/register
 func (h *Handler) Register(c *fiber.Ctx) error {
-	var req user.RegisterRequest
+	var req RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
 	}
-	req.Handle = user.NormalizeHandle(req.Handle)
+	req.Handle = NormalizeHandle(req.Handle)
 
 	// Validate request
 	if errs := validator.Validate(req); len(errs) > 0 {
@@ -61,7 +60,7 @@ func (h *Handler) ConfirmRegister(c *fiber.Ctx) error {
 			"error": "Invalid request body",
 		})
 	}
-	req.Handle = user.NormalizeHandle(req.Handle)
+	req.Handle = NormalizeHandle(req.Handle)
 
 	if errs := validator.Validate(req); len(errs) > 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -100,7 +99,7 @@ func (h *Handler) ConfirmRegister(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(user.LoginResponse{
+	return c.Status(fiber.StatusCreated).JSON(LoginResponse{
 		Token: token,
 		User:  *newUser,
 	})
@@ -141,7 +140,7 @@ func (h *Handler) ResendRegister(c *fiber.Ctx) error {
 // Login handler
 // POST /api/auth/login
 func (h *Handler) Login(c *fiber.Ctx) error {
-	var req user.LoginRequest
+	var req LoginRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -168,7 +167,7 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(user.LoginResponse{
+	return c.JSON(LoginResponse{
 		Token: token,
 		User:  *foundUser,
 	})

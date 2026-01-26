@@ -136,3 +136,12 @@ func (s *S3Client) buildObjectURL(key string) string {
 
 	return fmt.Sprintf("%s://%s/%s/%s", scheme, s.endpoint, s.bucket, key)
 }
+
+
+func (s *S3Client) GetObject(ctx context.Context, key string) (*minio.Object, error) {
+    obj, err := s.client.GetObject(ctx, s.bucket, key, minio.GetObjectOptions{})
+    if err != nil {
+        return nil, err
+    }
+    return obj, nil
+}

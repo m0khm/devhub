@@ -198,22 +198,35 @@ func (h *FileHandler) DownloadFile(c *fiber.Ctx) error {
 	}
 
 	if metadata.StorageKey == "" {
-		if metadata.URL != "" {
-			return c.Redirect(metadata.URL, fiber.StatusFound)
-		}
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "File not available",
-		})
-	}
+                return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+                        "error": "File not available",
+                })
+        }
 
 	ctx := context.Background()
-	downloadURL, err := h.s3Client.GetPresignedDownloadURL(ctx, metadata.StorageKey, metadata.Filename, metadata.MimeType)
-	if err != nil {
-		log.Printf("file download: failed to presign file %s: %v", metadata.StorageKey, err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to generate download link",
-		})
-	}
 
-	return c.Redirect(downloadURL, fiber.StatusFound)
+        obj, err := h.s3Client.GetObject(ctx, metadata.StorageKey)
+        if err != nil {
+                return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+                        "error": "Failed to fetch file",
+                })
+        }
+
+        if metadata.MimeType != "" {
+                c.Set("Content-Type", metadata.MimeType)
+        } else {
+                c.Set("Content-Type", "application/octet-stream")
+        }
+
+        disposition := c.Query("disposition", "attachment")
+
+        if metadata.Filename != "" {
+                if disposition == "inline" {
+                        c.Set("Content-Disposition", "inline; filename=\"" + metadata.Filename + "\"")
+                } else {
+                        c.Attachment(metadata.Filename)
+                }
+        }
+
+        return c.SendStream(obj)
 }

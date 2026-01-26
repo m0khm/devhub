@@ -108,7 +108,7 @@ func main() {
 	projectService := project.NewService(projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
 	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo, userRepo)
-	userService := user.NewService(db)
+	userService := user.NewService(db, authService, mailerClient)
 	groupService := group.NewService(db)
 	communityService := community.NewService(db)
 	dmService := dm.NewService(dmRepo, projectRepo)

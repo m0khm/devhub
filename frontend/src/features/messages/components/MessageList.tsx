@@ -28,6 +28,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const [pinnedHighlightId, setPinnedHighlightId] = useState<string | null>(null);
   const normalizedPinnedMessages = pinnedMessages ?? [];
   const normalizedMessages = messages ?? [];
+  const messageMap = React.useMemo(() => new Map([...normalizedPinnedMessages, ...normalizedMessages].map((m) => [m.id, m])), [normalizedPinnedMessages, normalizedMessages]);
   const [currentPinnedIndex, setCurrentPinnedIndex] = useState(0);
   const visibleMessages = normalizedMessages;
 
