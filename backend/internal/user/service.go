@@ -7,17 +7,27 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+
+	"github.com/m0khm/devhub/backend/internal/auth"
+	"github.com/m0khm/devhub/backend/internal/mailer"
 )
 
 var ErrUserNotFound = errors.New("user not found")
 
 type Service struct {
-	db *gorm.DB
+	db          *gorm.DB
+	authService *auth.Service
+	mailer      mailer.Sender
 }
 
-func NewService(db *gorm.DB) *Service {
-	return &Service{db: db}
+func NewService(db *gorm.DB, authService *auth.Service, mailerClient mailer.Sender) *Service {
+	return &Service{
+		db:          db,
+		authService: authService,
+		mailer:      mailerClient,
+	}
 }
 
 func (s *Service) Search(query string) ([]User, error) {
@@ -132,4 +142,95 @@ func (s *Service) Delete(userID uuid.UUID) error {
 		return gorm.ErrRecordNotFound
 	}
 	return nil
+}
+
+func (s *Service) StartEmailChange(userID uuid.UUID, req ChangeEmailRequest) (EmailChangeStartResponse, error) {
+	var foundUser User
+	if err := s.db.First(&foundUser, "id = ? AND is_deleted = false", userID).Error; err != nil {
+		return EmailChangeStartResponse{}, err
+	}
+
+	if foundUser.PasswordHash == nil {
+		return EmailChangeStartResponse{}, auth.ErrInvalidCredentials
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(*foundUser.PasswordHash), []byte(req.Password)); err != nil {
+		return EmailChangeStartResponse{}, auth.ErrInvalidCredentials
+	}
+
+	if err := s.authService.EnsureEmailAvailable(req.NewEmail); err != nil {
+		return EmailChangeStartResponse{}, err
+	}
+
+	confirmation, err := s.authService.UpsertConfirmation(req.NewEmail)
+	if err != nil {
+		return EmailChangeStartResponse{}, err
+	}
+
+	if err := s.mailer.SendVerificationCode(req.NewEmail, confirmation.Code); err != nil {
+		return EmailChangeStartResponse{}, fmt.Errorf("failed to send verification code: %w", err)
+	}
+
+	return EmailChangeStartResponse{ExpiresAt: confirmation.ExpiresAt}, nil
+}
+
+func (s *Service) ConfirmEmailChange(userID uuid.UUID, req ConfirmEmailChangeRequest) (*User, string, error) {
+	var foundUser User
+	if err := s.db.First(&foundUser, "id = ? AND is_deleted = false", userID).Error; err != nil {
+		return nil, "", err
+	}
+
+	if err := s.authService.EnsureEmailAvailable(req.NewEmail); err != nil {
+		return nil, "", err
+	}
+
+	var confirmation auth.EmailConfirmation
+	if err := s.db.Where("email = ?", req.NewEmail).First(&confirmation).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, "", auth.ErrConfirmationNotFound
+		}
+		return nil, "", fmt.Errorf("database error: %w", err)
+	}
+
+	if confirmation.ExpiresAt.Before(time.Now()) {
+		return nil, "", auth.ErrCodeExpired
+	}
+
+	if confirmation.Attempts >= auth.MaxVerificationAttempts() {
+		return nil, "", auth.ErrTooManyAttempts
+	}
+
+	if confirmation.Code != req.Code {
+		confirmation.Attempts++
+		if err := s.db.Save(&confirmation).Error; err != nil {
+			return nil, "", fmt.Errorf("failed to update confirmation attempts: %w", err)
+		}
+		return nil, "", auth.ErrInvalidCode
+	}
+
+	var updatedUser *User
+	var token string
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		foundUser.Email = req.NewEmail
+		if err := tx.Save(&foundUser).Error; err != nil {
+			return fmt.Errorf("failed to update user email: %w", err)
+		}
+
+		if err := tx.Delete(&confirmation).Error; err != nil {
+			return fmt.Errorf("failed to delete confirmation: %w", err)
+		}
+
+		jwtToken, err := s.authService.GenerateToken(foundUser.ID, foundUser.Email)
+		if err != nil {
+			return fmt.Errorf("failed to generate token: %w", err)
+		}
+
+		updatedUser = &foundUser
+		token = jwtToken
+		return nil
+	}); err != nil {
+		return nil, "", err
+	}
+
+	return updatedUser, token, nil
 }

@@ -302,6 +302,8 @@ func main() {
 	userRoutes := protected.Group("/users")
 	userRoutes.Get("/", userHandler.Search)
 	userRoutes.Patch("/me", userHandler.UpdateMe)
+	userRoutes.Post("/me/email", userHandler.StartEmailChange)
+	userRoutes.Post("/me/email/confirm", userHandler.ConfirmEmailChange)
 	userRoutes.Delete("/me", userHandler.DeleteMe)
 
 	// Group search routes

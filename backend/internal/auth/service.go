@@ -4,16 +4,16 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"time"
 	"math/big"
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
+	"github.com/m0khm/devhub/backend/internal/mailer"
 	"github.com/m0khm/devhub/backend/internal/metrics"
 	"github.com/m0khm/devhub/backend/internal/user"
-	"github.com/m0khm/devhub/backend/internal/mailer"
 )
 
 var (
@@ -37,6 +37,10 @@ const (
 	verificationTTL         = 10 * time.Minute
 	maxVerificationAttempts = 5
 )
+
+func MaxVerificationAttempts() int {
+	return maxVerificationAttempts
+}
 
 func NewService(db *gorm.DB, jwtManager *JWTManager, mailerClient mailer.Sender) *Service {
 	return &Service{
@@ -184,6 +188,18 @@ func (s *Service) GetUserByID(userID uuid.UUID) (*user.User, error) {
 // VerifyToken
 func (s *Service) VerifyToken(tokenString string) (*JWTClaims, error) {
 	return s.jwtManager.Verify(tokenString)
+}
+
+func (s *Service) EnsureEmailAvailable(email string) error {
+	return s.ensureEmailAvailable(email)
+}
+
+func (s *Service) UpsertConfirmation(email string) (*EmailConfirmation, error) {
+	return s.upsertConfirmation(email)
+}
+
+func (s *Service) GenerateToken(userID uuid.UUID, email string) (string, error) {
+	return s.jwtManager.Generate(userID, email)
 }
 
 func (s *Service) ensureEmailAvailable(email string) error {
