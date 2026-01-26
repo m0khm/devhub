@@ -49,11 +49,12 @@ type JWTConfig struct {
 }
 
 type S3Config struct {
-	Endpoint  string
-	AccessKey string
-	SecretKey string
-	Bucket    string
-	UseSSL    bool
+	Endpoint      string
+	AccessKey     string
+	SecretKey     string
+	Bucket        string
+	UseSSL        bool
+	PublicBaseURL string
 }
 
 type SMTPConfig struct {
@@ -111,11 +112,12 @@ func Load() (*Config, error) {
 			ExpireHours: getEnvAsInt("JWT_EXPIRE_HOURS", 168),
 		},
 		S3: S3Config{
-			Endpoint:  getEnv("S3_ENDPOINT", "localhost:9000"),
-			AccessKey: getEnv("S3_ACCESS_KEY", "minioadmin"),
-			SecretKey: getEnv("S3_SECRET_KEY", "minioadmin"),
-			Bucket:    getEnv("S3_BUCKET", "devhub"),
-			UseSSL:    getEnvAsBool("S3_USE_SSL", false),
+			Endpoint:      getEnv("S3_ENDPOINT", "localhost:9000"),
+			AccessKey:     getEnv("S3_ACCESS_KEY", "minioadmin"),
+			SecretKey:     getEnv("S3_SECRET_KEY", "minioadmin"),
+			Bucket:        getEnv("S3_BUCKET", "devhub"),
+			UseSSL:        getEnvAsBool("S3_USE_SSL", false),
+			PublicBaseURL: getEnv("S3_PUBLIC_BASE_URL", ""),
 		},
 		SMTP: SMTPConfig{
 			Host:     getEnv("SMTP_HOST", "smtp.resend.com"),

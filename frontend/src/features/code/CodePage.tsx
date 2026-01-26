@@ -1,7 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import hljs from 'highlight.js';
-import 'highlight.js/styles/github-dark.css';
+import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 interface CodeFile {
   path: string;
@@ -58,6 +56,7 @@ const initialRepos: Repo[] = [
 
 export const CodePage: React.FC = () => {
   const { projectId } = useParams();
+  const navigate = useNavigate();
   const [repos, setRepos] = useState<Repo[]>(initialRepos);
   const [selectedRepoId, setSelectedRepoId] = useState(initialRepos[0]?.id ?? '');
   const [selectedFilePath, setSelectedFilePath] = useState(
@@ -65,20 +64,43 @@ export const CodePage: React.FC = () => {
   );
   const [newRepoName, setNewRepoName] = useState('');
   const [newRepoDescription, setNewRepoDescription] = useState('');
+  const [newFilePath, setNewFilePath] = useState('');
 
   const selectedRepo = repos.find((repo) => repo.id === selectedRepoId) ?? repos[0];
   const selectedFile = selectedRepo?.files.find((file) => file.path === selectedFilePath);
 
-  const highlighted = useMemo(() => {
-    if (!selectedFile) {
-      return '';
+  const handleCreateFile = () => {
+    if (!selectedRepo || !newFilePath.trim()) {
+      return;
     }
-    const language = selectedFile.language;
-    if (language && hljs.getLanguage(language)) {
-      return hljs.highlight(selectedFile.content, { language }).value;
+    const trimmedPath = newFilePath.trim();
+    let fileAdded = false;
+    setRepos((prev) =>
+      prev.map((repo) => {
+        if (repo.id !== selectedRepo.id) {
+          return repo;
+        }
+        if (repo.files.some((file) => file.path === trimmedPath)) {
+          return repo;
+        }
+        fileAdded = true;
+        return {
+          ...repo,
+          files: [
+            ...repo.files,
+            {
+              path: trimmedPath,
+              content: '',
+            },
+          ],
+        };
+      })
+    );
+    if (fileAdded) {
+      setSelectedFilePath(trimmedPath);
+      setNewFilePath('');
     }
-    return hljs.highlightAuto(selectedFile.content).value;
-  }, [selectedFile]);
+  };
 
   const handleCreateRepo = () => {
     if (!newRepoName.trim()) {
@@ -104,6 +126,25 @@ export const CodePage: React.FC = () => {
     setNewRepoDescription('');
   };
 
+  const handleFileContentChange = (nextContent: string) => {
+    if (!selectedRepo || !selectedFile) {
+      return;
+    }
+    setRepos((prev) =>
+      prev.map((repo) => {
+        if (repo.id !== selectedRepo.id) {
+          return repo;
+        }
+        return {
+          ...repo,
+          files: repo.files.map((file) =>
+            file.path === selectedFile.path ? { ...file, content: nextContent } : file
+          ),
+        };
+      })
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="border-b border-slate-800 bg-slate-950/90 px-6 py-5">
@@ -114,6 +155,13 @@ export const CodePage: React.FC = () => {
             <p className="text-sm text-slate-400">Repositories and files in one place.</p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(`/projects/${projectId}`)}
+              className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 transition hover:border-slate-500"
+            >
+              Back to workspace
+            </button>
             <button
               type="button"
               className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 transition hover:border-slate-500"
@@ -196,8 +244,25 @@ export const CodePage: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 gap-0 lg:grid-cols-[240px_1fr]">
               <div className="border-r border-slate-800">
-                <div className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Files
+                <div className="border-b border-slate-800 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Files
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    <input
+                      value={newFilePath}
+                      onChange={(event) => setNewFilePath(event.target.value)}
+                      placeholder="Name / path"
+                      className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-100 focus:border-blue-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCreateFile}
+                      className="w-full rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500"
+                    >
+                      Create file
+                    </button>
+                  </div>
                 </div>
                 <div className="max-h-[420px] overflow-y-auto">
                   {selectedRepo?.files.map((file) => (
@@ -221,12 +286,12 @@ export const CodePage: React.FC = () => {
                       <span>{selectedFile.path}</span>
                       <span>{selectedFile.language ?? 'auto'}</span>
                     </div>
-                    <pre className="rounded-lg border border-slate-800 bg-slate-950 p-4 text-sm">
-                      <code
-                        className="hljs"
-                        dangerouslySetInnerHTML={{ __html: highlighted }}
-                      />
-                    </pre>
+                    <textarea
+                      value={selectedFile.content}
+                      onChange={(event) => handleFileContentChange(event.target.value)}
+                      rows={16}
+                      className="w-full rounded-lg border border-slate-800 bg-slate-950 p-4 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
+                    />
                   </div>
                 ) : (
                   <div className="py-10 text-center text-sm text-slate-400">

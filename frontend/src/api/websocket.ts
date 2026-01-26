@@ -22,6 +22,14 @@ export class WebSocketClient {
   private token: string | null = null;
 
   connect(topicId: string, token: string, handlers: WSHandlers) {
+    if (this.ws) {
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+      this.ws.onmessage = null;
+      this.ws.onopen = null;
+      this.ws.close();
+      this.ws = null;
+    }
     this.topicId = topicId;
     this.token = token;
     this.handlers = handlers;

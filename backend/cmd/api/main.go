@@ -84,6 +84,7 @@ func main() {
 		cfg.S3.SecretKey,
 		cfg.S3.Bucket,
 		cfg.S3.UseSSL,
+		cfg.S3.PublicBaseURL,
 	)
 	if err != nil {
 		log.Printf("S3 storage unavailable: %v", err)
@@ -106,7 +107,7 @@ func main() {
 	)
 	projectService := project.NewService(projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
-	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo)
+	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo, userRepo)
 	userService := user.NewService(db)
 	groupService := group.NewService(db)
 	communityService := community.NewService(db)
@@ -302,6 +303,8 @@ func main() {
 	userRoutes := protected.Group("/users")
 	userRoutes.Get("/", userHandler.Search)
 	userRoutes.Patch("/me", userHandler.UpdateMe)
+	userRoutes.Post("/me/email", userHandler.StartEmailChange)
+	userRoutes.Post("/me/email/confirm", userHandler.ConfirmEmailChange)
 	userRoutes.Delete("/me", userHandler.DeleteMe)
 
 	// Group search routes
