@@ -74,6 +74,42 @@ func (s *Service) Update(userID uuid.UUID, req UpdateUserRequest) (*User, error)
 		}
 	}
 
+	if req.Bio != nil {
+		trimmed := strings.TrimSpace(*req.Bio)
+		if trimmed == "" {
+			foundUser.Bio = nil
+		} else {
+			foundUser.Bio = &trimmed
+		}
+	}
+
+	if req.Company != nil {
+		trimmed := strings.TrimSpace(*req.Company)
+		if trimmed == "" {
+			foundUser.Company = nil
+		} else {
+			foundUser.Company = &trimmed
+		}
+	}
+
+	if req.Location != nil {
+		trimmed := strings.TrimSpace(*req.Location)
+		if trimmed == "" {
+			foundUser.Location = nil
+		} else {
+			foundUser.Location = &trimmed
+		}
+	}
+
+	if req.Phone != nil {
+		trimmed := strings.TrimSpace(*req.Phone)
+		if trimmed == "" {
+			foundUser.Phone = nil
+		} else {
+			foundUser.Phone = &trimmed
+		}
+	}
+
 	if err := s.db.Save(&foundUser).Error; err != nil {
 		return nil, err
 	}
