@@ -10,6 +10,8 @@ CREATE TABLE users (
     avatar_url TEXT,
     github_id VARCHAR(255) UNIQUE,
     github_username VARCHAR(255),
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

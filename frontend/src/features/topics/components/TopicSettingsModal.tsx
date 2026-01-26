@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { apiClient } from '../../../api/client';
+import { useProjectStore } from '../../../store/projectStore';
 import type { Topic } from '../../../shared/types';
 
 interface TopicSettingsModalProps {
@@ -19,8 +20,17 @@ export const TopicSettingsModal: React.FC<TopicSettingsModalProps> = ({
   const prevOverflow = useRef<string>('');
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [accessLevel, setAccessLevel] = useState<'members' | 'admins' | 'public'>(
+    'members'
+  );
+  const [visibility, setVisibility] = useState<'visible' | 'hidden' | 'archived'>(
+    'visible'
+  );
+  const [saving, setSaving] = useState(false);
   const [muteNotifications, setMuteNotifications] = useState(false);
   const [autoJoinThreads, setAutoJoinThreads] = useState(true);
+  const { currentTopics, setCurrentTopics } = useProjectStore();
 
   useEffect(() => {
     if (!open || !topicId) return;
@@ -37,6 +47,58 @@ export const TopicSettingsModal: React.FC<TopicSettingsModalProps> = ({
         setLoading(false);
       });
   }, [open, topicId]);
+
+  const handleDeleteTopic = async () => {
+    if (!topicId) return;
+    const confirmed = window.confirm(
+      'Delete this topic? Messages will be removed for everyone.'
+    );
+    if (!confirmed) return;
+
+    setDeleteLoading(true);
+    try {
+      await apiClient.delete(`/topics/${topicId}`);
+      toast.success('Topic deleted');
+      setCurrentTopics(currentTopics.filter((item) => item.id !== topicId));
+      onClose();
+    } catch (error) {
+      toast.error('Failed to delete topic');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!topic) return;
+    setMuteNotifications(topic.notifications_muted ?? false);
+    setAccessLevel(topic.access_level ?? 'members');
+    setVisibility(topic.visibility ?? 'visible');
+  }, [topic]);
+
+  const handleSave = async () => {
+    if (!topicId) return;
+    setSaving(true);
+    try {
+      const payload: {
+        notifications_muted: boolean;
+        access_level: string;
+        visibility: string;
+      } = {
+        notifications_muted: muteNotifications,
+        access_level: accessLevel,
+        visibility,
+      };
+      const response = await apiClient.put<Topic>(`/topics/${topicId}`, payload);
+      setTopic(response.data);
+      toast.success('Topic settings updated');
+      onClose();
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Failed to update topic';
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -135,7 +197,45 @@ export const TopicSettingsModal: React.FC<TopicSettingsModalProps> = ({
             </section>
 
             <section className="rounded-lg border border-border/70 bg-surface/70 p-4">
-              <h3 className="text-sm font-semibold text-text">Preferences</h3>
+              <h3 className="text-sm font-semibold text-text">Access & visibility</h3>
+              <div className="mt-4 space-y-4 text-sm text-text-muted">
+                <label className="flex flex-col gap-2">
+                  <span className="text-text">Access level</span>
+                  <select
+                    className="rounded-md border border-border/70 bg-base px-3 py-2 text-sm text-text"
+                    value={accessLevel}
+                    onChange={(event) =>
+                      setAccessLevel(
+                        event.target.value as 'members' | 'admins' | 'public'
+                      )
+                    }
+                  >
+                    <option value="members">Project members</option>
+                    <option value="admins">Admins only</option>
+                    <option value="public">Public</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-text">Visibility</span>
+                  <select
+                    className="rounded-md border border-border/70 bg-base px-3 py-2 text-sm text-text"
+                    value={visibility}
+                    onChange={(event) =>
+                      setVisibility(
+                        event.target.value as 'visible' | 'hidden' | 'archived'
+                      )
+                    }
+                  >
+                    <option value="visible">Visible in sidebar</option>
+                    <option value="hidden">Hidden from members</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-border/70 bg-surface/70 p-4">
+              <h3 className="text-sm font-semibold text-text">Notifications</h3>
               <div className="mt-4 space-y-3 text-sm text-text-muted">
                 <label className="flex items-center justify-between gap-4">
                   <span>Mute notifications</span>
@@ -157,6 +257,38 @@ export const TopicSettingsModal: React.FC<TopicSettingsModalProps> = ({
                 </label>
               </div>
             </section>
+
+            <section className="rounded-lg border border-red-500/20 bg-red-500/10 p-4">
+              <h3 className="text-sm font-semibold text-red-200">Danger zone</h3>
+              <p className="mt-2 text-sm text-red-200/80">
+                Deleting a topic removes its messages for all participants.
+              </p>
+              <button
+                type="button"
+                onClick={handleDeleteTopic}
+                disabled={deleteLoading}
+                className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-red-500/40 bg-red-500/20 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deleteLoading ? 'Deleting...' : 'Delete topic'}
+              </button>
+            </section>
+          </div>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-border/70 px-4 py-2 text-sm text-text-muted hover:bg-surface-muted"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save settings'}
+            </button>
           </div>
         </div>
       </div>

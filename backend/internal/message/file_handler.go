@@ -11,6 +11,14 @@ import (
 	"github.com/m0khm/devhub/backend/internal/storage"
 )
 
+type fileMetadata struct {
+	Filename   string `json:"filename"`
+	MimeType   string `json:"mime_type"`
+	Size       int64  `json:"size"`
+	URL        string `json:"url"`
+	StorageKey string `json:"storage_key"`
+}
+
 type FileHandler struct {
 	service   *Service
 	wsHandler *WSHandler
@@ -90,10 +98,10 @@ func (h *FileHandler) UploadFile(c *fiber.Ctx) error {
 
 	// Create file metadata
 	metadata := map[string]interface{}{
-		"filename":  file.Filename,
-		"size":      uploadResult.Size,
-		"mime_type": uploadResult.MimeType,
-		"url":       uploadResult.URL,
+		"filename":    file.Filename,
+		"size":        uploadResult.Size,
+		"mime_type":   uploadResult.MimeType,
+		"storage_key": uploadResult.Key,
 	}
 	metadataJSON, _ := json.Marshal(metadata)
 	metadataStr := string(metadataJSON)
@@ -117,10 +125,108 @@ func (h *FileHandler) UploadFile(c *fiber.Ctx) error {
 		})
 	}
 
+	safeURL := fmt.Sprintf("/api/files/%s/download", message.ID)
+	metadata["url"] = safeURL
+	metadataJSON, _ = json.Marshal(metadata)
+	metadataStr = string(metadataJSON)
+	if err := h.service.repo.UpdateMetadata(message.ID, metadataStr); err != nil {
+		log.Printf("file upload: failed to update metadata for message %s: %v", message.ID, err)
+	} else {
+		message.Metadata = &metadataStr
+	}
+
 	// Broadcast via WebSocket
 	if h.wsHandler != nil {
 		h.wsHandler.BroadcastNewMessage(message)
 	}
 
 	return c.JSON(message)
+}
+
+// DownloadFile handles file download
+// GET /api/files/:id/download
+func (h *FileHandler) DownloadFile(c *fiber.Ctx) error {
+	if h.s3Client == nil || !h.s3Client.IsReady() {
+		log.Printf("file download: storage unavailable for file %s", c.Params("id"))
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"error": "Storage is unavailable, please try again later",
+		})
+	}
+
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	messageID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid message ID",
+		})
+	}
+
+	message, err := h.service.GetByID(messageID, userID)
+	if err != nil {
+		if err == ErrMessageNotFound {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "File not found",
+			})
+		}
+		if err == ErrNotProjectMember {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Not a project member",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get file",
+		})
+	}
+
+	if message.Type != "file" || message.Metadata == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "File not found",
+		})
+	}
+
+	var metadata fileMetadata
+	if err := json.Unmarshal([]byte(*message.Metadata), &metadata); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid file metadata",
+		})
+	}
+
+	if metadata.StorageKey == "" {
+                return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+                        "error": "File not available",
+                })
+        }
+
+	ctx := context.Background()
+
+        obj, err := h.s3Client.GetObject(ctx, metadata.StorageKey)
+        if err != nil {
+                return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+                        "error": "Failed to fetch file",
+                })
+        }
+
+        if metadata.MimeType != "" {
+                c.Set("Content-Type", metadata.MimeType)
+        } else {
+                c.Set("Content-Type", "application/octet-stream")
+        }
+
+        disposition := c.Query("disposition", "attachment")
+
+        if metadata.Filename != "" {
+                if disposition == "inline" {
+                        c.Set("Content-Disposition", "inline; filename=\"" + metadata.Filename + "\"")
+                } else {
+                        c.Attachment(metadata.Filename)
+                }
+        }
+
+        return c.SendStream(obj)
 }

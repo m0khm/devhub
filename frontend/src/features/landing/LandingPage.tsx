@@ -109,6 +109,9 @@ export const LandingPage: React.FC = () => {
               <a className="transition hover:text-white" href="#final-cta">
                 Начать
               </a>
+              <Link className="transition hover:text-white" to="/hub">
+                Хаб
+              </Link>
             </nav>
             <div className="flex items-center gap-3">
               <Link

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import type { Mention, Topic, Message } from '../../../shared/types';
 import { apiClient } from '../../../api/client';
 import { wsClient } from '../../../api/websocket';
@@ -44,6 +45,21 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
     () => new Map(messages.map((message) => [message.id, message])),
     [messages]
   );
+  const quickLink = useMemo(() => {
+    if (topic.type === 'code') {
+      return {
+        label: 'Code',
+        path: `/projects/${topic.project_id}/code`,
+      };
+    }
+    if (topic.type === 'deploy') {
+      return {
+        label: 'Deploy',
+        path: `/projects/${topic.project_id}/deploy`,
+      };
+    }
+    return null;
+  }, [topic.project_id, topic.type]);
 
   const resolveThreadRoot = (message: Message) => {
     let current = message;
@@ -201,11 +217,26 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
         content,
         type: 'text',
         metadata,
+        parent_id: replyToMessage?.id,
       });
       // добавится через WS
       setReplyToMessage(null);
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to send message');
+    }
+  };
+
+  const handleDeleteMessage = async (message: Message) => {
+    const confirmed = window.confirm('Delete this message?');
+    if (!confirmed) return;
+
+    try {
+      await apiClient.delete(`/messages/${message.id}`);
+      deleteMessage(message.id);
+      setPinnedMessages((prev) => prev.filter((item) => item.id !== message.id));
+      toast.success('Message deleted');
+    } catch (error) {
+      toast.error('Failed to delete message');
     }
   };
 
@@ -286,16 +317,27 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
       />
 
       <div className="flex-1 min-h-0 flex">
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
           {/* Messages */}
           <MessageList
             messages={messages ?? []}
             pinnedMessages={pinnedMessages ?? []}
             loading={loading}
             highlightedMessageId={highlightedMessageId}
+            onHighlightMessage={setHighlightedMessageId}
             onReply={handleReply}
             onTogglePin={handleTogglePin}
+            onDelete={handleDeleteMessage}
           />
+          {quickLink && (
+            <Link
+              to={quickLink.path}
+              className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-full border border-border bg-surface-muted px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text shadow-lg transition hover:bg-surface"
+              aria-label={`Open ${quickLink.label} view`}
+            >
+              📌 {quickLink.label}
+            </Link>
+          )}
 
           {/* Typing indicator */}
           {typingUsers.size > 0 && (

@@ -15,8 +15,10 @@ type Config struct {
 	Redis    RedisConfig
 	JWT      JWTConfig
 	S3       S3Config
+	SMTP     SMTPConfig
 	GitHub   GitHubConfig
 	Admin    AdminConfig
+	Deploy   DeployConfig
 }
 
 type ServerConfig struct {
@@ -47,11 +49,20 @@ type JWTConfig struct {
 }
 
 type S3Config struct {
-	Endpoint  string
-	AccessKey string
-	SecretKey string
-	Bucket    string
-	UseSSL    bool
+	Endpoint      string
+	AccessKey     string
+	SecretKey     string
+	Bucket        string
+	UseSSL        bool
+	PublicBaseURL string
+}
+
+type SMTPConfig struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	From     string
 }
 
 type GitHubConfig struct {
@@ -64,6 +75,10 @@ type AdminConfig struct {
 	User               string
 	Password           string
 	SessionTTLInMinute int
+}
+
+type DeployConfig struct {
+	SecretsKey string
 }
 
 func Load() (*Config, error) {
@@ -97,11 +112,19 @@ func Load() (*Config, error) {
 			ExpireHours: getEnvAsInt("JWT_EXPIRE_HOURS", 168),
 		},
 		S3: S3Config{
-			Endpoint:  getEnv("S3_ENDPOINT", "localhost:9000"),
-			AccessKey: getEnv("S3_ACCESS_KEY", "minioadmin"),
-			SecretKey: getEnv("S3_SECRET_KEY", "minioadmin"),
-			Bucket:    getEnv("S3_BUCKET", "devhub"),
-			UseSSL:    getEnvAsBool("S3_USE_SSL", false),
+			Endpoint:      getEnv("S3_ENDPOINT", "localhost:9000"),
+			AccessKey:     getEnv("S3_ACCESS_KEY", "minioadmin"),
+			SecretKey:     getEnv("S3_SECRET_KEY", "minioadmin"),
+			Bucket:        getEnv("S3_BUCKET", "devhub"),
+			UseSSL:        getEnvAsBool("S3_USE_SSL", false),
+			PublicBaseURL: getEnv("S3_PUBLIC_BASE_URL", ""),
+		},
+		SMTP: SMTPConfig{
+			Host:     getEnv("SMTP_HOST", "smtp.resend.com"),
+			Port:     getEnvAsInt("SMTP_PORT", 587),
+			Username: getEnv("SMTP_USERNAME", "resend"),
+			Password: getEnv("SMTP_PASSWORD", ""),
+			From:     getEnv("SMTP_FROM", "no-reply@devhub.local"),
 		},
 		GitHub: GitHubConfig{
 			ClientID:     getEnv("GITHUB_CLIENT_ID", ""),
@@ -113,10 +136,17 @@ func Load() (*Config, error) {
 			Password:           getEnv("ADMIN_PASSWORD", "admin"),
 			SessionTTLInMinute: getEnvAsInt("ADMIN_SESSION_TTL_MINUTES", 60),
 		},
+		Deploy: DeployConfig{
+			SecretsKey: getEnv("DEPLOY_SECRETS_KEY", "change-me-in-production"),
+		},
 	}
 
 	if cfg.JWT.Secret == "change-me-in-production" && cfg.Server.Environment == "production" {
 		return nil, fmt.Errorf("JWT_SECRET must be set in production")
+	}
+
+	if cfg.Deploy.SecretsKey == "change-me-in-production" && cfg.Server.Environment == "production" {
+		return nil, fmt.Errorf("DEPLOY_SECRETS_KEY must be set in production")
 	}
 
 	return cfg, nil

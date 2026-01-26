@@ -36,6 +36,7 @@ func (r *Repository) GetByIDWithUser(id uuid.UUID) (*MessageWithUser, error) {
 			messages.*,
 			users.id as "user__id",
 			users.name as "user__name",
+			users.handle as "user__handle",
 			users.email as "user__email",
 			users.avatar_url as "user__avatar_url"
 		`).
@@ -55,6 +56,7 @@ func (r *Repository) GetByTopicID(topicID uuid.UUID, limit, offset int, before *
 			messages.*,
 			users.id as "user__id",
 			users.name as "user__name",
+			users.handle as "user__handle",
 			users.email as "user__email",
 			users.avatar_url as "user__avatar_url"
 		`).
@@ -77,6 +79,10 @@ func (r *Repository) GetByTopicID(topicID uuid.UUID, limit, offset int, before *
 // Update message
 func (r *Repository) Update(message *Message) error {
 	return r.db.Save(message).Error
+}
+
+func (r *Repository) UpdateMetadata(messageID uuid.UUID, metadata string) error {
+	return r.db.Model(&Message{}).Where("id = ?", messageID).Update("metadata", metadata).Error
 }
 
 // Delete message
@@ -166,13 +172,14 @@ func (r *Repository) GetPinnedByTopicID(topicID uuid.UUID) ([]MessageWithUser, e
 			messages.*,
 			users.id as "user__id",
 			users.name as "user__name",
+			users.handle as "user__handle",
 			users.email as "user__email",
 			users.avatar_url as "user__avatar_url"
 		`).
 		Joins("JOIN messages ON messages.id = pinned_messages.message_id").
 		Joins("LEFT JOIN users ON users.id = messages.user_id").
 		Where("pinned_messages.topic_id = ?", topicID).
-		Order("messages.created_at DESC").
+		Order("pinned_messages.created_at DESC").
 		Scan(&messages).Error
 
 	return messages, err
@@ -187,6 +194,7 @@ func (r *Repository) Search(topicID uuid.UUID, query string, limit int) ([]Messa
 			messages.*,
 			users.id as "user__id",
 			users.name as "user__name",
+			users.handle as "user__handle",
 			users.email as "user__email",
 			users.avatar_url as "user__avatar_url"
 		`).

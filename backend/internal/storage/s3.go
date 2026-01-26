@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -13,18 +15,28 @@ import (
 )
 
 type S3Client struct {
-	client *minio.Client
-        bucket string
-        endpoint string
+	client        *minio.Client
+	bucket        string
+	endpoint      string
+	useSSL        bool
+	publicBaseURL *url.URL
 }
 
-func NewS3Client(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*S3Client, error) {
+func NewS3Client(endpoint, accessKey, secretKey, bucket string, useSSL bool, publicBaseURL string) (*S3Client, error) {
 	client, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: useSSL,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create minio client: %w", err)
+	}
+
+	var parsedPublicBaseURL *url.URL
+	if publicBaseURL != "" {
+		parsedPublicBaseURL, err = url.Parse(publicBaseURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse S3 public base URL: %w", err)
+		}
 	}
 
 	// Ensure bucket exists
@@ -42,9 +54,11 @@ func NewS3Client(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*S
 	}
 
 	return &S3Client{
-		client: client,
-		bucket: bucket,
-                endpoint: endpoint,
+		client:        client,
+		bucket:        bucket,
+		endpoint:      endpoint,
+		useSSL:        useSSL,
+		publicBaseURL: parsedPublicBaseURL,
 	}, nil
 }
 
@@ -69,7 +83,7 @@ func (s *S3Client) Upload(ctx context.Context, reader io.Reader, filename string
 	}
 
 	// Generate URL (assuming public bucket)
-	url := fmt.Sprintf("http://%s/%s/%s", s.endpoint, s.bucket, key)
+	url := s.buildObjectURL(key)
 
 	return &UploadResult{
 		Key:      key,
@@ -84,9 +98,50 @@ func (s *S3Client) Delete(ctx context.Context, key string) error {
 }
 
 func (s *S3Client) GetURL(key string) string {
-	return fmt.Sprintf("http://%s/%s/%s", s.endpoint, s.bucket, key)
+	return s.buildObjectURL(key)
+}
+
+func (s *S3Client) GetPresignedDownloadURL(ctx context.Context, key, filename, mimeType string) (string, error) {
+	params := url.Values{}
+	if filename != "" {
+		params.Set("response-content-disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	}
+	if mimeType != "" {
+		params.Set("response-content-type", mimeType)
+	}
+
+	downloadURL, err := s.client.PresignedGetObject(ctx, s.bucket, key, time.Minute*15, params)
+	if err != nil {
+		return "", fmt.Errorf("failed to presign download url: %w", err)
+	}
+
+	return downloadURL.String(), nil
 }
 
 func (s *S3Client) IsReady() bool {
 	return s != nil && s.client != nil && s.bucket != ""
+}
+
+func (s *S3Client) buildObjectURL(key string) string {
+	if s.publicBaseURL != nil {
+		base := *s.publicBaseURL
+		base.Path = path.Join(base.Path, s.bucket, key)
+		return base.String()
+	}
+
+	scheme := "http"
+	if s.useSSL {
+		scheme = "https"
+	}
+
+	return fmt.Sprintf("%s://%s/%s/%s", scheme, s.endpoint, s.bucket, key)
+}
+
+
+func (s *S3Client) GetObject(ctx context.Context, key string) (*minio.Object, error) {
+    obj, err := s.client.GetObject(ctx, s.bucket, key, minio.GetObjectOptions{})
+    if err != nil {
+        return nil, err
+    }
+    return obj, nil
 }

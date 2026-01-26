@@ -1,97 +1,66 @@
-import axios, { AxiosError } from "axios";
+import axios from 'axios';
+import { safeStorage } from '../shared/utils/storage';
 
-function getApiBaseUrl(): string {
-  // 1) Если задан VITE_API_URL — используем его (например, для локалки)
-  const envUrl = import.meta.env.VITE_API_URL as string | undefined;
-  if (envUrl && envUrl.trim()) return envUrl.replace(/\/+$/, ""); // remove trailing /
+export const API_URL =
+  (import.meta as any).env?.VITE_API_URL || `${window.location.origin}/api`;
 
-  // 2) По умолчанию: тот же origin, где открыт фронт
-  // Например: http://91.184.243.98:5173 -> API будет http://91.184.243.98/api
-  const origin = window.location.origin; // включает порт 5173
-  const hostOnly = origin.replace(/:\d+$/, ""); // убираем :5173
-  return `${hostOnly}/api`;
-}
+// Backward-compatible alias
+export const API_BASE_URL = API_URL;
 
-export const API_BASE_URL = getApiBaseUrl();
+
 
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  // Если начнёшь работать с cookie-сессиями — включишь:
-  // withCredentials: true,
+  baseURL: API_URL,
+  withCredentials: true,
 });
 
-// Request interceptor — добавляем токен
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("auth_token");
-    if (token) {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+function attachAuthHeader(config: any) {
+  const token = getAuthToken();
+  if (!token) return config;
 
-    // удобно видеть куда реально летит запрос
-    // console.log("[API]", config.method?.toUpperCase(), config.baseURL + config.url);
-
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor — обработка ошибок
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError<any>) => {
-    const status = error.response?.status;
-    const data = error.response?.data;
-
-    // Логи — чтобы не было "Registration failed" без деталей
-    console.error("[API ERROR]", {
-      url: (error.config?.baseURL || "") + (error.config?.url || ""),
-      method: error.config?.method,
-      status,
-      data,
-    });
-
-    if (status === 401) {
-      // Unauthorized — удаляем токен и редиректим на логин
-      localStorage.removeItem("auth_token");
-      // не роняем в бесконечный редирект, если уже на /login
-      if (!window.location.pathname.startsWith("/login")) {
-        window.location.href = "/login";
-      }
-    }
-
-    return Promise.reject(error);
+  // Axios v1 может использовать AxiosHeaders (у него есть .set)
+  if ((config.headers as any)?.set) {
+    (config.headers as any).set('Authorization', `Bearer ${token}`);
+  } else {
+    config.headers = config.headers || {};
+    (config.headers as any)['Authorization'] = `Bearer ${token}`;
   }
-);
 
-// --- Helpers для удобства ---
-
-export function setAuthToken(token: string | null) {
-  if (token) localStorage.setItem("auth_token", token);
-  else localStorage.removeItem("auth_token");
+  return config;
 }
 
-export function getAuthToken() {
-  return localStorage.getItem("auth_token");
+apiClient.interceptors.request.use(attachAuthHeader);
+
+export function getAuthToken(): string | null {
+  return safeStorage.get('auth_token') || localStorage.getItem('auth_token');
 }
 
-// WS URL для топика (тот же хост что и API)
-// ВАЖНО: у тебя WS принимает token через query ?token=
-export function getTopicWsUrl(topicId: string, token?: string) {
-  const t = token || getAuthToken() || "";
-  const api = API_BASE_URL; // например http://91.184.243.98/api
+export function setAuthToken(token: string) {
+  localStorage.setItem('auth_token', token);
+}
 
-  // превращаем http -> ws, https -> wss
-  const wsBase = api.startsWith("https://")
-    ? api.replace(/^https:\/\//, "wss://")
-    : api.replace(/^http:\/\//, "ws://");
+export function clearAuthToken() {
+  localStorage.removeItem('auth_token');
+}
 
-  // api уже содержит /api, нам нужен endpoint:
-  // ws://HOST/api/topics/:id/ws?token=...
-  const url = `${wsBase}/topics/${topicId}/ws${t ? `?token=${encodeURIComponent(t)}` : ""}`;
-  return url;
+export function getApiBaseUrl(): string {
+  return API_URL;
+}
+
+// WS URL for Deploy terminal
+export function getDeployTerminalWsUrl(projectId: string, serverId: string, token?: string) {
+  const apiBase = getApiBaseUrl(); // e.g. https://dvhub.tech/api
+  const apiUrl = new URL(String(apiBase), window.location.origin);
+
+  // https -> wss, http -> ws
+  apiUrl.protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+
+  const basePath = apiUrl.pathname.replace(/\/+$/, '');
+  apiUrl.pathname = `${basePath}/projects/${projectId}/deploy/servers/${serverId}/terminal/ws`;
+
+  // add token if present
+  apiUrl.search = '';
+  if (token) apiUrl.searchParams.set('token', token);
+
+  return apiUrl.toString();
 }

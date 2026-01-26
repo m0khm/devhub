@@ -22,22 +22,32 @@ export class WebSocketClient {
   private token: string | null = null;
 
   connect(topicId: string, token: string, handlers: WSHandlers) {
+    if (this.ws) {
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+      this.ws.onmessage = null;
+      this.ws.onopen = null;
+      this.ws.close();
+      this.ws = null;
+    }
     this.topicId = topicId;
     this.token = token;
     this.handlers = handlers;
 
-    // Берём API базу (например: http://91.184.243.98/api)
-    // Если env нет — используем текущий домен: http(s)://<host>/api
+    // Берём API базу (например: https://dvhub.tech/api)
+    // Если env нет — используем текущий origin + /api
     const apiBase =
-      (import.meta as any).env?.VITE_API_URL ||
-      `${window.location.protocol}//${window.location.hostname}/api`;
+      (import.meta as any).env?.VITE_API_URL || `${window.location.origin}/api`;
 
-    // http -> ws, https -> wss
-    const wsBase = String(apiBase).replace(/^http/i, 'ws').replace(/\/+$/, '');
+    // Собираем абсолютный WS URL корректно (даже если VITE_API_URL относительный)
+    const apiUrl = new URL(String(apiBase), window.location.origin);
+    apiUrl.protocol = apiUrl.protocol === "https:" ? "wss:" : "ws:";
 
-    // ВАЖНО: не localhost и не :5173
-    const wsUrl = `${wsBase}/topics/${topicId}/ws?token=${encodeURIComponent(token)}`;
+    const basePath = apiUrl.pathname.replace(/\/+$/, "");
+    apiUrl.pathname = `${basePath}/topics/${topicId}/ws`;
+    apiUrl.searchParams.set("token", token);
 
+    const wsUrl = apiUrl.toString();
     console.log('[WS] connecting:', wsUrl);
 
     try {
