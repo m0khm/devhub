@@ -23,6 +23,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
 }) => {
   const prevOverflow = useRef<string>('');
   const updateProject = useProjectStore((state) => state.updateProject);
+  const deleteProject = useProjectStore((state) => state.deleteProject);
   const memberCount = useMemo(() => members.length, [members]);
   const [accessLevel, setAccessLevel] = useState<
     'private' | 'members' | 'public'
@@ -32,6 +33,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
   );
   const [muteNotifications, setMuteNotifications] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -78,6 +80,26 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
       toast.error(message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!project || deleting) return;
+    const confirmed = window.confirm(
+      `Delete "${project.name}"? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      await apiClient.delete(`/projects/${project.id}`);
+      deleteProject(project.id);
+      toast.success('Project deleted');
+      onClose();
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Failed to delete project';
+      toast.error(message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -239,6 +261,23 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                     ))}
                   </ul>
                 )}
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-red-500/40 bg-red-500/10 p-4">
+              <h3 className="text-sm font-semibold text-red-600">Danger zone</h3>
+              <p className="mt-2 text-sm text-red-500/80">
+                Deleting a project removes all of its data and cannot be undone.
+              </p>
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="rounded-lg border border-red-500/60 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {deleting ? 'Deleting...' : 'Delete project'}
+                </button>
               </div>
             </section>
           </div>
