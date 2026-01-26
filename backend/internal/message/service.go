@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,7 +14,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/notification"
 	"github.com/m0khm/devhub/backend/internal/project"
 	"github.com/m0khm/devhub/backend/internal/topic"
-	"strings"
+	"github.com/m0khm/devhub/backend/internal/user"
 )
 
 var (
@@ -29,6 +30,7 @@ type Service struct {
 	topicRepo        *topic.Repository
 	projectRepo      *project.Repository
 	notificationRepo *notification.Repository
+	userRepo         *user.Repository
 }
 
 func NewService(
@@ -36,12 +38,14 @@ func NewService(
 	topicRepo *topic.Repository,
 	projectRepo *project.Repository,
 	notificationRepo *notification.Repository,
+	userRepo *user.Repository,
 ) *Service {
 	return &Service{
 		repo:             repo,
 		topicRepo:        topicRepo,
 		projectRepo:      projectRepo,
 		notificationRepo: notificationRepo,
+		userRepo:         userRepo,
 	}
 }
 
@@ -407,33 +411,50 @@ func (s *Service) ToggleReaction(messageID, userID uuid.UUID, emoji string) erro
 }
 
 // Pin message
-func (s *Service) PinMessage(messageID, userID uuid.UUID) error {
+func (s *Service) PinMessage(messageID, userID uuid.UUID) (*MessageWithUser, error) {
 	message, err := s.repo.GetByID(messageID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ErrMessageNotFound
+			return nil, ErrMessageNotFound
 		}
-		return fmt.Errorf("failed to get message: %w", err)
+		return nil, fmt.Errorf("failed to get message: %w", err)
 	}
 
 	topicObj, err := s.topicRepo.GetByID(message.TopicID)
 	if err != nil {
-		return fmt.Errorf("failed to get topic: %w", err)
+		return nil, fmt.Errorf("failed to get topic: %w", err)
 	}
 
 	isMember, err := s.projectRepo.IsUserMember(topicObj.ProjectID, userID)
 	if err != nil {
-		return fmt.Errorf("failed to check membership: %w", err)
+		return nil, fmt.Errorf("failed to check membership: %w", err)
 	}
 	if !isMember {
-		return ErrNotProjectMember
+		return nil, ErrNotProjectMember
 	}
 
 	if err := s.repo.PinMessage(message.TopicID, message.ID); err != nil {
-		return fmt.Errorf("failed to pin message: %w", err)
+		return nil, fmt.Errorf("failed to pin message: %w", err)
 	}
 
-	return nil
+	pinnedBy, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	systemMessage := Message{
+		TopicID:  message.TopicID,
+		UserID:   nil,
+		Content:  fmt.Sprintf("%s pinned \"%s\"", pinnedBy.Name, message.Content),
+		Type:     "system",
+		Metadata: nil,
+		ParentID: nil,
+	}
+	if err := s.repo.Create(&systemMessage); err != nil {
+		return nil, fmt.Errorf("failed to create system message: %w", err)
+	}
+
+	return s.GetByID(systemMessage.ID, userID)
 }
 
 // Unpin message

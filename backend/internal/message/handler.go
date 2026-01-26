@@ -268,7 +268,8 @@ func (h *Handler) PinMessage(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.service.PinMessage(messageID, userID); err != nil {
+	message, err := h.service.PinMessage(messageID, userID)
+	if err != nil {
 		if errors.Is(err, ErrMessageNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"error": "Message not found",
@@ -282,6 +283,10 @@ func (h *Handler) PinMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to pin message",
 		})
+	}
+
+	if h.wsHandler != nil {
+		h.wsHandler.BroadcastNewMessage(message)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
