@@ -21,6 +21,13 @@ export const TopicSettingsModal: React.FC<TopicSettingsModalProps> = ({
   const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [accessLevel, setAccessLevel] = useState<'members' | 'admins' | 'public'>(
+    'members'
+  );
+  const [visibility, setVisibility] = useState<'visible' | 'hidden' | 'archived'>(
+    'visible'
+  );
+  const [saving, setSaving] = useState(false);
   const [muteNotifications, setMuteNotifications] = useState(false);
   const [autoJoinThreads, setAutoJoinThreads] = useState(true);
   const { currentTopics, setCurrentTopics } = useProjectStore();
