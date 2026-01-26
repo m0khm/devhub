@@ -253,7 +253,7 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
                   isOwnMessage ? 'order-2' : ''
                 }`}
               >
-                {message.user?.name || 'Unknown'}
+                {message.user?.handle ?? message.user?.name ?? message.user?.email ?? 'Unknown'}
               </span>
               <span
                 className={`text-xs text-slate-400 ${isOwnMessage ? 'order-1' : ''}`}

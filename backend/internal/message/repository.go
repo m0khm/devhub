@@ -36,6 +36,7 @@ func (r *Repository) GetByIDWithUser(id uuid.UUID) (*MessageWithUser, error) {
 			messages.*,
 			users.id as "user__id",
 			users.name as "user__name",
+			users.handle as "user__handle",
 			users.email as "user__email",
 			users.avatar_url as "user__avatar_url"
 		`).
@@ -55,6 +56,7 @@ func (r *Repository) GetByTopicID(topicID uuid.UUID, limit, offset int, before *
 			messages.*,
 			users.id as "user__id",
 			users.name as "user__name",
+			users.handle as "user__handle",
 			users.email as "user__email",
 			users.avatar_url as "user__avatar_url"
 		`).
@@ -166,6 +168,7 @@ func (r *Repository) GetPinnedByTopicID(topicID uuid.UUID) ([]MessageWithUser, e
 			messages.*,
 			users.id as "user__id",
 			users.name as "user__name",
+			users.handle as "user__handle",
 			users.email as "user__email",
 			users.avatar_url as "user__avatar_url"
 		`).
@@ -187,6 +190,7 @@ func (r *Repository) Search(topicID uuid.UUID, query string, limit int) ([]Messa
 			messages.*,
 			users.id as "user__id",
 			users.name as "user__name",
+			users.handle as "user__handle",
 			users.email as "user__email",
 			users.avatar_url as "user__avatar_url"
 		`).
