@@ -203,6 +203,34 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
       );
     };
 
+    if (message.type === 'system') {
+      return (
+        <div
+          ref={ref}
+          onClick={onSelect ? () => onSelect(message) : undefined}
+          onKeyDown={
+            onSelect
+              ? (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onSelect(message);
+                  }
+                }
+              : undefined
+          }
+          role={onSelect ? 'button' : undefined}
+          tabIndex={onSelect ? 0 : undefined}
+          className={`flex justify-center py-2 ${
+            isHighlighted ? 'ring-2 ring-sky-400/60 bg-sky-500/10 rounded-2xl' : ''
+          } ${onSelect ? 'cursor-pointer' : ''}`}
+        >
+          <div className="rounded-full bg-slate-800/70 px-4 py-1 text-xs text-slate-400">
+            {message.content}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         ref={ref}
