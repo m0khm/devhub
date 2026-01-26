@@ -8,29 +8,30 @@ export const API_URL =
 export const API_BASE_URL = API_URL;
 
 
-
 export const apiClient = axios.create({
   baseURL: API_URL,
   withCredentials: true,
 });
 
+
+
 function attachAuthHeader(config: any) {
   const token = getAuthToken();
-  if (!token) return config;
-
-  // Axios v1 может использовать AxiosHeaders (у него есть .set)
-  if ((config.headers as any)?.set) {
-    (config.headers as any).set('Authorization', `Bearer ${token}`);
-  } else {
-    config.headers = config.headers || {};
-    (config.headers as any)['Authorization'] = `Bearer ${token}`;
+  if (token) {
+    config.headers = { ...(config.headers || {}), Authorization: `Bearer ${token}` };
   }
-
   return config;
 }
 
+axios.interceptors.request.use(attachAuthHeader);
 apiClient.interceptors.request.use(attachAuthHeader);
-
+apiClient.interceptors.request.use((config) => {
+  const token = getAuthToken();
+  if (token) {
+    config.headers = { ...(config.headers || {}), Authorization: `Bearer ${token}` };
+  }
+  return config;
+});
 export function getAuthToken(): string | null {
   return safeStorage.get('auth_token') || localStorage.getItem('auth_token');
 }
