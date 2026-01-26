@@ -11,6 +11,7 @@ interface ProfileFormProps {
 
 export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const updateUser = useAuthStore((state) => state.updateUser);
+  const setAuth = useAuthStore((state) => state.setAuth);
   const logout = useAuthStore((state) => state.logout);
   const [name, setName] = useState(user?.name ?? '');
   const [handle, setHandle] = useState(user?.handle ?? '');
@@ -19,6 +20,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const [company, setCompany] = useState(user?.company ?? '');
   const [location, setLocation] = useState(user?.location ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
+  const [newEmail, setNewEmail] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [emailCodeSent, setEmailCodeSent] = useState(false);
   const [profileVisible, setProfileVisible] = useState(true);
   const [shareContactInfo, setShareContactInfo] = useState(false);
   const [allowMentions, setAllowMentions] = useState(true);
@@ -26,6 +31,8 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const [productUpdates, setProductUpdates] = useState(false);
   const [weeklyDigest, setWeeklyDigest] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [emailChangeLoading, setEmailChangeLoading] = useState(false);
+  const [emailConfirmLoading, setEmailConfirmLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
@@ -39,6 +46,78 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
       setPhone(user.phone ?? '');
     }
   }, [user]);
+
+  const handleSendEmailCode = async () => {
+    const trimmedEmail = newEmail.trim();
+    if (!trimmedEmail) {
+      toast.error('Enter a new email');
+      return;
+    }
+
+    if (trimmedEmail === user.email) {
+      toast.error('New email must be different');
+      return;
+    }
+
+    if (!currentPassword) {
+      toast.error('Enter your current password');
+      return;
+    }
+
+    setEmailChangeLoading(true);
+    try {
+      await apiClient.post('/users/me/email', {
+        new_email: trimmedEmail,
+        password: currentPassword,
+      });
+      setEmailCodeSent(true);
+      setEmailCode('');
+      toast.success('Verification code sent');
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error || 'Failed to send verification code';
+      toast.error(message);
+    } finally {
+      setEmailChangeLoading(false);
+    }
+  };
+
+  const handleConfirmEmail = async () => {
+    const trimmedEmail = newEmail.trim();
+    if (!trimmedEmail) {
+      toast.error('Enter a new email');
+      return;
+    }
+
+    if (!emailCode.trim()) {
+      toast.error('Enter the verification code');
+      return;
+    }
+
+    setEmailConfirmLoading(true);
+    try {
+      const response = await apiClient.post<{ token: string; user: User }>(
+        '/users/me/email/confirm',
+        {
+          new_email: trimmedEmail,
+          code: emailCode.trim(),
+        }
+      );
+      setAuth(response.data.user, response.data.token);
+      setNewEmail('');
+      setCurrentPassword('');
+      setEmailCode('');
+      setEmailCodeSent(false);
+      toast.success('Email updated');
+      onSaved?.();
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error || 'Failed to confirm email change';
+      toast.error(message);
+    } finally {
+      setEmailConfirmLoading(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -251,7 +330,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                placeholder="+1 555 123 4567"
+                placeholder="+7 123 456 78 90"
               />
             </div>
 
@@ -267,6 +346,77 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
                 rows={4}
               />
             </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold text-gray-900">Change email</h2>
+            <p className="text-sm text-gray-500">
+              We&apos;ll send a verification code to your new address.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                New email
+              </label>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(event) => {
+                  setNewEmail(event.target.value);
+                  setEmailCodeSent(false);
+                }}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                placeholder="name@example.com"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Current password
+              </label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                placeholder="••••••••"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleSendEmailCode}
+              disabled={emailChangeLoading}
+              className="inline-flex w-full items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {emailChangeLoading ? 'Sending...' : 'Send code'}
+            </button>
+
+            {emailCodeSent && (
+              <div className="space-y-4 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Verification code
+                  </label>
+                  <input
+                    type="text"
+                    value={emailCode}
+                    onChange={(event) => setEmailCode(event.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                    placeholder="6-digit code"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleConfirmEmail}
+                  disabled={emailConfirmLoading}
+                  className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {emailConfirmLoading ? 'Confirming...' : 'Confirm email'}
+                </button>
+              </div>
+            )}
           </div>
         </section>
 
