@@ -58,6 +58,7 @@ type MessageWithUser struct {
 	User *struct {
 		ID        uuid.UUID `json:"id"`
 		Name      string    `json:"name"`
+		Handle    string    `json:"handle"`
 		Email     string    `json:"email"`
 		AvatarURL *string   `json:"avatar_url"`
 	} `json:"user,omitempty"`
