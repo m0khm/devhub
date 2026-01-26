@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FileMetadata, Message } from '../../../shared/types';
 import { useAuthStore } from '../../../store/authStore';
 import { apiClient } from '../../../api/client';
@@ -8,6 +8,9 @@ import {
   DocumentIcon,
   MapPinIcon,
   EllipsisVerticalIcon,
+  TrashIcon,
+  ArrowUturnLeftIcon,
+  FaceSmileIcon,
 } from '@heroicons/react/24/outline';
 
 interface MessageItemProps {
@@ -22,20 +25,91 @@ interface MessageItemProps {
 
 export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
   (
-    { message, isPinned = false, isHighlighted = false, onSelect, onReply, onTogglePin },
+    {
+      message,
+      isPinned = false,
+      isHighlighted = false,
+      onSelect,
+      onReply,
+      onTogglePin,
+      onDelete,
+    },
     ref,
   ) => {
     const { user: currentUser } = useAuthStore();
     const isOwnMessage = message.user_id === currentUser?.id;
     const [menuOpen, setMenuOpen] = useState(false);
+    const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
 
-    const handleReaction = async (emoji: string) => {
-      try {
-        await apiClient.post(`/messages/${message.id}/reactions`, { emoji });
-      } catch (error) {
-        toast.error('Failed to add reaction');
+    const handleReaction = useCallback(
+      async (emoji: string) => {
+        try {
+          await apiClient.post(`/messages/${message.id}/reactions`, { emoji });
+        } catch (error) {
+          toast.error('Failed to add reaction');
+        }
+      },
+      [message.id],
+    );
+
+    const actionItems = useMemo(() => {
+      const items: Array<{
+        key: string;
+        label: string;
+        icon: React.ReactNode;
+        onClick: () => void;
+      }> = [];
+
+      if (onReply) {
+        items.push({
+          key: 'reply',
+          label: 'Reply',
+          icon: <ArrowUturnLeftIcon className="h-4 w-4 text-slate-300" />,
+          onClick: () => onReply(message),
+        });
       }
-    };
+
+      if (onTogglePin) {
+        items.push({
+          key: 'pin',
+          label: isPinned ? 'Unpin' : 'Pin',
+          icon: <MapPinIcon className="h-4 w-4 text-sky-300" />,
+          onClick: () => onTogglePin(message),
+        });
+      }
+
+      items.push({
+        key: 'reaction',
+        label: 'Reaction 👍',
+        icon: <FaceSmileIcon className="h-4 w-4 text-amber-300" />,
+        onClick: () => handleReaction('👍'),
+      });
+
+      if (onDelete && isOwnMessage) {
+        items.push({
+          key: 'delete',
+          label: 'Delete',
+          icon: <TrashIcon className="h-4 w-4 text-rose-400" />,
+          onClick: () => onDelete(message),
+        });
+      }
+
+      return items;
+    }, [handleReaction, isOwnMessage, isPinned, message, onDelete, onReply, onTogglePin]);
+
+    useEffect(() => {
+      if (!menuOpen) return undefined;
+
+      const handleOutsideClick = () => {
+        setMenuOpen(false);
+        setMenuPosition(null);
+      };
+
+      window.addEventListener('click', handleOutsideClick);
+      return () => {
+        window.removeEventListener('click', handleOutsideClick);
+      };
+    }, [menuOpen]);
 
     const getInitials = (name: string) => {
       return name
@@ -207,6 +281,13 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
       <div
         ref={ref}
         onClick={onSelect ? () => onSelect(message) : undefined}
+        onContextMenu={(event) => {
+          if (actionItems.length === 0) return;
+          event.preventDefault();
+          event.stopPropagation();
+          setMenuOpen(true);
+          setMenuPosition({ x: event.clientX, y: event.clientY });
+        }}
         onKeyDown={
           onSelect
             ? (event) => {
@@ -268,42 +349,48 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
               )}
             </div>
 
-            {(onTogglePin || (onDelete && isOwnMessage)) && (
+            {actionItems.length > 0 && (
               <div className="relative">
                 <button
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
+                    const rect = event.currentTarget.getBoundingClientRect();
                     setMenuOpen((prev) => !prev);
+                    setMenuPosition({ x: rect.right, y: rect.bottom });
                   }}
                   className="rounded-full p-1 text-slate-300 hover:text-slate-100 hover:bg-slate-800/80 transition"
                   aria-label="Message actions"
                 >
                   <EllipsisVerticalIcon className="h-4 w-4" />
                 </button>
-                {menuOpen && (
-                  <div
-                    className={`absolute z-10 mt-2 w-36 rounded-lg border border-slate-700/60 bg-slate-900/95 py-1 text-left shadow-lg ${
-                      isOwnMessage ? 'right-0' : 'left-0'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onTogglePin(message);
-                        setMenuOpen(false);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800/80"
-                    >
-                      <MapPinIcon className="h-4 w-4 text-sky-300" />
-                      {isPinned ? 'Unpin' : 'Pin'}
-                    </button>
-                  </div>
-                )}
               </div>
             )}
           </div>
+
+          {menuOpen && menuPosition && (
+            <div
+              className="fixed z-20 w-44 rounded-lg border border-slate-700/60 bg-slate-900/95 py-1 text-left shadow-lg"
+              style={{ left: menuPosition.x, top: menuPosition.y }}
+            >
+              {actionItems.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    item.onClick();
+                    setMenuOpen(false);
+                    setMenuPosition(null);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800/80"
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div
             className={`inline-block px-4 py-2 rounded-2xl ${
@@ -350,21 +437,6 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
                 className="px-2 py-1 rounded-full text-sm bg-slate-800/60 text-slate-200 hover:bg-slate-800 transition"
               >
                 +
-              </button>
-            </div>
-          )}
-
-          {onReply && (
-            <div className={`mt-2 flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onReply(message);
-                }}
-                className="text-xs font-medium text-slate-400 hover:text-slate-200 transition"
-              >
-                Reply
               </button>
             </div>
           )}
