@@ -79,6 +79,10 @@ func (r *Repository) Update(message *Message) error {
 	return r.db.Save(message).Error
 }
 
+func (r *Repository) UpdateMetadata(messageID uuid.UUID, metadata string) error {
+	return r.db.Model(&Message{}).Where("id = ?", messageID).Update("metadata", metadata).Error
+}
+
 // Delete message
 func (r *Repository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&Message{}, "id = ?", id).Error

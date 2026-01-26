@@ -101,7 +101,6 @@ func (h *FileHandler) UploadFile(c *fiber.Ctx) error {
 		"filename":    file.Filename,
 		"size":        uploadResult.Size,
 		"mime_type":   uploadResult.MimeType,
-		"url":         uploadResult.URL,
 		"storage_key": uploadResult.Key,
 	}
 	metadataJSON, _ := json.Marshal(metadata)
@@ -124,6 +123,16 @@ func (h *FileHandler) UploadFile(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to create message",
 		})
+	}
+
+	safeURL := fmt.Sprintf("/api/files/%s/download", message.ID)
+	metadata["url"] = safeURL
+	metadataJSON, _ = json.Marshal(metadata)
+	metadataStr = string(metadataJSON)
+	if err := h.service.repo.UpdateMetadata(message.ID, metadataStr); err != nil {
+		log.Printf("file upload: failed to update metadata for message %s: %v", message.ID, err)
+	} else {
+		message.Metadata = &metadataStr
 	}
 
 	// Broadcast via WebSocket
