@@ -29,10 +29,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const normalizedPinnedMessages = pinnedMessages ?? [];
   const normalizedMessages = messages ?? [];
   const [currentPinnedIndex, setCurrentPinnedIndex] = useState(0);
-  const pinnedIds = new Set(normalizedPinnedMessages.map((message) => message.id));
-  const visibleMessages = normalizedMessages.filter(
-    (message) => !pinnedIds.has(message.id),
-  );
+  const visibleMessages = normalizedMessages;
 
   useEffect(() => {
     if (!highlightedMessageId && !pinnedHighlightId) {
