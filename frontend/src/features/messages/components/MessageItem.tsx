@@ -46,6 +46,60 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
       ? messageMap?.get(message.parent_id)
       : undefined;
 
+    const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+
+    const fileMeta = useMemo(() => {
+      if (message.type !== 'file' || !message.metadata) return null;
+      try {
+        return typeof message.metadata === 'string'
+          ? (JSON.parse(message.metadata) as FileMetadata)
+          : (message.metadata as FileMetadata);
+      } catch {
+        return null;
+      }
+    }, [message.type, message.metadata]);
+
+    const isImageFile = Boolean(fileMeta?.mime_type?.startsWith('image/'));
+    const canPreviewImage = isImageFile && (typeof fileMeta?.size !== 'number' || fileMeta.size <= 5 * 1024 * 1024);
+
+    useEffect(() => {
+      let revoked: string | null = null;
+
+      // очищаем старый preview при смене сообщения
+      setImagePreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+
+      if (!canPreviewImage || !fileMeta?.filename) return;
+
+      (async () => {
+        try {
+          const response = await apiClient.get(`/files/${message.id}/download`, {
+            responseType: 'blob',
+          });
+
+          const blob = new Blob([response.data], {
+            type:
+              response.headers?.['content-type'] ||
+              fileMeta.mime_type ||
+              'image/*',
+          });
+
+          const url = URL.createObjectURL(blob);
+          revoked = url;
+          setImagePreviewUrl(url);
+        } catch {
+          // молча — превью просто не покажем
+        }
+      })();
+
+      return () => {
+        if (revoked) URL.revokeObjectURL(revoked);
+      };
+    }, [message.id, canPreviewImage, fileMeta?.filename, fileMeta?.mime_type, fileMeta?.size]);
+
+
     const handleReaction = useCallback(
       async (emoji: string) => {
         try {
@@ -193,6 +247,25 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
 
     return (
       <div className="mt-2">
+
+        {isImage && imagePreviewUrl && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              // можно открыть в новой вкладке:
+              window.open(imagePreviewUrl, '_blank', 'noopener,noreferrer');
+            }}
+            className="block text-left"
+          >
+            <img
+              src={imagePreviewUrl}
+              alt={metadata.filename}
+              className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition border border-slate-700/60"
+            />
+          </button>
+        )}
+
         {isImage && renderDownloadCard('Image (click to download)')}
         {isPdf && renderDownloadCard('PDF (click to download)')}
         {isAudio && renderDownloadCard('Audio (click to download)')}
