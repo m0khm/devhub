@@ -251,7 +251,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                placeholder="+1 555 123 4567"
+                placeholder="+7 123 456 78 90"
               />
             </div>
 
