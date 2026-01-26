@@ -84,6 +84,7 @@ func main() {
 		cfg.S3.SecretKey,
 		cfg.S3.Bucket,
 		cfg.S3.UseSSL,
+		cfg.S3.PublicBaseURL,
 	)
 	if err != nil {
 		log.Printf("S3 storage unavailable: %v", err)

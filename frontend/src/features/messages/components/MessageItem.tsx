@@ -89,18 +89,19 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
       const isVideo = mimeType.startsWith('video/');
       const fileSize =
         typeof metadata.size === 'number' ? `${(metadata.size / 1024).toFixed(1)} KB` : null;
+      const safeUrl = `/api/files/${message.id}/download`;
 
       return (
         <div className="mt-2">
           {isImage && (
             <a
-              href={metadata.url}
+              href={safeUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(event) => event.stopPropagation()}
             >
               <img
-                src={metadata.url}
+                src={safeUrl}
                 alt={metadata.filename}
                 className="max-w-sm rounded-lg cursor-pointer hover:opacity-90 transition"
               />
@@ -110,7 +111,7 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
           {isPdf && (
             <div className="rounded-lg overflow-hidden border border-slate-700/60 bg-slate-900/60">
               <embed
-                src={metadata.url}
+                src={safeUrl}
                 type="application/pdf"
                 className="w-full h-64"
               />
@@ -119,19 +120,19 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
 
           {isAudio && (
             <audio controls className="w-full mt-2">
-              <source src={metadata.url} type={mimeType} />
+              <source src={safeUrl} type={mimeType} />
             </audio>
           )}
 
           {isVideo && (
             <video controls className="w-full mt-2 rounded-lg">
-              <source src={metadata.url} type={mimeType} />
+              <source src={safeUrl} type={mimeType} />
             </video>
           )}
 
           {!isImage && !isPdf && !isAudio && !isVideo && (
             <a
-              href={metadata.url}
+              href={safeUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(event) => event.stopPropagation()}
