@@ -93,6 +93,7 @@ func main() {
 
 	// Initialize repositories
 	projectRepo := project.NewRepository(db)
+	codeRepo := code.NewRepository(db)
 	topicRepo := topic.NewRepository(db)
 	messageRepo := message.NewRepository(db)
 	notificationRepo := notification.NewRepository(db)
@@ -107,6 +108,7 @@ func main() {
 		time.Duration(cfg.Admin.SessionTTLInMinute)*time.Minute,
 	)
 	projectService := project.NewService(projectRepo)
+	codeService := code.NewService(codeRepo, projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
 	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo, userRepo)
 	userService := user.NewService(db, authService, mailerClient)
@@ -127,6 +129,7 @@ func main() {
 	authHandler := auth.NewHandler(authService)
 	adminHandler := admin.NewHandler(adminService)
 	projectHandler := project.NewHandler(projectService)
+	codeHandler := code.NewHandler(codeService)
 	invitationHandler := project.NewInvitationHandler(invitationService)
 	topicHandler := topic.NewHandler(topicService)
 	messageHandler := message.NewHandler(messageService)
@@ -136,7 +139,7 @@ func main() {
 	messageHandler.SetNotificationService(notificationService)
 	fileHandler := message.NewFileHandler(messageService, s3Client)
 	fileHandler.SetWSHandler(wsHandler)
-	userHandler := user.NewHandler(userService)
+	userHandler := user.NewHandler(userService, s3Client)
 	groupHandler := group.NewHandler(groupService)
 	communityHandler := community.NewHandler(communityService)
 	notificationHandler := notification.NewHandler(notificationService)
@@ -160,6 +163,7 @@ func main() {
 	app.Use(metrics.Middleware())
 
 	app.Get("/metrics", metrics.Handler)
+	app.Static("/uploads", "./uploads")
 
 	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
@@ -257,10 +261,16 @@ func main() {
 	projectRoutes.Delete("/:id", projectHandler.Delete)
 	projectRoutes.Get("/:id/members", projectHandler.GetMembers)
 	projectRoutes.Post("/:id/members", projectHandler.AddMember)
+	projectRoutes.Patch("/:id/members/:userId", projectHandler.UpdateMemberRole)
 	projectRoutes.Delete("/:id/members/:userId", projectHandler.RemoveMember)
 	projectRoutes.Post("/:id/invitations", invitationHandler.Create)
 	projectRoutes.Post("/:projectId/dm", dmHandler.CreateOrGet)
 	projectRoutes.Get("/:projectId/dm", dmHandler.List)
+	projectRoutes.Get("/:projectId/repos", codeHandler.ListRepos)
+	projectRoutes.Post("/:projectId/repos", codeHandler.CreateRepo)
+	projectRoutes.Put("/:projectId/repos/:repoId", codeHandler.UpdateRepo)
+	projectRoutes.Post("/:projectId/repos/:repoId/files", codeHandler.CreateFile)
+	projectRoutes.Put("/:projectId/repos/:repoId/files/:fileId", codeHandler.UpdateFile)
 	projectRoutes.Post("/:projectId/deploy/servers", deployHandler.CreateServer)
 	projectRoutes.Get("/:projectId/deploy/servers", deployHandler.ListServers)
 	projectRoutes.Get("/:projectId/deploy/servers/:serverId", deployHandler.GetServer)
@@ -309,6 +319,7 @@ func main() {
 	userRoutes := protected.Group("/users")
 	userRoutes.Get("/", userHandler.Search)
 	userRoutes.Patch("/me", userHandler.UpdateMe)
+	userRoutes.Post("/me/avatar", userHandler.UploadAvatar)
 	userRoutes.Post("/me/email", userHandler.StartEmailChange)
 	userRoutes.Post("/me/email/confirm", userHandler.ConfirmEmailChange)
 	userRoutes.Delete("/me", userHandler.DeleteMe)

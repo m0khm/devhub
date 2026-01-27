@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { DeployPage } from "./features/deploy/DeployPage";
 import { CodePage } from "./features/code/CodePage";
+import { CustomPage } from "./features/custom/CustomPage";
 import { TermsPage } from "./features/legal/TermsPage";
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -13,6 +14,7 @@ import { ProjectWorkspace } from './features/projects/components/ProjectWorkspac
 import { ProfilePage } from './features/profile/ProfilePage';
 import { LandingPage } from './features/landing/LandingPage';
 import { HubPage } from './features/hub/HubPage';
+import { PlanningPage } from './features/planning/PlanningPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -77,6 +79,14 @@ function App() {
           element={
             <ProtectedRoute>
               <DeployPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/planning"
+          element={
+            <ProtectedRoute>
+              <PlanningPage />
             </ProtectedRoute>
           }
         />

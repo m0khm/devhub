@@ -127,6 +127,26 @@ func (s *Service) Update(userID uuid.UUID, req UpdateUserRequest) (*User, error)
 	return &foundUser, nil
 }
 
+func (s *Service) UpdateAvatar(userID uuid.UUID, avatarURL string) (*User, error) {
+	var foundUser User
+	if err := s.db.First(&foundUser, "id = ? AND is_deleted = false", userID).Error; err != nil {
+		return nil, err
+	}
+
+	trimmed := strings.TrimSpace(avatarURL)
+	if trimmed == "" {
+		foundUser.AvatarURL = nil
+	} else {
+		foundUser.AvatarURL = &trimmed
+	}
+
+	if err := s.db.Save(&foundUser).Error; err != nil {
+		return nil, err
+	}
+
+	return &foundUser, nil
+}
+
 func (s *Service) Delete(userID uuid.UUID) error {
 	now := time.Now()
 	result := s.db.Model(&User{}).

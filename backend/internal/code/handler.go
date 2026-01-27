@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/m0khm/devhub/backend/pkg/validator"
 )
 
 type Handler struct {
@@ -15,80 +16,195 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-// GET /api/projects/:projectId/repos/:repoId/branches
-func (h *Handler) ListBranches(c *fiber.Ctx) error {
-	userID, err := uuid.Parse(c.Locals("userID").(string))
+// GET /api/projects/:projectId/repos
+func (h *Handler) ListRepos(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
 	if err != nil {
-		return fiber.ErrUnauthorized
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
+
 	projectID, err := uuid.Parse(c.Params("projectId"))
 	if err != nil {
-		return fiber.ErrBadRequest
-	}
-	repoID := c.Params("repoId")
-	if repoID == "" {
-		return fiber.ErrBadRequest
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid project ID"})
 	}
 
-	branches, err := h.service.ListBranches(projectID, userID, repoID)
+	repos, err := h.service.ListRepos(projectID, userID)
 	if err != nil {
 		if errors.Is(err, ErrNotProjectMember) {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not a project member"})
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "You are not a member of this project"})
 		}
-		return fiber.ErrInternalServerError
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to list repositories"})
 	}
 
-	return c.JSON(branches)
+	if repos == nil {
+		repos = []Repository{}
+	}
+
+	return c.JSON(repos)
 }
 
-// GET /api/projects/:projectId/repos/:repoId/commits
-func (h *Handler) ListCommits(c *fiber.Ctx) error {
-	userID, err := uuid.Parse(c.Locals("userID").(string))
+// POST /api/projects/:projectId/repos
+func (h *Handler) CreateRepo(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
 	if err != nil {
-		return fiber.ErrUnauthorized
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
+
 	projectID, err := uuid.Parse(c.Params("projectId"))
 	if err != nil {
-		return fiber.ErrBadRequest
-	}
-	repoID := c.Params("repoId")
-	if repoID == "" {
-		return fiber.ErrBadRequest
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid project ID"})
 	}
 
-	commits, err := h.service.ListCommits(projectID, userID, repoID)
+	var req CreateRepoRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"details": errs,
+		})
+	}
+
+	repo, err := h.service.CreateRepo(projectID, userID, req)
 	if err != nil {
 		if errors.Is(err, ErrNotProjectMember) {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not a project member"})
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "You are not a member of this project"})
 		}
-		return fiber.ErrInternalServerError
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create repository"})
 	}
 
-	return c.JSON(commits)
+	return c.Status(fiber.StatusCreated).JSON(repo)
 }
 
-// GET /api/projects/:projectId/repos/:repoId/changes
-func (h *Handler) ListChanges(c *fiber.Ctx) error {
-	userID, err := uuid.Parse(c.Locals("userID").(string))
+// PUT /api/projects/:projectId/repos/:repoId
+func (h *Handler) UpdateRepo(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
 	if err != nil {
-		return fiber.ErrUnauthorized
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
+
 	projectID, err := uuid.Parse(c.Params("projectId"))
 	if err != nil {
-		return fiber.ErrBadRequest
-	}
-	repoID := c.Params("repoId")
-	if repoID == "" {
-		return fiber.ErrBadRequest
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid project ID"})
 	}
 
-	changes, err := h.service.ListChanges(projectID, userID, repoID)
+	repoID, err := uuid.Parse(c.Params("repoId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid repository ID"})
+	}
+
+	var req UpdateRepoRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	repo, err := h.service.UpdateRepo(projectID, repoID, userID, req)
 	if err != nil {
 		if errors.Is(err, ErrNotProjectMember) {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not a project member"})
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "You are not a member of this project"})
 		}
-		return fiber.ErrInternalServerError
+		if errors.Is(err, ErrRepoNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Repository not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update repository"})
 	}
 
-	return c.JSON(changes)
+	return c.JSON(repo)
+}
+
+// POST /api/projects/:projectId/repos/:repoId/files
+func (h *Handler) CreateFile(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	projectID, err := uuid.Parse(c.Params("projectId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid project ID"})
+	}
+
+	repoID, err := uuid.Parse(c.Params("repoId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid repository ID"})
+	}
+
+	var req CreateFileRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"details": errs,
+		})
+	}
+
+	file, err := h.service.CreateFile(projectID, repoID, userID, req)
+	if err != nil {
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "You are not a member of this project"})
+		}
+		if errors.Is(err, ErrRepoNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Repository not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create file"})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(file)
+}
+
+// PUT /api/projects/:projectId/repos/:repoId/files/:fileId
+func (h *Handler) UpdateFile(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+	}
+
+	projectID, err := uuid.Parse(c.Params("projectId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid project ID"})
+	}
+
+	repoID, err := uuid.Parse(c.Params("repoId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid repository ID"})
+	}
+
+	fileID, err := uuid.Parse(c.Params("fileId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid file ID"})
+	}
+
+	var req UpdateFileRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	file, err := h.service.UpdateFile(projectID, repoID, fileID, userID, req)
+	if err != nil {
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "You are not a member of this project"})
+		}
+		if errors.Is(err, ErrRepoNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Repository not found"})
+		}
+		if errors.Is(err, ErrFileNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "File not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update file"})
+	}
+
+	return c.JSON(file)
+}
+
+func getUserIDFromContext(c *fiber.Ctx) (uuid.UUID, error) {
+	userIDStr, ok := c.Locals("userID").(string)
+	if !ok {
+		return uuid.Nil, errors.New("user ID not found in context")
+	}
+	return uuid.Parse(userIDStr)
 }

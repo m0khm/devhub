@@ -12,6 +12,7 @@ interface ProjectSettingsModalProps {
   project?: Project | null;
   members: ProjectMemberWithUser[];
   membersLoading: boolean;
+  onMembersUpdated?: () => void | Promise<void>;
 }
 
 export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
@@ -20,6 +21,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
   project,
   members,
   membersLoading,
+  onMembersUpdated,
 }) => {
   const prevOverflow = useRef<string>('');
   const updateProject = useProjectStore((state) => state.updateProject);
@@ -34,6 +36,12 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
   const [muteNotifications, setMuteNotifications] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [roleMenu, setRoleMenu] = useState<{
+    member: ProjectMemberWithUser;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [roleUpdating, setRoleUpdating] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -58,6 +66,26 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     setVisibility(project.visibility ?? 'visible');
     setMuteNotifications(project.notifications_muted ?? false);
   }, [project]);
+
+  useEffect(() => {
+    if (open) return;
+    setRoleMenu(null);
+  }, [open]);
+
+  useEffect(() => {
+    if (!roleMenu) return;
+
+    const handleClose = () => setRoleMenu(null);
+    window.addEventListener('click', handleClose);
+    window.addEventListener('contextmenu', handleClose);
+    window.addEventListener('scroll', handleClose, true);
+
+    return () => {
+      window.removeEventListener('click', handleClose);
+      window.removeEventListener('contextmenu', handleClose);
+      window.removeEventListener('scroll', handleClose, true);
+    };
+  }, [roleMenu]);
 
   const handleSave = async () => {
     if (!project) return;
@@ -100,6 +128,46 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
       toast.error(message);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleContextMenu = (
+    event: React.MouseEvent<HTMLLIElement>,
+    member: ProjectMemberWithUser
+  ) => {
+    event.preventDefault();
+    if (!project) return;
+    const menuWidth = 180;
+    const menuHeight = 96;
+    const padding = 12;
+    const x = Math.min(
+      event.clientX,
+      window.innerWidth - menuWidth - padding
+    );
+    const y = Math.min(
+      event.clientY,
+      window.innerHeight - menuHeight - padding
+    );
+    setRoleMenu({ member, x, y });
+  };
+
+  const handleRoleChange = async (role: 'admin' | 'member') => {
+    if (!project || !roleMenu || roleUpdating) return;
+    setRoleUpdating(true);
+    try {
+      await apiClient.patch(
+        `/projects/${project.id}/members/${roleMenu.member.user_id}`,
+        { role }
+      );
+      toast.success('Member role updated');
+      await onMembersUpdated?.();
+      setRoleMenu(null);
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error || 'Failed to update member role';
+      toast.error(message);
+    } finally {
+      setRoleUpdating(false);
     }
   };
 
@@ -245,6 +313,9 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                       <li
                         key={member.id}
                         className="flex items-center justify-between rounded-md border border-border/70 bg-base/40 px-3 py-2"
+                        onContextMenu={(event) =>
+                          handleContextMenu(event, member)
+                        }
                       >
                         <div>
                           <div className="text-sm font-medium text-text">
@@ -298,6 +369,41 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
               {saving ? 'Saving...' : 'Save settings'}
             </button>
           </div>
+          {roleMenu && (
+            <div
+              className="fixed z-[1000001] w-44 rounded-lg border border-border/70 bg-surface p-2 text-sm text-text shadow-lg"
+              style={{ left: roleMenu.x, top: roleMenu.y }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="px-2 pb-2 text-xs text-text-muted">
+                Change role
+              </div>
+              {roleMenu.member.role === 'owner' ? (
+                <div className="px-2 py-1 text-xs text-text-muted">
+                  Owner role cannot be changed
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <button
+                    type="button"
+                    className="w-full rounded-md px-2 py-1 text-left text-sm text-text hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => handleRoleChange('admin')}
+                    disabled={roleUpdating || roleMenu.member.role === 'admin'}
+                  >
+                    Make admin
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full rounded-md px-2 py-1 text-left text-sm text-text hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => handleRoleChange('member')}
+                    disabled={roleUpdating || roleMenu.member.role === 'member'}
+                  >
+                    Make member
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>

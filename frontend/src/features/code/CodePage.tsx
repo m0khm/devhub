@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient } from '../../api/client';
 
 interface CodeFile {
+  id?: string;
   path: string;
   language?: string;
   content: string;
@@ -16,253 +17,169 @@ interface Repo {
   files: CodeFile[];
 }
 
-interface RepoBranch {
-  name: string;
-  lastCommit: string;
-  updatedAt: string;
-}
-
-interface RepoCommit {
-  hash: string;
-  message: string;
-  author: string;
-  timestamp: string;
-}
-
-interface RepoChange {
-  id: string;
-  summary: string;
-  author: string;
-  timestamp: string;
-  files: string[];
-}
-
-interface RepoActivity {
-  branches: RepoBranch[];
-  commits: RepoCommit[];
-  changes: RepoChange[];
-}
-
-const initialRepos: Repo[] = [
-  {
-    id: 'alpha',
-    name: 'frontend-web',
-    description: 'UI layer for DevHub.',
-    updatedAt: '2 hours ago',
-    files: [
-      {
-        path: 'src/App.tsx',
-        language: 'typescript',
-        content: `import React from 'react';\n\nexport const App = () => {\n  return <div>Hello DevHub</div>;\n};`,
-      },
-      {
-        path: 'src/styles/theme.css',
-        language: 'css',
-        content: `:root {\n  --brand: #1f6feb;\n}\n\nbody {\n  font-family: 'Inter', sans-serif;\n}`,
-      },
-    ],
-  },
-  {
-    id: 'beta',
-    name: 'backend-api',
-    description: 'API service and workers.',
-    updatedAt: 'yesterday',
-    files: [
-      {
-        path: 'cmd/api/main.go',
-        language: 'go',
-        content: `package main\n\nfunc main() {\n  println("DevHub API")\n}`,
-      },
-      {
-        path: 'README.md',
-        language: 'markdown',
-        content: `# Backend API\n\n- Fiber\n- PostgreSQL\n- Redis`,
-      },
-    ],
-  },
-];
-
-const fallbackActivity: Record<string, RepoActivity> = {
-  alpha: {
-    branches: [
-      { name: 'main', lastCommit: '9bf2c21', updatedAt: '2 hours ago' },
-      { name: 'design/refresh', lastCommit: '0f4ad20', updatedAt: 'yesterday' },
-      { name: 'feat/notifications', lastCommit: 'ad129fe', updatedAt: '2 days ago' },
-      { name: 'chore/cleanup', lastCommit: 'c018ef2', updatedAt: 'last week' },
-    ],
-    commits: [
-      {
-        hash: '9bf2c21',
-        message: 'Polish header spacing + restore theme tokens',
-        author: 'Maya Chen',
-        timestamp: 'Today · 12:45',
-      },
-      {
-        hash: '0f4ad20',
-        message: 'Add onboarding hints for new repos',
-        author: 'Devon Lee',
-        timestamp: 'Yesterday · 16:10',
-      },
-      {
-        hash: 'ad129fe',
-        message: 'Refactor build pipeline for UI bundles',
-        author: 'Ira Diaz',
-        timestamp: 'Mon · 09:02',
-      },
-    ],
-    changes: [
-      {
-        id: 'change-1',
-        summary: 'Updated sidebar navigation layout',
-        author: 'Maya Chen',
-        timestamp: 'Today · 11:30',
-        files: ['src/components/Sidebar.tsx', 'src/styles/sidebar.css'],
-      },
-      {
-        id: 'change-2',
-        summary: 'Refined color tokens for dark mode',
-        author: 'Devon Lee',
-        timestamp: 'Yesterday · 15:42',
-        files: ['src/styles/theme.css'],
-      },
-      {
-        id: 'change-3',
-        summary: 'Improved lint rules and formatting',
-        author: 'Ira Diaz',
-        timestamp: 'Mon · 08:15',
-        files: ['.eslintrc', 'package.json'],
-      },
-    ],
-  },
-  beta: {
-    branches: [
-      { name: 'main', lastCommit: 'a70f343', updatedAt: 'yesterday' },
-      { name: 'feat/billing-api', lastCommit: 'd11c3ad', updatedAt: '3 days ago' },
-      { name: 'ops/metrics', lastCommit: 'bb67e12', updatedAt: 'last week' },
-    ],
-    commits: [
-      {
-        hash: 'a70f343',
-        message: 'Add request tracing to API gateway',
-        author: 'Felix Park',
-        timestamp: 'Yesterday · 18:03',
-      },
-      {
-        hash: 'd11c3ad',
-        message: 'Introduce billing endpoints',
-        author: 'Rosa Miles',
-        timestamp: 'Mon · 10:27',
-      },
-      {
-        hash: 'bb67e12',
-        message: 'Tune worker concurrency defaults',
-        author: 'Felix Park',
-        timestamp: 'Fri · 17:50',
-      },
-    ],
-    changes: [
-      {
-        id: 'change-4',
-        summary: 'Migrated database connection pool',
-        author: 'Rosa Miles',
-        timestamp: 'Yesterday · 13:20',
-        files: ['cmd/api/main.go', 'config/database.yml'],
-      },
-      {
-        id: 'change-5',
-        summary: 'Added health checks for workers',
-        author: 'Felix Park',
-        timestamp: 'Mon · 11:04',
-        files: ['internal/health/handler.go'],
-      },
-    ],
-  },
-};
-
-const defaultActivity: RepoActivity = {
-  branches: [],
-  commits: [],
-  changes: [],
-};
-
 export const CodePage: React.FC = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const [repos, setRepos] = useState<Repo[]>(initialRepos);
-  const [selectedRepoId, setSelectedRepoId] = useState(initialRepos[0]?.id ?? '');
-  const [selectedFilePath, setSelectedFilePath] = useState(
-    initialRepos[0]?.files[0]?.path ?? ''
-  );
+  const [repos, setRepos] = useState<Repo[]>([]);
+  const [selectedRepoId, setSelectedRepoId] = useState('');
+  const [selectedFilePath, setSelectedFilePath] = useState('');
   const [newRepoName, setNewRepoName] = useState('');
   const [newRepoDescription, setNewRepoDescription] = useState('');
   const [newFilePath, setNewFilePath] = useState('');
-  const [branchList, setBranchList] = useState<RepoBranch[]>([]);
-  const [commitList, setCommitList] = useState<RepoCommit[]>([]);
-  const [changeList, setChangeList] = useState<RepoChange[]>([]);
-  const [loadingActivity, setLoadingActivity] = useState(false);
-  const [showAllBranches, setShowAllBranches] = useState(false);
-  const [showAllCommits, setShowAllCommits] = useState(false);
-  const [showAllChanges, setShowAllChanges] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const saveTimeoutRef = useRef<number | null>(null);
 
   const selectedRepo = repos.find((repo) => repo.id === selectedRepoId) ?? repos[0];
   const selectedFile = selectedRepo?.files.find((file) => file.path === selectedFilePath);
-  const activityLimit = 3;
+  const storageKey = projectId ? `code_repos_${projectId}` : 'code_repos';
 
-  const handleCreateFile = () => {
+  useEffect(() => {
+    if (!projectId) {
+      return;
+    }
+
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Repo[];
+        if (Array.isArray(parsed)) {
+          setRepos(parsed);
+        }
+      } catch {
+        localStorage.removeItem(storageKey);
+      }
+    }
+
+    const loadRepos = async () => {
+      try {
+        const response = await apiClient.get<Repo[]>(`/projects/${projectId}/repos`);
+        setRepos(Array.isArray(response.data) ? response.data : []);
+      } catch {
+        // fallback to localStorage data
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRepos();
+  }, [projectId, storageKey]);
+
+  useEffect(() => {
+    if (!projectId) {
+      return;
+    }
+    localStorage.setItem(storageKey, JSON.stringify(repos));
+  }, [projectId, repos, storageKey]);
+
+  useEffect(() => {
+    if (!repos.length) {
+      setSelectedRepoId('');
+      setSelectedFilePath('');
+      return;
+    }
+
+    if (!selectedRepoId || !repos.some((repo) => repo.id === selectedRepoId)) {
+      setSelectedRepoId(repos[0].id);
+      setSelectedFilePath(repos[0].files[0]?.path ?? '');
+      return;
+    }
+
+    if (
+      selectedRepoId &&
+      selectedFilePath &&
+      repos
+        .find((repo) => repo.id === selectedRepoId)
+        ?.files.some((file) => file.path === selectedFilePath)
+    ) {
+      return;
+    }
+
+    const currentRepo = repos.find((repo) => repo.id === selectedRepoId);
+    setSelectedFilePath(currentRepo?.files[0]?.path ?? '');
+  }, [repos, selectedRepoId, selectedFilePath]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        window.clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCreateFile = async () => {
     if (!selectedRepo || !newFilePath.trim()) {
       return;
     }
     const trimmedPath = newFilePath.trim();
-    let fileAdded = false;
-    setRepos((prev) =>
-      prev.map((repo) => {
-        if (repo.id !== selectedRepo.id) {
-          return repo;
+    if (!projectId) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.post<CodeFile>(
+        `/projects/${projectId}/repos/${selectedRepo.id}/files`,
+        {
+          path: trimmedPath,
+          content: '',
         }
-        if (repo.files.some((file) => file.path === trimmedPath)) {
-          return repo;
-        }
-        fileAdded = true;
-        return {
-          ...repo,
-          files: [
-            ...repo.files,
-            {
-              path: trimmedPath,
-              content: '',
-            },
-          ],
-        };
-      })
-    );
-    if (fileAdded) {
-      setSelectedFilePath(trimmedPath);
+      );
+      const createdFile = response.data;
+      setRepos((prev) =>
+        prev.map((repo) =>
+          repo.id === selectedRepo.id
+            ? { ...repo, files: [...repo.files, createdFile] }
+            : repo
+        )
+      );
+      setSelectedFilePath(createdFile.path);
+      setNewFilePath('');
+    } catch {
+      const fallbackFile: CodeFile = { id: `${Date.now()}`, path: trimmedPath, content: '' };
+      setRepos((prev) =>
+        prev.map((repo) =>
+          repo.id === selectedRepo.id
+            ? { ...repo, files: [...repo.files, fallbackFile] }
+            : repo
+        )
+      );
+      setSelectedFilePath(fallbackFile.path);
       setNewFilePath('');
     }
   };
 
-  const handleCreateRepo = () => {
+  const handleCreateRepo = async () => {
     if (!newRepoName.trim()) {
       return;
     }
-    const newRepo: Repo = {
-      id: `${newRepoName}-${Date.now()}`,
-      name: newRepoName.trim(),
-      description: newRepoDescription.trim() || undefined,
-      updatedAt: 'just now',
-      files: [
-        {
-          path: 'README.md',
-          language: 'markdown',
-          content: `# ${newRepoName.trim()}\n\nDescribe your project here.`,
-        },
-      ],
-    };
-    setRepos((prev) => [newRepo, ...prev]);
-    setSelectedRepoId(newRepo.id);
-    setSelectedFilePath(newRepo.files[0].path);
-    setNewRepoName('');
-    setNewRepoDescription('');
+    if (!projectId) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.post<Repo>(`/projects/${projectId}/repos`, {
+        name: newRepoName.trim(),
+        description: newRepoDescription.trim() || undefined,
+      });
+      const newRepo = response.data;
+      setRepos((prev) => [newRepo, ...prev]);
+      setSelectedRepoId(newRepo.id);
+      setSelectedFilePath(newRepo.files[0]?.path ?? '');
+      setNewRepoName('');
+      setNewRepoDescription('');
+    } catch {
+      const fallbackRepo: Repo = {
+        id: `${newRepoName.trim()}-${Date.now()}`,
+        name: newRepoName.trim(),
+        description: newRepoDescription.trim() || undefined,
+        updatedAt: new Date().toISOString(),
+        files: [],
+      };
+      setRepos((prev) => [fallbackRepo, ...prev]);
+      setSelectedRepoId(fallbackRepo.id);
+      setSelectedFilePath('');
+      setNewRepoName('');
+      setNewRepoDescription('');
+    }
   };
 
   const handleFileContentChange = (nextContent: string) => {
@@ -282,6 +199,39 @@ export const CodePage: React.FC = () => {
         };
       })
     );
+
+    if (!projectId || !selectedFile.id) {
+      return;
+    }
+
+    if (saveTimeoutRef.current) {
+      window.clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        await apiClient.put(
+          `/projects/${projectId}/repos/${selectedRepo.id}/files/${selectedFile.id}`,
+          {
+            content: nextContent,
+            language: selectedFile.language,
+          }
+        );
+      } catch {
+        // keep local edits if API fails
+      }
+    }, 700);
+  };
+
+  const formatUpdatedAt = (value?: string) => {
+    if (!value) {
+      return 'unknown';
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleString();
   };
 
   useEffect(() => {
@@ -418,23 +368,31 @@ export const CodePage: React.FC = () => {
               Repositories
             </div>
             <div className="max-h-[420px] overflow-y-auto">
-              {repos.map((repo) => (
-                <button
-                  type="button"
-                  key={repo.id}
-                  onClick={() => {
-                    setSelectedRepoId(repo.id);
-                    setSelectedFilePath(repo.files[0]?.path ?? '');
-                  }}
-                  className={`w-full border-b border-slate-800 px-4 py-3 text-left transition hover:bg-slate-800/60 ${
-                    repo.id === selectedRepo?.id ? 'bg-slate-800/70' : ''
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-slate-100">{repo.name}</p>
-                  <p className="text-xs text-slate-400">{repo.description}</p>
-                  <p className="mt-2 text-[11px] text-slate-500">Updated {repo.updatedAt}</p>
-                </button>
-              ))}
+              {isLoading ? (
+                <div className="px-4 py-6 text-xs text-slate-500">Loading repositories...</div>
+              ) : repos.length === 0 ? (
+                <div className="px-4 py-6 text-xs text-slate-500">No repositories yet.</div>
+              ) : (
+                repos.map((repo) => (
+                  <button
+                    type="button"
+                    key={repo.id}
+                    onClick={() => {
+                      setSelectedRepoId(repo.id);
+                      setSelectedFilePath(repo.files[0]?.path ?? '');
+                    }}
+                    className={`w-full border-b border-slate-800 px-4 py-3 text-left transition hover:bg-slate-800/60 ${
+                      repo.id === selectedRepo?.id ? 'bg-slate-800/70' : ''
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-slate-100">{repo.name}</p>
+                    <p className="text-xs text-slate-400">{repo.description}</p>
+                    <p className="mt-2 text-[11px] text-slate-500">
+                      Updated {formatUpdatedAt(repo.updatedAt)}
+                    </p>
+                  </button>
+                ))
+              )}
             </div>
           </div>
         </aside>
