@@ -34,6 +34,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const [emailChangeLoading, setEmailChangeLoading] = useState(false);
   const [emailConfirmLoading, setEmailConfirmLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [openSection, setOpenSection] = useState<
+    'basic' | 'email' | 'privacy' | 'notifications' | 'danger'
+  >('basic');
 
   useEffect(() => {
     if (user) {
@@ -199,6 +202,18 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
     }
   };
 
+  const handleSectionToggle = (
+    section: 'basic' | 'email' | 'privacy' | 'notifications' | 'danger'
+  ) => {
+    setOpenSection(section);
+  };
+
+  const getSectionButtonLabel = (isOpen: boolean) =>
+    isOpen ? 'Скрыть' : 'Открыть';
+
+  const sectionContainerClass =
+    'rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6';
+
   return (
     <>
       <div className="mb-8 text-center">
@@ -234,266 +249,327 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
         </dl>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <div className="mb-5">
-            <h2 className="text-lg font-semibold text-gray-900">Основные</h2>
-            <p className="text-sm text-gray-500">
-              Обновите публичные данные профиля и контакты.
-            </p>
-          </div>
-          <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <section className={sectionContainerClass}>
+          <button
+            type="button"
+            onClick={() => handleSectionToggle('basic')}
+            aria-expanded={openSection === 'basic'}
+            aria-controls="profile-basic-section"
+            className="flex w-full items-start justify-between gap-4 text-left"
+          >
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                type="email"
-                value={user.email}
-                readOnly
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500"
-              />
+              <h2 className="text-lg font-semibold text-gray-900">Основные</h2>
+              <p className="text-sm text-gray-500">
+                Обновите публичные данные профиля и контакты.
+              </p>
             </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                placeholder="Your name"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Handle
-              </label>
-              <input
-                type="text"
-                value={handle}
-                onChange={(event) => setHandle(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                placeholder="@devhub"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Avatar URL
-              </label>
-              <input
-                type="url"
-                value={avatarUrl}
-                onChange={(event) => setAvatarUrl(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                placeholder="https://example.com/avatar.png"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Company
-              </label>
-              <input
-                type="text"
-                value={company}
-                onChange={(event) => setCompany(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                placeholder="Your company"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Location
-              </label>
-              <input
-                type="text"
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                placeholder="City, Country"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Phone
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                placeholder="+7 123 456 78 90"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Bio
-              </label>
-              <textarea
-                value={bio}
-                onChange={(event) => setBio(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                placeholder="Tell us a little about yourself"
-                rows={4}
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <div className="mb-5">
-            <h2 className="text-lg font-semibold text-gray-900">Change email</h2>
-            <p className="text-sm text-gray-500">
-              We&apos;ll send a verification code to your new address.
-            </p>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                New email
-              </label>
-              <input
-                type="email"
-                value={newEmail}
-                onChange={(event) => {
-                  setNewEmail(event.target.value);
-                  setEmailCodeSent(false);
-                }}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                placeholder="name@example.com"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Current password
-              </label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                placeholder="••••••••"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={handleSendEmailCode}
-              disabled={emailChangeLoading}
-              className="inline-flex w-full items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {emailChangeLoading ? 'Sending...' : 'Send code'}
-            </button>
-
-            {emailCodeSent && (
-              <div className="space-y-4 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Verification code
-                  </label>
-                  <input
-                    type="text"
-                    value={emailCode}
-                    onChange={(event) => setEmailCode(event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                    placeholder="6-digit code"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleConfirmEmail}
-                  disabled={emailConfirmLoading}
-                  className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {emailConfirmLoading ? 'Confirming...' : 'Confirm email'}
-                </button>
+            <span className="text-sm font-medium text-blue-600">
+              {getSectionButtonLabel(openSection === 'basic')}
+            </span>
+          </button>
+          {openSection === 'basic' && (
+            <div id="profile-basic-section" className="mt-5 space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  placeholder="Your name"
+                  required
+                />
               </div>
-            )}
-          </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Handle
+                </label>
+                <input
+                  type="text"
+                  value={handle}
+                  onChange={(event) => setHandle(event.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  placeholder="@devhub"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Avatar URL
+                </label>
+                <input
+                  type="url"
+                  value={avatarUrl}
+                  onChange={(event) => setAvatarUrl(event.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://example.com/avatar.png"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Company
+                </label>
+                <input
+                  type="text"
+                  value={company}
+                  onChange={(event) => setCompany(event.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  placeholder="Your company"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  placeholder="City, Country"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  placeholder="+7 123 456 78 90"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Bio
+                </label>
+                <textarea
+                  value={bio}
+                  onChange={(event) => setBio(event.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  placeholder="Tell us a little about yourself"
+                  rows={4}
+                />
+              </div>
+            </div>
+          )}
         </section>
 
-        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <div className="mb-5">
-            <h2 className="text-lg font-semibold text-gray-900">Приватность</h2>
-            <p className="text-sm text-gray-500">
-              Управляйте видимостью и тем, какие данные доступны коллегам.
-            </p>
-          </div>
-          <div className="space-y-4 text-sm text-gray-700">
-            <label className="flex items-center justify-between gap-4">
-              <span>Показывать профиль в команде</span>
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-blue-600"
-                checked={profileVisible}
-                onChange={(event) => setProfileVisible(event.target.checked)}
-              />
-            </label>
-            <label className="flex items-center justify-between gap-4">
-              <span>Делиться контактной информацией</span>
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-blue-600"
-                checked={shareContactInfo}
-                onChange={(event) => setShareContactInfo(event.target.checked)}
-              />
-            </label>
-            <label className="flex items-center justify-between gap-4">
-              <span>Разрешить упоминания в темах</span>
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-blue-600"
-                checked={allowMentions}
-                onChange={(event) => setAllowMentions(event.target.checked)}
-              />
-            </label>
-          </div>
+        <section className={sectionContainerClass}>
+          <button
+            type="button"
+            onClick={() => handleSectionToggle('email')}
+            aria-expanded={openSection === 'email'}
+            aria-controls="profile-email-section"
+            className="flex w-full items-start justify-between gap-4 text-left"
+          >
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Email</h2>
+              <p className="text-sm text-gray-500">
+                Измените адрес электронной почты и подтвердите его.
+              </p>
+            </div>
+            <span className="text-sm font-medium text-blue-600">
+              {getSectionButtonLabel(openSection === 'email')}
+            </span>
+          </button>
+          {openSection === 'email' && (
+            <div id="profile-email-section" className="mt-5 space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Current email
+                </label>
+                <input
+                  type="email"
+                  value={user.email}
+                  readOnly
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  New email
+                </label>
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(event) => {
+                    setNewEmail(event.target.value);
+                    setEmailCodeSent(false);
+                  }}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  placeholder="name@example.com"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Current password
+                </label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  placeholder="••••••••"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleSendEmailCode}
+                disabled={emailChangeLoading}
+                className="inline-flex w-full items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {emailChangeLoading ? 'Sending...' : 'Send code'}
+              </button>
+
+              {emailCodeSent && (
+                <div className="space-y-4 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Verification code
+                    </label>
+                    <input
+                      type="text"
+                      value={emailCode}
+                      onChange={(event) => setEmailCode(event.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                      placeholder="6-digit code"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleConfirmEmail}
+                    disabled={emailConfirmLoading}
+                    className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {emailConfirmLoading ? 'Confirming...' : 'Confirm email'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
-        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <div className="mb-5">
-            <h2 className="text-lg font-semibold text-gray-900">Уведомления</h2>
-            <p className="text-sm text-gray-500">
-              Настройте, как часто и куда отправлять уведомления.
-            </p>
-          </div>
-          <div className="space-y-4 text-sm text-gray-700">
-            <label className="flex items-center justify-between gap-4">
-              <span>Email-уведомления о сообщениях</span>
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-blue-600"
-                checked={emailNotifications}
-                onChange={(event) => setEmailNotifications(event.target.checked)}
-              />
-            </label>
-            <label className="flex items-center justify-between gap-4">
-              <span>Обновления продукта</span>
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-blue-600"
-                checked={productUpdates}
-                onChange={(event) => setProductUpdates(event.target.checked)}
-              />
-            </label>
-            <label className="flex items-center justify-between gap-4">
-              <span>Еженедельный дайджест</span>
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-blue-600"
-                checked={weeklyDigest}
-                onChange={(event) => setWeeklyDigest(event.target.checked)}
-              />
-            </label>
-          </div>
+        <section className={sectionContainerClass}>
+          <button
+            type="button"
+            onClick={() => handleSectionToggle('privacy')}
+            aria-expanded={openSection === 'privacy'}
+            aria-controls="profile-privacy-section"
+            className="flex w-full items-start justify-between gap-4 text-left"
+          >
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Приватность</h2>
+              <p className="text-sm text-gray-500">
+                Управляйте видимостью и тем, какие данные доступны коллегам.
+              </p>
+            </div>
+            <span className="text-sm font-medium text-blue-600">
+              {getSectionButtonLabel(openSection === 'privacy')}
+            </span>
+          </button>
+          {openSection === 'privacy' && (
+            <div
+              id="profile-privacy-section"
+              className="mt-5 space-y-4 text-sm text-gray-700"
+            >
+              <label className="flex items-center justify-between gap-4">
+                <span>Показывать профиль в команде</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-blue-600"
+                  checked={profileVisible}
+                  onChange={(event) => setProfileVisible(event.target.checked)}
+                />
+              </label>
+              <label className="flex items-center justify-between gap-4">
+                <span>Делиться контактной информацией</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-blue-600"
+                  checked={shareContactInfo}
+                  onChange={(event) => setShareContactInfo(event.target.checked)}
+                />
+              </label>
+              <label className="flex items-center justify-between gap-4">
+                <span>Разрешить упоминания в темах</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-blue-600"
+                  checked={allowMentions}
+                  onChange={(event) => setAllowMentions(event.target.checked)}
+                />
+              </label>
+            </div>
+          )}
+        </section>
+
+        <section className={sectionContainerClass}>
+          <button
+            type="button"
+            onClick={() => handleSectionToggle('notifications')}
+            aria-expanded={openSection === 'notifications'}
+            aria-controls="profile-notifications-section"
+            className="flex w-full items-start justify-between gap-4 text-left"
+          >
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Уведомления
+              </h2>
+              <p className="text-sm text-gray-500">
+                Настройте, как часто и куда отправлять уведомления.
+              </p>
+            </div>
+            <span className="text-sm font-medium text-blue-600">
+              {getSectionButtonLabel(openSection === 'notifications')}
+            </span>
+          </button>
+          {openSection === 'notifications' && (
+            <div
+              id="profile-notifications-section"
+              className="mt-5 space-y-4 text-sm text-gray-700"
+            >
+              <label className="flex items-center justify-between gap-4">
+                <span>Email-уведомления о сообщениях</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-blue-600"
+                  checked={emailNotifications}
+                  onChange={(event) =>
+                    setEmailNotifications(event.target.checked)
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between gap-4">
+                <span>Обновления продукта</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-blue-600"
+                  checked={productUpdates}
+                  onChange={(event) => setProductUpdates(event.target.checked)}
+                />
+              </label>
+              <label className="flex items-center justify-between gap-4">
+                <span>Еженедельный дайджест</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-blue-600"
+                  checked={weeklyDigest}
+                  onChange={(event) => setWeeklyDigest(event.target.checked)}
+                />
+              </label>
+            </div>
+          )}
         </section>
 
         <button
@@ -505,21 +581,38 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
         </button>
       </form>
 
-      <div className="mt-8 rounded-xl border border-red-100 bg-red-50/60 p-6">
-        <h2 className="text-lg font-semibold text-red-700">Danger zone</h2>
-        <p className="mt-2 text-sm text-red-600">
-          Deleting your account will remove your access. You can&apos;t undo this
-          action.
-        </p>
+      <section className="mt-8 rounded-2xl border border-red-100 bg-red-50/40 p-4 shadow-sm sm:p-6">
         <button
           type="button"
-          onClick={handleDeleteAccount}
-          disabled={deleteLoading}
-          className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => handleSectionToggle('danger')}
+          aria-expanded={openSection === 'danger'}
+          aria-controls="profile-danger-section"
+          className="flex w-full items-start justify-between gap-4 text-left"
         >
-          {deleteLoading ? 'Deleting...' : 'Delete account'}
+          <div>
+            <h2 className="text-lg font-semibold text-red-700">Danger zone</h2>
+            <p className="text-sm text-red-600">
+              Deleting your account will remove your access. You can&apos;t undo
+              this action.
+            </p>
+          </div>
+          <span className="text-sm font-semibold text-red-600">
+            {getSectionButtonLabel(openSection === 'danger')}
+          </span>
         </button>
-      </div>
+        {openSection === 'danger' && (
+          <div id="profile-danger-section" className="mt-5">
+            <button
+              type="button"
+              onClick={handleDeleteAccount}
+              disabled={deleteLoading}
+              className="inline-flex w-full items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {deleteLoading ? 'Deleting...' : 'Delete account'}
+            </button>
+          </div>
+        )}
+      </section>
     </>
   );
 };
