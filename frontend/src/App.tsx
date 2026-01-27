@@ -1,20 +1,17 @@
 import React, { useEffect } from 'react';
-import { DeployPage } from "./features/deploy/DeployPage";
-import { CodePage } from "./features/code/CodePage";
-import { CustomPage } from "./features/custom/CustomPage";
-import { TermsPage } from "./features/legal/TermsPage";
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
-import { LoginPage } from './features/auth/components/LoginPage';
-import { RegisterPage } from './features/auth/components/RegisterPage';
-import { AdminPage } from './features/admin/AdminPage';
-import { ProjectWorkspace } from './features/projects/components/ProjectWorkspace';
-import { ProfilePage } from './features/profile/ProfilePage';
-import { LandingPage } from './features/landing/LandingPage';
-import { HubPage } from './features/hub/HubPage';
-import { PlanningPage } from './features/planning/PlanningPage';
+import { LandingPage } from './features/new-ui/pages/LandingPage';
+import { AuthPage } from './features/new-ui/pages/AuthPage';
+import { WorkspaceLayout } from './features/new-ui/pages/WorkspaceLayout';
+import { ChatView } from './features/new-ui/components/workspace/ChatView';
+import { KanbanView } from './features/new-ui/components/workspace/KanbanView';
+import { CalendarView } from './features/new-ui/components/workspace/CalendarView';
+import { FilesView } from './features/new-ui/components/workspace/FilesView';
+import { DashboardView } from './features/new-ui/components/workspace/DashboardView';
+import { HubPage } from './features/new-ui/pages/HubPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -23,7 +20,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   if (!isHydrated) {
     return null;
   }
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/auth?mode=login" />;
 };
 
 function App() {
@@ -46,58 +43,27 @@ function App() {
       <Toaster position="top-right" />
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/login" element={<Navigate to="/auth?mode=login" replace />} />
         <Route
-          path="/app"
-          element={
-            <ProtectedRoute>
-              <ProjectWorkspace />
-            </ProtectedRoute>
-          }
+          path="/register"
+          element={<Navigate to="/auth?mode=register" replace />}
         />
         <Route
-          path="/projects/:projectId"
+          path="/workspace"
           element={
             <ProtectedRoute>
-              <ProjectWorkspace />
+              <WorkspaceLayout />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/projects/:projectId/code"
-          element={
-            <ProtectedRoute>
-              <CodePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/projects/:projectId/deploy"
-          element={
-            <ProtectedRoute>
-              <DeployPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/projects/:projectId/planning"
-          element={
-            <ProtectedRoute>
-              <PlanningPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <ProfilePage />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route index element={<ChatView />} />
+          <Route path="chat" element={<ChatView />} />
+          <Route path="kanban" element={<KanbanView />} />
+          <Route path="calendar" element={<CalendarView />} />
+          <Route path="files" element={<FilesView />} />
+          <Route path="dashboard" element={<DashboardView />} />
+        </Route>
         <Route
           path="/hub"
           element={
@@ -106,6 +72,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
