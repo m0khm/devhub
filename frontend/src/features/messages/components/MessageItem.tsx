@@ -46,6 +46,11 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
     const parentMessage = message.parent_id
       ? messageMap?.get(message.parent_id)
       : undefined;
+    const displayName =
+      message.user?.handle?.trim() ||
+      message.user?.name ||
+      message.user?.email ||
+      'Unknown';
 
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
@@ -394,12 +399,12 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
           {message.user?.avatar_url ? (
             <img
               src={message.user.avatar_url}
-              alt={message.user.name}
+              alt={displayName}
               className="w-10 h-10 rounded-full"
             />
           ) : (
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-              {message.user ? getInitials(message.user.name) : '?'}
+              {message.user ? getInitials(displayName) : '?'}
             </div>
           )}
         </div>
@@ -417,7 +422,7 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
                   isOwnMessage ? 'order-2' : ''
                 }`}
               >
-                {message.user?.handle ?? message.user?.name ?? message.user?.email ?? 'Unknown'}
+                {displayName}
               </span>
               <span
                 className={`text-xs text-slate-400 ${isOwnMessage ? 'order-1' : ''}`}
