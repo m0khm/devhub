@@ -1,7 +1,15 @@
 package user
 
 import (
+	"bytes"
+	"context"
 	"errors"
+	"fmt"
+	"io"
+	"mime"
+	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -9,15 +17,22 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/m0khm/devhub/backend/internal/auth"
+	"github.com/m0khm/devhub/backend/internal/storage"
 	"github.com/m0khm/devhub/backend/pkg/validator"
 )
 
 type Handler struct {
-	service *Service
+	service    *Service
+	s3Client   *storage.S3Client
+	uploadRoot string
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, s3Client *storage.S3Client) *Handler {
+	return &Handler{
+		service:    service,
+		s3Client:   s3Client,
+		uploadRoot: filepath.Join("uploads", "avatars"),
+	}
 }
 
 // Search users by name or email
@@ -89,6 +104,122 @@ func (h *Handler) UpdateMe(c *fiber.Ctx) error {
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to update user",
+		})
+	}
+
+	return c.JSON(updatedUser)
+}
+
+// UploadAvatar uploads a new avatar for the current user
+// POST /api/users/me/avatar
+func (h *Handler) UploadAvatar(c *fiber.Ctx) error {
+	userID := c.Locals("userID")
+	if userID == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid user ID format",
+		})
+	}
+
+	userUUID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "No file provided",
+		})
+	}
+
+	const maxSize = int64(5 * 1024 * 1024) // 5MB
+	if file.Size > maxSize {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "File size exceeds 5MB limit",
+		})
+	}
+
+	fileReader, err := file.Open()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to read file",
+		})
+	}
+	defer fileReader.Close()
+
+	head := make([]byte, 512)
+	n, _ := io.ReadFull(fileReader, head)
+	head = head[:n]
+	detectedType := http.DetectContentType(head)
+	contentType := file.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = detectedType
+	}
+
+	if !strings.HasPrefix(detectedType, "image/") {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Only image uploads are allowed",
+		})
+	}
+
+	var avatarURL string
+	if h.s3Client != nil && h.s3Client.IsReady() {
+		reader := io.MultiReader(bytes.NewReader(head), fileReader)
+		uploadResult, err := h.s3Client.Upload(context.Background(), reader, file.Filename, file.Size, contentType)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to upload avatar",
+			})
+		}
+		avatarURL = uploadResult.URL
+	} else {
+		ext := filepath.Ext(file.Filename)
+		if ext == "" {
+			if exts, err := mime.ExtensionsByType(contentType); err == nil && len(exts) > 0 {
+				ext = exts[0]
+			}
+		}
+		if ext == "" {
+			ext = ".png"
+		}
+
+		uploadDir := filepath.Join(h.uploadRoot, userUUID.String())
+		if err := os.MkdirAll(uploadDir, 0o755); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to store avatar",
+			})
+		}
+
+		filename := fmt.Sprintf("%s%s", uuid.New().String(), ext)
+		dstPath := filepath.Join(uploadDir, filename)
+		if err := c.SaveFile(file, dstPath); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to store avatar",
+			})
+		}
+
+		avatarURL = fmt.Sprintf("/%s/%s/%s", h.uploadRoot, userUUID.String(), filename)
+		avatarURL = filepath.ToSlash(avatarURL)
+	}
+
+	updatedUser, err := h.service.UpdateAvatar(userUUID, avatarURL)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "User not found",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to update avatar",
 		})
 	}
 

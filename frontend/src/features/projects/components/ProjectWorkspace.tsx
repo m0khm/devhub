@@ -99,6 +99,7 @@ export const ProjectWorkspace: React.FC = () => {
               project={currentProject}
               members={slots.members}
               membersLoading={slots.membersLoading}
+              onMembersUpdated={slots.refreshMembers}
             />
           </>
         )}
