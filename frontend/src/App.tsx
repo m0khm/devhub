@@ -14,6 +14,7 @@ import { ProjectWorkspace } from './features/projects/components/ProjectWorkspac
 import { ProfilePage } from './features/profile/ProfilePage';
 import { LandingPage } from './features/landing/LandingPage';
 import { HubPage } from './features/hub/HubPage';
+import { PlanningPage } from './features/planning/PlanningPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -82,10 +83,10 @@ function App() {
           }
         />
         <Route
-          path="/projects/:projectId/custom"
+          path="/projects/:projectId/planning"
           element={
             <ProtectedRoute>
-              <CustomPage />
+              <PlanningPage />
             </ProtectedRoute>
           }
         />

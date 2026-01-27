@@ -17,6 +17,7 @@ interface ProjectViewSlots {
   main: React.ReactNode;
   members: ProjectMemberWithUser[];
   membersLoading: boolean;
+  refreshMembers: () => void;
 }
 
 interface ProjectViewProps {
@@ -114,6 +115,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
   };
 
   const loadMembers = async (id: string) => {
+    setMembersLoading(true);
     try {
       const response = await apiClient.get<ProjectMemberWithUser[]>(
         `/projects/${id}/members`
@@ -121,8 +123,9 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
       setMembers(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       toast.error('Failed to load project members');
+    } finally {
+      setMembersLoading(false);
     }
-    setMembersLoading(false);
   };
 
   const selectedTopic =
@@ -143,6 +146,10 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
         ),
         members,
         membersLoading,
+        refreshMembers: () => {
+          if (!resolvedProjectId) return;
+          void loadMembers(resolvedProjectId);
+        },
       }
     : {
         middle: (
@@ -173,6 +180,9 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
         ),
         members,
         membersLoading,
+        refreshMembers: () => {
+          void loadMembers(resolvedProjectId);
+        },
       };
 
   if (children) {
