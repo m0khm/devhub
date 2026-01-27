@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { VideoCameraIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { VideoCameraIcon } from '@heroicons/react/24/outline';
 import { AxiosError } from 'axios';
 import { apiClient } from '../../../api/client';
 import { useAuthStore } from '../../../store/authStore';
@@ -27,8 +27,10 @@ export const VideoCallButton: React.FC<VideoCallButtonProps> = ({ topicId }) => 
       }>(`/topics/${topicId}/video/room`);
 
       console.info('Video call room response:', response.data);
-      window.open(response.data.room_url, "_blank", "noopener,noreferrer");
-        toast.success('Video call started!');
+      setRoomName(response.data.room_name);
+      setRoomUrl(response.data.room_url);
+      setDomain(response.data.domain);
+      toast.success('Video call started!');
     } catch (error) {
       const apiError = error as AxiosError<{ error?: string }>;
       const apiMessage = apiError.response?.data?.error;
