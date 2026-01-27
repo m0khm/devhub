@@ -134,7 +134,7 @@ func main() {
 	messageHandler.SetNotificationService(notificationService)
 	fileHandler := message.NewFileHandler(messageService, s3Client)
 	fileHandler.SetWSHandler(wsHandler)
-	userHandler := user.NewHandler(userService)
+	userHandler := user.NewHandler(userService, s3Client)
 	groupHandler := group.NewHandler(groupService)
 	communityHandler := community.NewHandler(communityService)
 	notificationHandler := notification.NewHandler(notificationService)
@@ -157,6 +157,7 @@ func main() {
 	app.Use(metrics.Middleware())
 
 	app.Get("/metrics", metrics.Handler)
+	app.Static("/uploads", "./uploads")
 
 	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
@@ -303,6 +304,7 @@ func main() {
 	userRoutes := protected.Group("/users")
 	userRoutes.Get("/", userHandler.Search)
 	userRoutes.Patch("/me", userHandler.UpdateMe)
+	userRoutes.Post("/me/avatar", userHandler.UploadAvatar)
 	userRoutes.Post("/me/email", userHandler.StartEmailChange)
 	userRoutes.Post("/me/email/confirm", userHandler.ConfirmEmailChange)
 	userRoutes.Delete("/me", userHandler.DeleteMe)

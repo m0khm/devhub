@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { apiClient } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
@@ -16,6 +16,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const [name, setName] = useState(user?.name ?? '');
   const [handle, setHandle] = useState(user?.handle ?? '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url ?? '');
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [bio, setBio] = useState(user?.bio ?? '');
   const [company, setCompany] = useState(user?.company ?? '');
   const [location, setLocation] = useState(user?.location ?? '');
@@ -34,6 +35,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const [emailChangeLoading, setEmailChangeLoading] = useState(false);
   const [emailConfirmLoading, setEmailConfirmLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -46,6 +48,31 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
       setPhone(user.phone ?? '');
     }
   }, [user]);
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setAvatarUploading(true);
+    try {
+      const response = await apiClient.post<User>('/users/me/avatar', formData);
+      updateUser(response.data);
+      setAvatarUrl(response.data.avatar_url ?? '');
+      toast.success('Avatar updated');
+      onSaved?.();
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error || 'Failed to upload avatar';
+      toast.error(message);
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
+    }
+  };
 
   const handleSendEmailCode = async () => {
     const trimmedEmail = newEmail.trim();
@@ -293,6 +320,30 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
                 placeholder="https://example.com/avatar.png"
               />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Upload avatar
+              </label>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) {
+                    handleAvatarUpload(file);
+                  }
+                }}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3"
+                disabled={avatarUploading}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                PNG, JPG, GIF до 5MB. Загрузка обновит аватар в профиле.
+              </p>
+              {avatarUploading && (
+                <p className="mt-2 text-xs text-blue-600">Uploading...</p>
+              )}
             </div>
 
             <div>
