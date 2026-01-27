@@ -11,12 +11,20 @@ export const RegisterPage: React.FC = () => {
   
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
+  const [handle, setHandle] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [confirm, setConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
+
+  const normalizeHandle = (value: string) => {
+    let normalized = value.trim();
+    normalized = normalized.replace(/^@+/, '');
+    normalized = normalized.replace(/\s+/g, '');
+    return normalized;
+  };
 
   useEffect(() => {
     if (resendCountdown <= 0) {
@@ -34,6 +42,24 @@ export const RegisterPage: React.FC = () => {
     if (step === 1 && !name.trim()) {
       toast.error('Please enter your full name');
       return false;
+    }
+
+    if (step === 1) {
+      const normalizedHandle = normalizeHandle(handle);
+      if (!normalizedHandle) {
+        toast.error('Please enter a handle');
+        return false;
+      }
+
+      if (!/^[a-zA-Z0-9]+$/.test(normalizedHandle)) {
+        toast.error('Handle can only contain letters and numbers');
+        return false;
+      }
+
+      if (normalizedHandle.length < 3 || normalizedHandle.length > 20) {
+        toast.error('Handle must be between 3 and 20 characters');
+        return false;
+      }
     }
 
     if (step === 2) {
@@ -76,8 +102,10 @@ export const RegisterPage: React.FC = () => {
     if (step === 2) {
       setLoading(true);
       try {
+        const normalizedHandle = normalizeHandle(handle);
         const response = await apiClient.post<{ expires_at: string }>('/auth/register', {
           name,
+          handle: normalizedHandle,
           email,
           password,
         });
@@ -117,8 +145,10 @@ export const RegisterPage: React.FC = () => {
     setLoading(true);
 
     try {
+      const normalizedHandle = normalizeHandle(handle);
       const response = await apiClient.post<AuthResponse>('/auth/register/confirm', {
         name,
+        handle: normalizedHandle,
         email,
         password,
         code,
@@ -182,6 +212,20 @@ export const RegisterPage: React.FC = () => {
                 placeholder="John Doe"
                 autoComplete="name"
               />
+              <label className="mt-4 block text-sm font-medium text-slate-700 mb-2">
+                Handle
+              </label>
+              <input
+                type="text"
+                value={handle}
+                onChange={(e) => setHandle(normalizeHandle(e.target.value))}
+                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="johndoe"
+                autoComplete="username"
+              />
+              <p className="mt-1 text-sm text-slate-500">
+                3-20 characters, letters and numbers only
+              </p>
             </div>
           )}
 
