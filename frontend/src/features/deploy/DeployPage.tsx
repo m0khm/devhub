@@ -98,7 +98,9 @@ export const DeployPage: React.FC = () => {
       setTerminalOutput((prev) => prev + `\n# Connected to ${selectedServer?.name}\n`);
     };
     ws.onmessage = (event) => {
-      setTerminalOutput((prev) => prev + event.data);
+      const message =
+        typeof event.data === 'string' ? event.data.replace(/\r\n/g, '\n') : event.data;
+      setTerminalOutput((prev) => prev + message);
     };
     ws.onerror = () => {
       setIsConnecting(false);
@@ -254,9 +256,9 @@ export const DeployPage: React.FC = () => {
             <div className="border-b border-slate-800 px-4 py-3 text-sm text-slate-300">
               Terminal {selectedServer ? `· ${selectedServer.name}` : ''}
             </div>
-            <div className="h-[420px] overflow-y-auto bg-black px-4 py-3 font-mono text-sm text-emerald-200">
+            <pre className="h-[420px] overflow-y-auto bg-black px-4 py-3 font-mono text-sm text-emerald-200 whitespace-pre-wrap">
               {terminalOutput || 'Select a server and connect to start.'}
-            </div>
+            </pre>
             <div className="flex items-center gap-2 border-t border-slate-800 px-4 py-3">
               <input
                 value={terminalInput}
