@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProjectStore } from '../../../store/projectStore';
 import { useAuthStore } from '../../../store/authStore';
@@ -29,6 +29,10 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
     .join('')
     .slice(0, 2)
     .toUpperCase();
+  const basePath = useMemo(
+    () => (currentProject?.id ? `/projects/${currentProject.id}` : '/app'),
+    [currentProject?.id]
+  );
 
   return (
     <div className="flex h-full flex-col items-center justify-between py-4">
@@ -94,22 +98,22 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
         </div>
       </div>
       <div className="flex w-full flex-col items-center gap-2 px-3">
-        <button
-          type="button"
+        <Link
+          to={`${basePath}/chat`}
           className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
           aria-label="Сообщения"
         >
           <ChatBubbleLeftRightIcon className="h-4 w-4 text-slate-300" />
           <span>Сообщения</span>
-        </button>
-        <button
-          type="button"
+        </Link>
+        <Link
+          to={`${basePath}/dashboard`}
           className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
-          aria-label="Избранное"
+          aria-label="Дашборд"
         >
           <StarIcon className="h-4 w-4 text-slate-300" />
-          <span>Избранное</span>
-        </button>
+          <span>Дашборд</span>
+        </Link>
         <button
           type="button"
           className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
@@ -120,14 +124,14 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           <PlusIcon className="h-4 w-4 text-slate-300" />
           <span>Добавить проект</span>
         </button>
-        <button
-          type="button"
+        <Link
+          to={`${basePath}/custom`}
           className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
           aria-label="Настройки"
         >
           <Cog6ToothIcon className="h-4 w-4 text-slate-300" />
           <span>Настройки</span>
-        </button>
+        </Link>
       </div>
       <CreateProjectModal
         open={showCreateModal}

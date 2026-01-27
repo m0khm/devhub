@@ -10,11 +10,17 @@ import { useThemeStore } from './store/themeStore';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { RegisterPage } from './features/auth/components/RegisterPage';
 import { AdminPage } from './features/admin/AdminPage';
-import { ProjectWorkspace } from './features/projects/components/ProjectWorkspace';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { LandingPage } from './features/landing/LandingPage';
 import { HubPage } from './features/hub/HubPage';
 import { PlanningPage } from './features/planning/PlanningPage';
+import { WorkspaceLayout } from './features/workspace/WorkspaceLayout';
+import { WorkspaceDashboardPage } from './features/workspace/WorkspaceDashboardPage';
+import { WorkspaceChatPage } from './features/workspace/WorkspaceChatPage';
+import { WorkspaceFilesPage } from './features/workspace/WorkspaceFilesPage';
+import { WorkspaceNotificationsPage } from './features/workspace/WorkspaceNotificationsPage';
+import { WorkspaceTopicsPage } from './features/workspace/WorkspaceTopicsPage';
+import { WorkspaceVideoPage } from './features/workspace/WorkspaceVideoPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -54,42 +60,46 @@ function App() {
           path="/app"
           element={
             <ProtectedRoute>
-              <ProjectWorkspace />
+              <WorkspaceLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<WorkspaceDashboardPage />} />
+          <Route path="dashboard" element={<WorkspaceDashboardPage />} />
+          <Route path="chat" element={<WorkspaceChatPage />} />
+          <Route path="topics" element={<WorkspaceTopicsPage />} />
+          <Route path="files" element={<WorkspaceFilesPage />} />
+          <Route path="code" element={<CodePage />} />
+          <Route path="planning" element={<PlanningPage />} />
+          <Route path="deploy" element={<DeployPage />} />
+          <Route path="hub" element={<HubPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="notifications" element={<WorkspaceNotificationsPage />} />
+          <Route path="video" element={<WorkspaceVideoPage />} />
+          <Route path="custom" element={<CustomPage />} />
+        </Route>
         <Route
           path="/projects/:projectId"
           element={
             <ProtectedRoute>
-              <ProjectWorkspace />
+              <WorkspaceLayout />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/projects/:projectId/code"
-          element={
-            <ProtectedRoute>
-              <CodePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/projects/:projectId/deploy"
-          element={
-            <ProtectedRoute>
-              <DeployPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/projects/:projectId/planning"
-          element={
-            <ProtectedRoute>
-              <PlanningPage />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route index element={<WorkspaceDashboardPage />} />
+          <Route path="dashboard" element={<WorkspaceDashboardPage />} />
+          <Route path="chat" element={<WorkspaceChatPage />} />
+          <Route path="topics" element={<WorkspaceTopicsPage />} />
+          <Route path="files" element={<WorkspaceFilesPage />} />
+          <Route path="code" element={<CodePage />} />
+          <Route path="planning" element={<PlanningPage />} />
+          <Route path="deploy" element={<DeployPage />} />
+          <Route path="hub" element={<HubPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="notifications" element={<WorkspaceNotificationsPage />} />
+          <Route path="video" element={<WorkspaceVideoPage />} />
+          <Route path="custom" element={<CustomPage />} />
+        </Route>
         <Route
           path="/profile"
           element={
