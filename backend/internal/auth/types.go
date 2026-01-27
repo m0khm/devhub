@@ -21,7 +21,7 @@ type User struct {
 type RegisterRequest struct {
 	Email    string  `json:"email" validate:"required,email"`
 	Password string  `json:"password" validate:"required,min=8"`
-	Handle   *string `json:"handle" validate:"required,alphanum,min=3,max=20"`
+	Handle   *string `json:"handle" validate:"omitempty,alphanum,min=3,max=20"`
 	Name     string  `json:"name,omitempty"`
 }
 
