@@ -480,65 +480,67 @@ export const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
             </div>
           )}
 
-          <div
-            className={`inline-block px-4 py-2 rounded-2xl ${
-              isOwnMessage
-                ? 'bg-sky-500/90 text-white shadow'
-                : 'bg-slate-800/80 text-slate-100 shadow'
-            }`}
-          >
-            {parentMessage && (
-              <div className="mb-2 rounded-lg border border-slate-700/60 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
-                <span className="font-semibold text-slate-200">
-                  Replying to {parentMessage.user?.name || 'Unknown'}
-                </span>
-                <span className="mx-1 text-slate-500">•</span>
-                <span className="line-clamp-2">
-                  {parentMessage.content || '...'}
-                </span>
-              </div>
-            )}
-            {message.type === 'code' ? (
-              renderCodeContent()
-            ) : (
-              <>
-                <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                {renderFileContent()}
-              </>
-            )}
-          </div>
+          <div className="inline-flex flex-col items-start text-left">
+            <div
+              className={`px-4 py-2 rounded-2xl ${
+                isOwnMessage
+                  ? 'bg-sky-500/90 text-white shadow'
+                  : 'bg-slate-800/80 text-slate-100 shadow'
+              }`}
+            >
+              {parentMessage && (
+                <div className="mb-2 rounded-lg border border-slate-700/60 bg-slate-900/70 px-3 py-2 text-xs text-slate-300">
+                  <span className="font-semibold text-slate-200">
+                    Replying to {parentMessage.user?.name || 'Unknown'}
+                  </span>
+                  <span className="mx-1 text-slate-500">•</span>
+                  <span className="line-clamp-2">
+                    {parentMessage.content || '...'}
+                  </span>
+                </div>
+              )}
+              {message.type === 'code' ? (
+                renderCodeContent()
+              ) : (
+                <>
+                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                  {renderFileContent()}
+                </>
+              )}
+            </div>
 
-          {/* Reactions */}
-          {message.reactions && message.reactions.length > 0 && (
-            <div className="flex gap-1 mt-1 flex-wrap">
-              {message.reactions.map((reaction) => (
+            {/* Reactions */}
+            {message.reactions && message.reactions.length > 0 && (
+              <div className="flex gap-1 mt-1 flex-wrap">
+                {message.reactions.map((reaction) => (
+                  <button
+                    key={reaction.emoji}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleReaction(reaction.emoji);
+                    }}
+                    className={`px-2 py-1 rounded-full text-sm flex items-center gap-1 transition ${
+                      reaction.has_self
+                        ? 'bg-sky-500/20 border border-sky-500/40 text-slate-100'
+                        : 'bg-slate-800/60 text-slate-200 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span>{reaction.emoji}</span>
+                    <span className="text-xs text-slate-300">{reaction.count}</span>
+                  </button>
+                ))}
                 <button
-                  key={reaction.emoji}
                   onClick={(event) => {
                     event.stopPropagation();
-                    handleReaction(reaction.emoji);
+                    handleReaction('👍');
                   }}
-                  className={`px-2 py-1 rounded-full text-sm flex items-center gap-1 transition ${
-                    reaction.has_self
-                      ? 'bg-sky-500/20 border border-sky-500/40 text-slate-100'
-                      : 'bg-slate-800/60 text-slate-200 hover:bg-slate-800'
-                  }`}
+                  className="px-2 py-1 rounded-full text-sm bg-slate-800/60 text-slate-200 hover:bg-slate-800 transition"
                 >
-                  <span>{reaction.emoji}</span>
-                  <span className="text-xs text-slate-300">{reaction.count}</span>
+                  +
                 </button>
-              ))}
-              <button
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleReaction('👍');
-                }}
-                className="px-2 py-1 rounded-full text-sm bg-slate-800/60 text-slate-200 hover:bg-slate-800 transition"
-              >
-                +
-              </button>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
