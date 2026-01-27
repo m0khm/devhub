@@ -84,6 +84,12 @@ func (r *Repository) RemoveMember(projectID, userID uuid.UUID) error {
 		Delete(&ProjectMember{}).Error
 }
 
+func (r *Repository) UpdateMemberRole(projectID, userID uuid.UUID, role string) error {
+	return r.db.Model(&ProjectMember{}).
+		Where("project_id = ? AND user_id = ?", projectID, userID).
+		Update("role", role).Error
+}
+
 // Get project members
 func (r *Repository) GetMembers(projectID uuid.UUID) ([]ProjectMemberWithUser, error) {
 	var members []ProjectMemberWithUser
