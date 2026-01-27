@@ -58,6 +58,12 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
         path: `/projects/${topic.project_id}/deploy`,
       };
     }
+    if (topic.type === 'custom') {
+      return {
+        label: 'Customize',
+        path: `/projects/${topic.project_id}/custom`,
+      };
+    }
     return null;
   }, [topic.project_id, topic.type]);
 
