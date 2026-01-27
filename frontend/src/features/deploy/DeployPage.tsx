@@ -22,6 +22,7 @@ export const DeployPage: React.FC = () => {
   const [terminalOutput, setTerminalOutput] = useState<string>('');
   const [terminalInput, setTerminalInput] = useState<string>('');
   const [isConnecting, setIsConnecting] = useState(false);
+  const [activePanel, setActivePanel] = useState<'deploy' | 'env' | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   const [formState, setFormState] = useState({
@@ -131,14 +132,32 @@ export const DeployPage: React.FC = () => {
             <h1 className="text-2xl font-semibold">Deploy · {projectId}</h1>
             <p className="text-sm text-slate-400">Register servers and open SSH terminals.</p>
           </div>
-          <button
-            type="button"
-            onClick={handleConnect}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-800"
-            disabled={!selectedServerId || isConnecting}
-          >
-            {isConnecting ? 'Connecting...' : 'Connect terminal'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setActivePanel((prev) => (prev === 'deploy' ? null : 'deploy'))
+              }
+              className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-emerald-500"
+            >
+              Deploy options
+            </button>
+            <button
+              type="button"
+              onClick={() => setActivePanel((prev) => (prev === 'env' ? null : 'env'))}
+              className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-emerald-500"
+            >
+              Env variables
+            </button>
+            <button
+              type="button"
+              onClick={handleConnect}
+              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-800"
+              disabled={!selectedServerId || isConnecting}
+            >
+              {isConnecting ? 'Connecting...' : 'Connect terminal'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -252,6 +271,82 @@ export const DeployPage: React.FC = () => {
         </aside>
 
         <section className="space-y-4">
+          {activePanel && (
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60">
+              <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-200">
+                    {activePanel === 'deploy' ? 'Deployment options' : 'Environment variables'}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {activePanel === 'deploy'
+                      ? 'Configure runtime, build, and rollout preferences.'
+                      : 'Store secrets and configuration for deploy steps.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActivePanel(null)}
+                  className="text-xs text-slate-400 hover:text-slate-200"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="space-y-3 px-4 py-4 text-sm text-slate-300">
+                {activePanel === 'deploy' ? (
+                  <>
+                    <div>
+                      <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+                        Deploy strategy
+                      </label>
+                      <input
+                        disabled
+                        placeholder="Rolling / Blue-green / Canary"
+                        className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+                        Build command
+                      </label>
+                      <input
+                        disabled
+                        placeholder="npm run build"
+                        className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+                        Key
+                      </label>
+                      <input
+                        disabled
+                        placeholder="DATABASE_URL"
+                        className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+                        Value
+                      </label>
+                      <input
+                        disabled
+                        placeholder="••••••••"
+                        className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                      />
+                    </div>
+                  </>
+                )}
+                <p className="text-xs text-slate-500">
+                  These forms are placeholders. We can enable editing once the deploy pipeline is
+                  wired in.
+                </p>
+              </div>
+            </div>
+          )}
           <div className="rounded-lg border border-slate-800 bg-slate-900/60">
             <div className="border-b border-slate-800 px-4 py-3 text-sm text-slate-300">
               Terminal {selectedServer ? `· ${selectedServer.name}` : ''}
