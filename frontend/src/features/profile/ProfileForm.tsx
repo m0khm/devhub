@@ -13,9 +13,13 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const updateUser = useAuthStore((state) => state.updateUser);
   const setAuth = useAuthStore((state) => state.setAuth);
   const logout = useAuthStore((state) => state.logout);
+
+  const normalizeAvatarUrl = (url: string) =>
+    url.replace("http://minio:9000/devhub/uploads/", "/uploads/");
+
   const [name, setName] = useState(user?.name ?? '');
   const [handle, setHandle] = useState(user?.handle ?? '');
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url ?? '');
+  const [avatarUrl, setAvatarUrl] = useState(normalizeAvatarUrl(user?.avatar_url ?? ''));
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [bio, setBio] = useState(user?.bio ?? '');
   const [company, setCompany] = useState(user?.company ?? '');
@@ -35,13 +39,20 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const [emailChangeLoading, setEmailChangeLoading] = useState(false);
   const [emailConfirmLoading, setEmailConfirmLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  type OpenSection = "basic" | "email" | "privacy" | "notifications" | "danger" | null;
+  const [openSection, setOpenSection] = useState<OpenSection>("basic");
+
+  const handleSectionToggle = (section: Exclude<OpenSection, null>) => {
+    setOpenSection((prev) => (prev === section ? null : section));
+  };
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (user) {
       setName(user.name);
       setHandle(user.handle ?? '');
-      setAvatarUrl(user.avatar_url ?? '');
+      setAvatarUrl(normalizeAvatarUrl(user.avatar_url ?? ''));
       setBio(user.bio ?? '');
       setCompany(user.company ?? '');
       setLocation(user.location ?? '');
@@ -58,8 +69,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
     setAvatarUploading(true);
     try {
       const response = await apiClient.post<User>('/users/me/avatar', formData);
-      updateUser(response.data);
-      setAvatarUrl(response.data.avatar_url ?? '');
+      const normalizedUser = { ...response.data, avatar_url: normalizeAvatarUrl(response.data.avatar_url ?? '') };
+      updateUser(normalizedUser);
+      setAvatarUrl(normalizedUser.avatar_url ?? '');
       toast.success('Avatar updated');
       onSaved?.();
     } catch (error: any) {
@@ -195,7 +207,8 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
     setLoading(true);
     try {
       const response = await apiClient.patch<User>('/users/me', payload);
-      updateUser(response.data);
+      const normalizedUser = { ...response.data, avatar_url: normalizeAvatarUrl(response.data.avatar_url ?? '') };
+        updateUser(normalizedUser);
       toast.success('Profile updated');
       onSaved?.();
     } catch (error: any) {
@@ -224,12 +237,6 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
     } finally {
       setDeleteLoading(false);
     }
-  };
-
-  const handleSectionToggle = (
-    section: 'basic' | 'email' | 'privacy' | 'notifications' | 'danger'
-  ) => {
-    setOpenSection(section);
   };
 
   const getSectionButtonLabel = (isOpen: boolean) =>
@@ -323,31 +330,6 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Avatar URL
-                </label>
-                <input
-                  type="url"
-                  value={avatarUrl}
-                  onChange={(event) => setAvatarUrl(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  placeholder="https://example.com/avatar.png"
-                />
-              </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Avatar URL
-              </label>
-              <input
-                type="url"
-                value={avatarUrl}
-                onChange={(event) => setAvatarUrl(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                placeholder="https://example.com/avatar.png"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
                 Upload avatar
               </label>
               <input
@@ -444,6 +426,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
                   className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500"
                 />
               </div>
+
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   New email
@@ -459,6 +442,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
                   placeholder="name@example.com"
                 />
               </div>
+
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Current password

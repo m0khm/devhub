@@ -29,6 +29,17 @@ export const CodePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const saveTimeoutRef = useRef<number | null>(null);
 
+  const [showAllBranches, setShowAllBranches] = useState(false);
+  const [showAllCommits, setShowAllCommits] = useState(false);
+  const [showAllChanges, setShowAllChanges] = useState(false);
+
+  const activityLimit = 5;
+
+  const [branchList, setBranchList] = useState<any[]>([]);
+  const [commitList, setCommitList] = useState<any[]>([]);
+  const [changeList, setChangeList] = useState<any[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(false);
+
   const selectedRepo = repos.find((repo) => repo.id === selectedRepoId) ?? repos[0];
   const selectedFile = selectedRepo?.files.find((file) => file.path === selectedFilePath);
   const storageKey = projectId ? `code_repos_${projectId}` : 'code_repos';
