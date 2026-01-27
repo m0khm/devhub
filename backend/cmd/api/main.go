@@ -254,6 +254,7 @@ func main() {
 	projectRoutes.Delete("/:id", projectHandler.Delete)
 	projectRoutes.Get("/:id/members", projectHandler.GetMembers)
 	projectRoutes.Post("/:id/members", projectHandler.AddMember)
+	projectRoutes.Patch("/:id/members/:userId", projectHandler.UpdateMemberRole)
 	projectRoutes.Delete("/:id/members/:userId", projectHandler.RemoveMember)
 	projectRoutes.Post("/:id/invitations", invitationHandler.Create)
 	projectRoutes.Post("/:projectId/dm", dmHandler.CreateOrGet)
