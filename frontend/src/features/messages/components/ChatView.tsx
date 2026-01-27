@@ -58,6 +58,12 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
         path: `/projects/${topic.project_id}/deploy`,
       };
     }
+    if (topic.type === 'planning') {
+      return {
+        label: 'Planning',
+        path: `/projects/${topic.project_id}/planning`,
+      };
+    }
     return null;
   }, [topic.project_id, topic.type]);
 
