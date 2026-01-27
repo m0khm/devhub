@@ -332,7 +332,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
           {quickLink && (
             <Link
               to={quickLink.path}
-              className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-full border border-border bg-surface-muted px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text shadow-lg transition hover:bg-surface"
+              className="absolute left-4 top-4 inline-flex min-w-[140px] items-center justify-center gap-2 rounded-full border border-border bg-surface-muted px-3 py-2 text-xs font-semibold uppercase tracking-wide text-text shadow-lg transition hover:bg-surface"
               aria-label={`Open ${quickLink.label} view`}
             >
               📌 {quickLink.label}
