@@ -14,6 +14,7 @@ import (
 
 	"github.com/m0khm/devhub/backend/internal/admin"
 	"github.com/m0khm/devhub/backend/internal/auth"
+	"github.com/m0khm/devhub/backend/internal/code"
 	"github.com/m0khm/devhub/backend/internal/community"
 	"github.com/m0khm/devhub/backend/internal/config"
 	"github.com/m0khm/devhub/backend/internal/database"
@@ -92,6 +93,7 @@ func main() {
 
 	// Initialize repositories
 	projectRepo := project.NewRepository(db)
+	codeRepo := code.NewRepository(db)
 	topicRepo := topic.NewRepository(db)
 	messageRepo := message.NewRepository(db)
 	notificationRepo := notification.NewRepository(db)
@@ -106,6 +108,7 @@ func main() {
 		time.Duration(cfg.Admin.SessionTTLInMinute)*time.Minute,
 	)
 	projectService := project.NewService(projectRepo)
+	codeService := code.NewService(codeRepo, projectRepo)
 	topicService := topic.NewService(topicRepo, projectRepo)
 	messageService := message.NewService(messageRepo, topicRepo, projectRepo, notificationRepo, userRepo)
 	userService := user.NewService(db, authService, mailerClient)
@@ -125,6 +128,7 @@ func main() {
 	authHandler := auth.NewHandler(authService)
 	adminHandler := admin.NewHandler(adminService)
 	projectHandler := project.NewHandler(projectService)
+	codeHandler := code.NewHandler(codeService)
 	invitationHandler := project.NewInvitationHandler(invitationService)
 	topicHandler := topic.NewHandler(topicService)
 	messageHandler := message.NewHandler(messageService)
@@ -258,6 +262,11 @@ func main() {
 	projectRoutes.Post("/:id/invitations", invitationHandler.Create)
 	projectRoutes.Post("/:projectId/dm", dmHandler.CreateOrGet)
 	projectRoutes.Get("/:projectId/dm", dmHandler.List)
+	projectRoutes.Get("/:projectId/repos", codeHandler.ListRepos)
+	projectRoutes.Post("/:projectId/repos", codeHandler.CreateRepo)
+	projectRoutes.Put("/:projectId/repos/:repoId", codeHandler.UpdateRepo)
+	projectRoutes.Post("/:projectId/repos/:repoId/files", codeHandler.CreateFile)
+	projectRoutes.Put("/:projectId/repos/:repoId/files/:fileId", codeHandler.UpdateFile)
 	projectRoutes.Post("/:projectId/deploy/servers", deployHandler.CreateServer)
 	projectRoutes.Get("/:projectId/deploy/servers", deployHandler.ListServers)
 	projectRoutes.Get("/:projectId/deploy/servers/:serverId", deployHandler.GetServer)
