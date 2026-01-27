@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { apiClient } from '../../api/client';
 
 interface CodeFile {
   path: string;
@@ -13,6 +14,33 @@ interface Repo {
   description?: string;
   updatedAt: string;
   files: CodeFile[];
+}
+
+interface RepoBranch {
+  name: string;
+  lastCommit: string;
+  updatedAt: string;
+}
+
+interface RepoCommit {
+  hash: string;
+  message: string;
+  author: string;
+  timestamp: string;
+}
+
+interface RepoChange {
+  id: string;
+  summary: string;
+  author: string;
+  timestamp: string;
+  files: string[];
+}
+
+interface RepoActivity {
+  branches: RepoBranch[];
+  commits: RepoCommit[];
+  changes: RepoChange[];
 }
 
 const initialRepos: Repo[] = [
@@ -54,6 +82,109 @@ const initialRepos: Repo[] = [
   },
 ];
 
+const fallbackActivity: Record<string, RepoActivity> = {
+  alpha: {
+    branches: [
+      { name: 'main', lastCommit: '9bf2c21', updatedAt: '2 hours ago' },
+      { name: 'design/refresh', lastCommit: '0f4ad20', updatedAt: 'yesterday' },
+      { name: 'feat/notifications', lastCommit: 'ad129fe', updatedAt: '2 days ago' },
+      { name: 'chore/cleanup', lastCommit: 'c018ef2', updatedAt: 'last week' },
+    ],
+    commits: [
+      {
+        hash: '9bf2c21',
+        message: 'Polish header spacing + restore theme tokens',
+        author: 'Maya Chen',
+        timestamp: 'Today · 12:45',
+      },
+      {
+        hash: '0f4ad20',
+        message: 'Add onboarding hints for new repos',
+        author: 'Devon Lee',
+        timestamp: 'Yesterday · 16:10',
+      },
+      {
+        hash: 'ad129fe',
+        message: 'Refactor build pipeline for UI bundles',
+        author: 'Ira Diaz',
+        timestamp: 'Mon · 09:02',
+      },
+    ],
+    changes: [
+      {
+        id: 'change-1',
+        summary: 'Updated sidebar navigation layout',
+        author: 'Maya Chen',
+        timestamp: 'Today · 11:30',
+        files: ['src/components/Sidebar.tsx', 'src/styles/sidebar.css'],
+      },
+      {
+        id: 'change-2',
+        summary: 'Refined color tokens for dark mode',
+        author: 'Devon Lee',
+        timestamp: 'Yesterday · 15:42',
+        files: ['src/styles/theme.css'],
+      },
+      {
+        id: 'change-3',
+        summary: 'Improved lint rules and formatting',
+        author: 'Ira Diaz',
+        timestamp: 'Mon · 08:15',
+        files: ['.eslintrc', 'package.json'],
+      },
+    ],
+  },
+  beta: {
+    branches: [
+      { name: 'main', lastCommit: 'a70f343', updatedAt: 'yesterday' },
+      { name: 'feat/billing-api', lastCommit: 'd11c3ad', updatedAt: '3 days ago' },
+      { name: 'ops/metrics', lastCommit: 'bb67e12', updatedAt: 'last week' },
+    ],
+    commits: [
+      {
+        hash: 'a70f343',
+        message: 'Add request tracing to API gateway',
+        author: 'Felix Park',
+        timestamp: 'Yesterday · 18:03',
+      },
+      {
+        hash: 'd11c3ad',
+        message: 'Introduce billing endpoints',
+        author: 'Rosa Miles',
+        timestamp: 'Mon · 10:27',
+      },
+      {
+        hash: 'bb67e12',
+        message: 'Tune worker concurrency defaults',
+        author: 'Felix Park',
+        timestamp: 'Fri · 17:50',
+      },
+    ],
+    changes: [
+      {
+        id: 'change-4',
+        summary: 'Migrated database connection pool',
+        author: 'Rosa Miles',
+        timestamp: 'Yesterday · 13:20',
+        files: ['cmd/api/main.go', 'config/database.yml'],
+      },
+      {
+        id: 'change-5',
+        summary: 'Added health checks for workers',
+        author: 'Felix Park',
+        timestamp: 'Mon · 11:04',
+        files: ['internal/health/handler.go'],
+      },
+    ],
+  },
+};
+
+const defaultActivity: RepoActivity = {
+  branches: [],
+  commits: [],
+  changes: [],
+};
+
 export const CodePage: React.FC = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -65,9 +196,17 @@ export const CodePage: React.FC = () => {
   const [newRepoName, setNewRepoName] = useState('');
   const [newRepoDescription, setNewRepoDescription] = useState('');
   const [newFilePath, setNewFilePath] = useState('');
+  const [branchList, setBranchList] = useState<RepoBranch[]>([]);
+  const [commitList, setCommitList] = useState<RepoCommit[]>([]);
+  const [changeList, setChangeList] = useState<RepoChange[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(false);
+  const [showAllBranches, setShowAllBranches] = useState(false);
+  const [showAllCommits, setShowAllCommits] = useState(false);
+  const [showAllChanges, setShowAllChanges] = useState(false);
 
   const selectedRepo = repos.find((repo) => repo.id === selectedRepoId) ?? repos[0];
   const selectedFile = selectedRepo?.files.find((file) => file.path === selectedFilePath);
+  const activityLimit = 3;
 
   const handleCreateFile = () => {
     if (!selectedRepo || !newFilePath.trim()) {
@@ -144,6 +283,73 @@ export const CodePage: React.FC = () => {
       })
     );
   };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const applyFallback = () => {
+      const fallback = fallbackActivity[selectedRepoId] ?? defaultActivity;
+      if (!isMounted) {
+        return;
+      }
+      setBranchList(fallback.branches);
+      setCommitList(fallback.commits);
+      setChangeList(fallback.changes);
+    };
+
+    const loadActivity = async () => {
+      if (!projectId || !selectedRepoId) {
+        applyFallback();
+        return;
+      }
+      setLoadingActivity(true);
+      try {
+        const [branchesRes, commitsRes, changesRes] = await Promise.all([
+          apiClient.get<RepoBranch[]>(
+            `/projects/${projectId}/repos/${selectedRepoId}/branches`
+          ),
+          apiClient.get<RepoCommit[]>(
+            `/projects/${projectId}/repos/${selectedRepoId}/commits`
+          ),
+          apiClient.get<RepoChange[]>(
+            `/projects/${projectId}/repos/${selectedRepoId}/changes`
+          ),
+        ]);
+        if (
+          !Array.isArray(branchesRes.data) ||
+          !Array.isArray(commitsRes.data) ||
+          !Array.isArray(changesRes.data)
+        ) {
+          throw new Error('Invalid repo activity payload');
+        }
+        if (!isMounted) {
+          return;
+        }
+        setBranchList(branchesRes.data);
+        setCommitList(commitsRes.data);
+        setChangeList(changesRes.data);
+      } catch (error) {
+        applyFallback();
+      } finally {
+        if (isMounted) {
+          setLoadingActivity(false);
+        }
+      }
+    };
+
+    loadActivity();
+    setShowAllBranches(false);
+    setShowAllCommits(false);
+    setShowAllChanges(false);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [projectId, selectedRepoId]);
+
+  const visibleBranches = showAllBranches ? branchList : branchList.slice(0, activityLimit);
+  const visibleCommits = showAllCommits ? commitList : commitList.slice(0, activityLimit);
+  const visibleChanges = showAllChanges ? changeList : changeList.slice(0, activityLimit);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -297,6 +503,115 @@ export const CodePage: React.FC = () => {
                   <div className="py-10 text-center text-sm text-slate-400">
                     Select a file to preview.
                   </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-100">Branches</h3>
+                {branchList.length > activityLimit && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllBranches((prev) => !prev)}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {showAllBranches ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-slate-300">
+                {loadingActivity ? (
+                  <p className="text-xs text-slate-500">Loading branches...</p>
+                ) : visibleBranches.length > 0 ? (
+                  visibleBranches.map((branch) => (
+                    <div
+                      key={branch.name}
+                      className="rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-100">{branch.name}</span>
+                        <span className="text-[11px] text-slate-500">{branch.updatedAt}</span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        Last commit · {branch.lastCommit}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500">No branches available.</p>
+                )}
+              </div>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-100">Recent commits</h3>
+                {commitList.length > activityLimit && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllCommits((prev) => !prev)}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {showAllCommits ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-slate-300">
+                {loadingActivity ? (
+                  <p className="text-xs text-slate-500">Loading commits...</p>
+                ) : visibleCommits.length > 0 ? (
+                  visibleCommits.map((commit) => (
+                    <div
+                      key={commit.hash}
+                      className="rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2"
+                    >
+                      <p className="text-sm font-medium text-slate-100">{commit.message}</p>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        {commit.hash} · {commit.author}
+                      </p>
+                      <p className="text-[11px] text-slate-500">{commit.timestamp}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500">No commits yet.</p>
+                )}
+              </div>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-100">Change history</h3>
+                {changeList.length > activityLimit && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllChanges((prev) => !prev)}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {showAllChanges ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-slate-300">
+                {loadingActivity ? (
+                  <p className="text-xs text-slate-500">Loading history...</p>
+                ) : visibleChanges.length > 0 ? (
+                  visibleChanges.map((change) => (
+                    <div
+                      key={change.id}
+                      className="rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2"
+                    >
+                      <p className="text-sm font-medium text-slate-100">{change.summary}</p>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        {change.author} · {change.timestamp}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {change.files.slice(0, 2).join(', ')}
+                        {change.files.length > 2 ? '…' : ''}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500">No change history yet.</p>
                 )}
               </div>
             </div>
