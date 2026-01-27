@@ -234,6 +234,73 @@ export const CodePage: React.FC = () => {
     return parsed.toLocaleString();
   };
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const applyFallback = () => {
+      const fallback = fallbackActivity[selectedRepoId] ?? defaultActivity;
+      if (!isMounted) {
+        return;
+      }
+      setBranchList(fallback.branches);
+      setCommitList(fallback.commits);
+      setChangeList(fallback.changes);
+    };
+
+    const loadActivity = async () => {
+      if (!projectId || !selectedRepoId) {
+        applyFallback();
+        return;
+      }
+      setLoadingActivity(true);
+      try {
+        const [branchesRes, commitsRes, changesRes] = await Promise.all([
+          apiClient.get<RepoBranch[]>(
+            `/projects/${projectId}/repos/${selectedRepoId}/branches`
+          ),
+          apiClient.get<RepoCommit[]>(
+            `/projects/${projectId}/repos/${selectedRepoId}/commits`
+          ),
+          apiClient.get<RepoChange[]>(
+            `/projects/${projectId}/repos/${selectedRepoId}/changes`
+          ),
+        ]);
+        if (
+          !Array.isArray(branchesRes.data) ||
+          !Array.isArray(commitsRes.data) ||
+          !Array.isArray(changesRes.data)
+        ) {
+          throw new Error('Invalid repo activity payload');
+        }
+        if (!isMounted) {
+          return;
+        }
+        setBranchList(branchesRes.data);
+        setCommitList(commitsRes.data);
+        setChangeList(changesRes.data);
+      } catch (error) {
+        applyFallback();
+      } finally {
+        if (isMounted) {
+          setLoadingActivity(false);
+        }
+      }
+    };
+
+    loadActivity();
+    setShowAllBranches(false);
+    setShowAllCommits(false);
+    setShowAllChanges(false);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [projectId, selectedRepoId]);
+
+  const visibleBranches = showAllBranches ? branchList : branchList.slice(0, activityLimit);
+  const visibleCommits = showAllCommits ? commitList : commitList.slice(0, activityLimit);
+  const visibleChanges = showAllChanges ? changeList : changeList.slice(0, activityLimit);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="border-b border-slate-800 bg-slate-950/90 px-6 py-5">
@@ -394,6 +461,115 @@ export const CodePage: React.FC = () => {
                   <div className="py-10 text-center text-sm text-slate-400">
                     Select a file to preview.
                   </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-100">Branches</h3>
+                {branchList.length > activityLimit && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllBranches((prev) => !prev)}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {showAllBranches ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-slate-300">
+                {loadingActivity ? (
+                  <p className="text-xs text-slate-500">Loading branches...</p>
+                ) : visibleBranches.length > 0 ? (
+                  visibleBranches.map((branch) => (
+                    <div
+                      key={branch.name}
+                      className="rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-100">{branch.name}</span>
+                        <span className="text-[11px] text-slate-500">{branch.updatedAt}</span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        Last commit · {branch.lastCommit}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500">No branches available.</p>
+                )}
+              </div>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-100">Recent commits</h3>
+                {commitList.length > activityLimit && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllCommits((prev) => !prev)}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {showAllCommits ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-slate-300">
+                {loadingActivity ? (
+                  <p className="text-xs text-slate-500">Loading commits...</p>
+                ) : visibleCommits.length > 0 ? (
+                  visibleCommits.map((commit) => (
+                    <div
+                      key={commit.hash}
+                      className="rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2"
+                    >
+                      <p className="text-sm font-medium text-slate-100">{commit.message}</p>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        {commit.hash} · {commit.author}
+                      </p>
+                      <p className="text-[11px] text-slate-500">{commit.timestamp}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500">No commits yet.</p>
+                )}
+              </div>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-100">Change history</h3>
+                {changeList.length > activityLimit && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllChanges((prev) => !prev)}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {showAllChanges ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-slate-300">
+                {loadingActivity ? (
+                  <p className="text-xs text-slate-500">Loading history...</p>
+                ) : visibleChanges.length > 0 ? (
+                  visibleChanges.map((change) => (
+                    <div
+                      key={change.id}
+                      className="rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2"
+                    >
+                      <p className="text-sm font-medium text-slate-100">{change.summary}</p>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        {change.author} · {change.timestamp}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {change.files.slice(0, 2).join(', ')}
+                        {change.files.length > 2 ? '…' : ''}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500">No change history yet.</p>
                 )}
               </div>
             </div>

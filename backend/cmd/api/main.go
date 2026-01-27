@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/m0khm/devhub/backend/internal/mailer"
 	"log"
 	"os"
 	"strings"
@@ -21,6 +20,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/deploy"
 	"github.com/m0khm/devhub/backend/internal/dm"
 	"github.com/m0khm/devhub/backend/internal/group"
+	"github.com/m0khm/devhub/backend/internal/mailer"
 	"github.com/m0khm/devhub/backend/internal/message"
 	"github.com/m0khm/devhub/backend/internal/metrics"
 	"github.com/m0khm/devhub/backend/internal/middleware"
@@ -123,6 +123,7 @@ func main() {
 		log.Fatalf("Failed to init deploy encryptor: %v", err)
 	}
 	deployService := deploy.NewService(deployRepo, projectRepo, deployEncryptor)
+	codeService := code.NewService(projectRepo)
 
 	// Initialize handlers
 	authHandler := auth.NewHandler(authService)
@@ -142,6 +143,7 @@ func main() {
 	groupHandler := group.NewHandler(groupService)
 	communityHandler := community.NewHandler(communityService)
 	notificationHandler := notification.NewHandler(notificationService)
+	codeHandler := code.NewHandler(codeService)
 
 	videoHandler := video.NewHandler() // NEW
 	deployHandler := deploy.NewHandler(deployService)
@@ -272,6 +274,9 @@ func main() {
 	projectRoutes.Post("/:projectId/deploy/servers", deployHandler.CreateServer)
 	projectRoutes.Get("/:projectId/deploy/servers", deployHandler.ListServers)
 	projectRoutes.Get("/:projectId/deploy/servers/:serverId", deployHandler.GetServer)
+	projectRoutes.Get("/:projectId/repos/:repoId/branches", codeHandler.ListBranches)
+	projectRoutes.Get("/:projectId/repos/:repoId/commits", codeHandler.ListCommits)
+	projectRoutes.Get("/:projectId/repos/:repoId/changes", codeHandler.ListChanges)
 
 	// Topic routes (внутри проекта)
 	projectRoutes.Post("/:projectId/topics", topicHandler.Create)
