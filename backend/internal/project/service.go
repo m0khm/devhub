@@ -15,6 +15,7 @@ var (
 	ErrAlreadyMember     = errors.New("user is already a member")
 	ErrInvalidMemberRole = errors.New("invalid project member role")
 	ErrCannotRemoveOwner = errors.New("cannot remove project owner")
+	ErrCannotChangeOwner = errors.New("cannot change project owner role")
 )
 
 type Service struct {
@@ -272,6 +273,41 @@ func (s *Service) RemoveMember(projectID, userID, memberID uuid.UUID) error {
 
 	if err := s.repo.RemoveMember(projectID, memberID); err != nil {
 		return fmt.Errorf("failed to remove member: %w", err)
+	}
+
+	return nil
+}
+
+// Update project member role
+func (s *Service) UpdateMemberRole(projectID, userID, memberID uuid.UUID, role string) error {
+	requesterRole, err := s.repo.GetUserRole(projectID, userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrNotProjectMember
+		}
+		return fmt.Errorf("failed to get user role: %w", err)
+	}
+	if requesterRole != "owner" && requesterRole != "admin" {
+		return ErrNotProjectOwner
+	}
+
+	if role != "member" && role != "admin" {
+		return ErrInvalidMemberRole
+	}
+
+	targetRole, err := s.repo.GetUserRole(projectID, memberID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrNotProjectMember
+		}
+		return fmt.Errorf("failed to get member role: %w", err)
+	}
+	if targetRole == "owner" {
+		return ErrCannotChangeOwner
+	}
+
+	if err := s.repo.UpdateMemberRole(projectID, memberID, role); err != nil {
+		return fmt.Errorf("failed to update member role: %w", err)
 	}
 
 	return nil

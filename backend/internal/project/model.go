@@ -50,6 +50,10 @@ type AddProjectMemberRequest struct {
 	Role   string    `json:"role" validate:"omitempty,oneof=admin member"`
 }
 
+type UpdateProjectMemberRoleRequest struct {
+	Role string `json:"role" validate:"required,oneof=admin member"`
+}
+
 type ProjectWithMembers struct {
 	Project
 	Members []ProjectMemberWithUser `json:"members"`

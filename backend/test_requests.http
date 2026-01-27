@@ -6,6 +6,7 @@ curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@devhub.com",
+    "handle": "testuser",
     "password": "password123",
     "name": "Test User"
   }'

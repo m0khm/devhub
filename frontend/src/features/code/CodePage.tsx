@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { apiClient } from '../../api/client';
 
 interface CodeFile {
+  id?: string;
   path: string;
   language?: string;
   content: string;
@@ -15,115 +17,180 @@ interface Repo {
   files: CodeFile[];
 }
 
-const initialRepos: Repo[] = [
-  {
-    id: 'alpha',
-    name: 'frontend-web',
-    description: 'UI layer for DevHub.',
-    updatedAt: '2 hours ago',
-    files: [
-      {
-        path: 'src/App.tsx',
-        language: 'typescript',
-        content: `import React from 'react';\n\nexport const App = () => {\n  return <div>Hello DevHub</div>;\n};`,
-      },
-      {
-        path: 'src/styles/theme.css',
-        language: 'css',
-        content: `:root {\n  --brand: #1f6feb;\n}\n\nbody {\n  font-family: 'Inter', sans-serif;\n}`,
-      },
-    ],
-  },
-  {
-    id: 'beta',
-    name: 'backend-api',
-    description: 'API service and workers.',
-    updatedAt: 'yesterday',
-    files: [
-      {
-        path: 'cmd/api/main.go',
-        language: 'go',
-        content: `package main\n\nfunc main() {\n  println("DevHub API")\n}`,
-      },
-      {
-        path: 'README.md',
-        language: 'markdown',
-        content: `# Backend API\n\n- Fiber\n- PostgreSQL\n- Redis`,
-      },
-    ],
-  },
-];
-
 export const CodePage: React.FC = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const [repos, setRepos] = useState<Repo[]>(initialRepos);
-  const [selectedRepoId, setSelectedRepoId] = useState(initialRepos[0]?.id ?? '');
-  const [selectedFilePath, setSelectedFilePath] = useState(
-    initialRepos[0]?.files[0]?.path ?? ''
-  );
+  const [repos, setRepos] = useState<Repo[]>([]);
+  const [selectedRepoId, setSelectedRepoId] = useState('');
+  const [selectedFilePath, setSelectedFilePath] = useState('');
   const [newRepoName, setNewRepoName] = useState('');
   const [newRepoDescription, setNewRepoDescription] = useState('');
   const [newFilePath, setNewFilePath] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const saveTimeoutRef = useRef<number | null>(null);
+
+  const [showAllBranches, setShowAllBranches] = useState(false);
+  const [showAllCommits, setShowAllCommits] = useState(false);
+  const [showAllChanges, setShowAllChanges] = useState(false);
+
+  const activityLimit = 5;
+
+  const [branchList, setBranchList] = useState<any[]>([]);
+  const [commitList, setCommitList] = useState<any[]>([]);
+  const [changeList, setChangeList] = useState<any[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(false);
 
   const selectedRepo = repos.find((repo) => repo.id === selectedRepoId) ?? repos[0];
   const selectedFile = selectedRepo?.files.find((file) => file.path === selectedFilePath);
+  const storageKey = projectId ? `code_repos_${projectId}` : 'code_repos';
 
-  const handleCreateFile = () => {
+  useEffect(() => {
+    if (!projectId) {
+      return;
+    }
+
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Repo[];
+        if (Array.isArray(parsed)) {
+          setRepos(parsed);
+        }
+      } catch {
+        localStorage.removeItem(storageKey);
+      }
+    }
+
+    const loadRepos = async () => {
+      try {
+        const response = await apiClient.get<Repo[]>(`/projects/${projectId}/repos`);
+        setRepos(Array.isArray(response.data) ? response.data : []);
+      } catch {
+        // fallback to localStorage data
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRepos();
+  }, [projectId, storageKey]);
+
+  useEffect(() => {
+    if (!projectId) {
+      return;
+    }
+    localStorage.setItem(storageKey, JSON.stringify(repos));
+  }, [projectId, repos, storageKey]);
+
+  useEffect(() => {
+    if (!repos.length) {
+      setSelectedRepoId('');
+      setSelectedFilePath('');
+      return;
+    }
+
+    if (!selectedRepoId || !repos.some((repo) => repo.id === selectedRepoId)) {
+      setSelectedRepoId(repos[0].id);
+      setSelectedFilePath(repos[0].files[0]?.path ?? '');
+      return;
+    }
+
+    if (
+      selectedRepoId &&
+      selectedFilePath &&
+      repos
+        .find((repo) => repo.id === selectedRepoId)
+        ?.files.some((file) => file.path === selectedFilePath)
+    ) {
+      return;
+    }
+
+    const currentRepo = repos.find((repo) => repo.id === selectedRepoId);
+    setSelectedFilePath(currentRepo?.files[0]?.path ?? '');
+  }, [repos, selectedRepoId, selectedFilePath]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        window.clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCreateFile = async () => {
     if (!selectedRepo || !newFilePath.trim()) {
       return;
     }
     const trimmedPath = newFilePath.trim();
-    let fileAdded = false;
-    setRepos((prev) =>
-      prev.map((repo) => {
-        if (repo.id !== selectedRepo.id) {
-          return repo;
+    if (!projectId) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.post<CodeFile>(
+        `/projects/${projectId}/repos/${selectedRepo.id}/files`,
+        {
+          path: trimmedPath,
+          content: '',
         }
-        if (repo.files.some((file) => file.path === trimmedPath)) {
-          return repo;
-        }
-        fileAdded = true;
-        return {
-          ...repo,
-          files: [
-            ...repo.files,
-            {
-              path: trimmedPath,
-              content: '',
-            },
-          ],
-        };
-      })
-    );
-    if (fileAdded) {
-      setSelectedFilePath(trimmedPath);
+      );
+      const createdFile = response.data;
+      setRepos((prev) =>
+        prev.map((repo) =>
+          repo.id === selectedRepo.id
+            ? { ...repo, files: [...repo.files, createdFile] }
+            : repo
+        )
+      );
+      setSelectedFilePath(createdFile.path);
+      setNewFilePath('');
+    } catch {
+      const fallbackFile: CodeFile = { id: `${Date.now()}`, path: trimmedPath, content: '' };
+      setRepos((prev) =>
+        prev.map((repo) =>
+          repo.id === selectedRepo.id
+            ? { ...repo, files: [...repo.files, fallbackFile] }
+            : repo
+        )
+      );
+      setSelectedFilePath(fallbackFile.path);
       setNewFilePath('');
     }
   };
 
-  const handleCreateRepo = () => {
+  const handleCreateRepo = async () => {
     if (!newRepoName.trim()) {
       return;
     }
-    const newRepo: Repo = {
-      id: `${newRepoName}-${Date.now()}`,
-      name: newRepoName.trim(),
-      description: newRepoDescription.trim() || undefined,
-      updatedAt: 'just now',
-      files: [
-        {
-          path: 'README.md',
-          language: 'markdown',
-          content: `# ${newRepoName.trim()}\n\nDescribe your project here.`,
-        },
-      ],
-    };
-    setRepos((prev) => [newRepo, ...prev]);
-    setSelectedRepoId(newRepo.id);
-    setSelectedFilePath(newRepo.files[0].path);
-    setNewRepoName('');
-    setNewRepoDescription('');
+    if (!projectId) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.post<Repo>(`/projects/${projectId}/repos`, {
+        name: newRepoName.trim(),
+        description: newRepoDescription.trim() || undefined,
+      });
+      const newRepo = response.data;
+      setRepos((prev) => [newRepo, ...prev]);
+      setSelectedRepoId(newRepo.id);
+      setSelectedFilePath(newRepo.files[0]?.path ?? '');
+      setNewRepoName('');
+      setNewRepoDescription('');
+    } catch {
+      const fallbackRepo: Repo = {
+        id: `${newRepoName.trim()}-${Date.now()}`,
+        name: newRepoName.trim(),
+        description: newRepoDescription.trim() || undefined,
+        updatedAt: new Date().toISOString(),
+        files: [],
+      };
+      setRepos((prev) => [fallbackRepo, ...prev]);
+      setSelectedRepoId(fallbackRepo.id);
+      setSelectedFilePath('');
+      setNewRepoName('');
+      setNewRepoDescription('');
+    }
   };
 
   const handleFileContentChange = (nextContent: string) => {
@@ -143,7 +210,107 @@ export const CodePage: React.FC = () => {
         };
       })
     );
+
+    if (!projectId || !selectedFile.id) {
+      return;
+    }
+
+    if (saveTimeoutRef.current) {
+      window.clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        await apiClient.put(
+          `/projects/${projectId}/repos/${selectedRepo.id}/files/${selectedFile.id}`,
+          {
+            content: nextContent,
+            language: selectedFile.language,
+          }
+        );
+      } catch {
+        // keep local edits if API fails
+      }
+    }, 700);
   };
+
+  const formatUpdatedAt = (value?: string) => {
+    if (!value) {
+      return 'unknown';
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleString();
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const applyFallback = () => {
+      const fallback = fallbackActivity[selectedRepoId] ?? defaultActivity;
+      if (!isMounted) {
+        return;
+      }
+      setBranchList(fallback.branches);
+      setCommitList(fallback.commits);
+      setChangeList(fallback.changes);
+    };
+
+    const loadActivity = async () => {
+      if (!projectId || !selectedRepoId) {
+        applyFallback();
+        return;
+      }
+      setLoadingActivity(true);
+      try {
+        const [branchesRes, commitsRes, changesRes] = await Promise.all([
+          apiClient.get<RepoBranch[]>(
+            `/projects/${projectId}/repos/${selectedRepoId}/branches`
+          ),
+          apiClient.get<RepoCommit[]>(
+            `/projects/${projectId}/repos/${selectedRepoId}/commits`
+          ),
+          apiClient.get<RepoChange[]>(
+            `/projects/${projectId}/repos/${selectedRepoId}/changes`
+          ),
+        ]);
+        if (
+          !Array.isArray(branchesRes.data) ||
+          !Array.isArray(commitsRes.data) ||
+          !Array.isArray(changesRes.data)
+        ) {
+          throw new Error('Invalid repo activity payload');
+        }
+        if (!isMounted) {
+          return;
+        }
+        setBranchList(branchesRes.data);
+        setCommitList(commitsRes.data);
+        setChangeList(changesRes.data);
+      } catch (error) {
+        applyFallback();
+      } finally {
+        if (isMounted) {
+          setLoadingActivity(false);
+        }
+      }
+    };
+
+    loadActivity();
+    setShowAllBranches(false);
+    setShowAllCommits(false);
+    setShowAllChanges(false);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [projectId, selectedRepoId]);
+
+  const visibleBranches = showAllBranches ? branchList : branchList.slice(0, activityLimit);
+  const visibleCommits = showAllCommits ? commitList : commitList.slice(0, activityLimit);
+  const visibleChanges = showAllChanges ? changeList : changeList.slice(0, activityLimit);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -212,23 +379,31 @@ export const CodePage: React.FC = () => {
               Repositories
             </div>
             <div className="max-h-[420px] overflow-y-auto">
-              {repos.map((repo) => (
-                <button
-                  type="button"
-                  key={repo.id}
-                  onClick={() => {
-                    setSelectedRepoId(repo.id);
-                    setSelectedFilePath(repo.files[0]?.path ?? '');
-                  }}
-                  className={`w-full border-b border-slate-800 px-4 py-3 text-left transition hover:bg-slate-800/60 ${
-                    repo.id === selectedRepo?.id ? 'bg-slate-800/70' : ''
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-slate-100">{repo.name}</p>
-                  <p className="text-xs text-slate-400">{repo.description}</p>
-                  <p className="mt-2 text-[11px] text-slate-500">Updated {repo.updatedAt}</p>
-                </button>
-              ))}
+              {isLoading ? (
+                <div className="px-4 py-6 text-xs text-slate-500">Loading repositories...</div>
+              ) : repos.length === 0 ? (
+                <div className="px-4 py-6 text-xs text-slate-500">No repositories yet.</div>
+              ) : (
+                repos.map((repo) => (
+                  <button
+                    type="button"
+                    key={repo.id}
+                    onClick={() => {
+                      setSelectedRepoId(repo.id);
+                      setSelectedFilePath(repo.files[0]?.path ?? '');
+                    }}
+                    className={`w-full border-b border-slate-800 px-4 py-3 text-left transition hover:bg-slate-800/60 ${
+                      repo.id === selectedRepo?.id ? 'bg-slate-800/70' : ''
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-slate-100">{repo.name}</p>
+                    <p className="text-xs text-slate-400">{repo.description}</p>
+                    <p className="mt-2 text-[11px] text-slate-500">
+                      Updated {formatUpdatedAt(repo.updatedAt)}
+                    </p>
+                  </button>
+                ))
+              )}
             </div>
           </div>
         </aside>
@@ -297,6 +472,115 @@ export const CodePage: React.FC = () => {
                   <div className="py-10 text-center text-sm text-slate-400">
                     Select a file to preview.
                   </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-100">Branches</h3>
+                {branchList.length > activityLimit && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllBranches((prev) => !prev)}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {showAllBranches ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-slate-300">
+                {loadingActivity ? (
+                  <p className="text-xs text-slate-500">Loading branches...</p>
+                ) : visibleBranches.length > 0 ? (
+                  visibleBranches.map((branch) => (
+                    <div
+                      key={branch.name}
+                      className="rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-100">{branch.name}</span>
+                        <span className="text-[11px] text-slate-500">{branch.updatedAt}</span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        Last commit · {branch.lastCommit}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500">No branches available.</p>
+                )}
+              </div>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-100">Recent commits</h3>
+                {commitList.length > activityLimit && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllCommits((prev) => !prev)}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {showAllCommits ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-slate-300">
+                {loadingActivity ? (
+                  <p className="text-xs text-slate-500">Loading commits...</p>
+                ) : visibleCommits.length > 0 ? (
+                  visibleCommits.map((commit) => (
+                    <div
+                      key={commit.hash}
+                      className="rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2"
+                    >
+                      <p className="text-sm font-medium text-slate-100">{commit.message}</p>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        {commit.hash} · {commit.author}
+                      </p>
+                      <p className="text-[11px] text-slate-500">{commit.timestamp}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500">No commits yet.</p>
+                )}
+              </div>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-100">Change history</h3>
+                {changeList.length > activityLimit && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllChanges((prev) => !prev)}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {showAllChanges ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-slate-300">
+                {loadingActivity ? (
+                  <p className="text-xs text-slate-500">Loading history...</p>
+                ) : visibleChanges.length > 0 ? (
+                  visibleChanges.map((change) => (
+                    <div
+                      key={change.id}
+                      className="rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2"
+                    >
+                      <p className="text-sm font-medium text-slate-100">{change.summary}</p>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        {change.author} · {change.timestamp}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {change.files.slice(0, 2).join(', ')}
+                        {change.files.length > 2 ? '…' : ''}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500">No change history yet.</p>
                 )}
               </div>
             </div>

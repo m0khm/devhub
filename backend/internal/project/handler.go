@@ -341,6 +341,75 @@ func (h *Handler) RemoveMember(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusNoContent).Send(nil)
 }
 
+// Update project member role
+// PATCH /api/projects/:id/members/:userId
+func (h *Handler) UpdateMemberRole(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid project ID",
+		})
+	}
+
+	memberID, err := uuid.Parse(c.Params("userId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
+	}
+
+	var req UpdateProjectMemberRoleRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"details": errs,
+		})
+	}
+
+	if err := h.service.UpdateMemberRole(projectID, userID, memberID, req.Role); err != nil {
+		if errors.Is(err, ErrNotProjectOwner) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Only project owner or admin can update roles",
+			})
+		}
+		if errors.Is(err, ErrCannotChangeOwner) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Cannot change project owner role",
+			})
+		}
+		if errors.Is(err, ErrInvalidMemberRole) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid member role",
+			})
+		}
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Project member not found",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to update project member role",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"status": "member role updated",
+	})
+}
+
 // Helper function
 func getUserIDFromContext(c *fiber.Ctx) (uuid.UUID, error) {
 	userIDStr, ok := c.Locals("userID").(string)
