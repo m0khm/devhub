@@ -7,6 +7,7 @@ import { apiClient } from '../../../api/client';
 import { useProjectStore } from '../../../store/projectStore';
 import type { Project } from '../../../shared/types';
 import { ProfileModal } from '../../profile/ProfileModal';
+import { FavoritesModal } from './FavoritesModal';
 import { ProjectSidebar } from './ProjectSidebar';
 import { ProjectView } from './ProjectView';
 import { ProjectSettingsModal } from './ProjectSettingsModal';
@@ -135,6 +136,8 @@ export const ProjectWorkspace: React.FC = () => {
               left={
                 <ProjectSidebar
                   onOpenProfile={openProfileModal}
+                  onOpenFavorites={openFavoritesModal}
+                  onOpenProjectSettings={() => setIsProjectSettingsOpen(true)}
                   onProjectCreated={loadProjects}
                 />
               }
@@ -176,6 +179,10 @@ export const ProjectWorkspace: React.FC = () => {
         )}
       </ProjectView>
       <ProfileModal open={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
+      <FavoritesModal
+        open={isFavoritesOpen}
+        onClose={() => setIsFavoritesOpen(false)}
+      />
     </>
   );
 };
