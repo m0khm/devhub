@@ -84,7 +84,7 @@ export const HubPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-3">
               <Link
-                to="/app"
+                to="/workspace"
                 className="rounded-full border border-border/80 px-4 py-2 text-sm font-medium text-text transition hover:border-accent hover:text-accent"
               >
                 Вернуться в рабочее пространство
@@ -226,7 +226,7 @@ export const HubPage: React.FC = () => {
                       </div>
                     </div>
                     <Link
-                      to={`/projects/${project.id}`}
+                      to={`/workspace/chat/${project.id}`}
                       className="rounded-full border border-accent/60 px-3 py-1 text-xs font-semibold text-accent transition hover:bg-accent/10"
                     >
                       Открыть
@@ -245,13 +245,13 @@ export const HubPage: React.FC = () => {
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
-                to="/app"
+                to="/workspace"
                 className="rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white"
               >
                 Перейти в Workspace
               </Link>
               <Link
-                to="/profile"
+                to="/workspace/profile"
                 className="rounded-full border border-border/80 px-4 py-2 text-xs font-semibold text-text transition hover:border-accent hover:text-accent"
               >
                 Обновить профиль

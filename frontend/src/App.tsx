@@ -6,9 +6,6 @@ import { useThemeStore } from './store/themeStore';
 import { LandingPage } from './features/new-ui/pages/LandingPage';
 import { AuthPage } from './features/new-ui/pages/AuthPage';
 import { WorkspaceLayout } from './features/new-ui/pages/WorkspaceLayout';
-import { ChatView } from './features/new-ui/components/workspace/ChatView';
-import { KanbanView } from './features/new-ui/components/workspace/KanbanView';
-import { CalendarView } from './features/new-ui/components/workspace/CalendarView';
 import { FilesView } from './features/new-ui/components/workspace/FilesView';
 import { DashboardView } from './features/new-ui/components/workspace/DashboardView';
 import { HubPage } from './features/new-ui/pages/HubPage';
@@ -51,14 +48,6 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/login" element={<Navigate to="/auth?mode=login" replace />} />
-        <Route
-          path="/register"
-          element={<Navigate to="/auth?mode=register" replace />}
-        />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/contacts" element={<ContactPage />} />
         <Route
           path="/workspace"
           element={
@@ -67,13 +56,14 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<ChatView />} />
-          <Route path="chat" element={<ChatView />} />
-          <Route path="chat/:topicId" element={<ChatView />} />
-          <Route path="kanban" element={<KanbanView />} />
-          <Route path="calendar" element={<CalendarView />} />
+          <Route index element={<Navigate to="chat" replace />} />
+          <Route path="chat/:projectId?" element={<ProjectWorkspace />} />
+          <Route path="deploy/:projectId?" element={<DeployPage />} />
+          <Route path="planning/:projectId?" element={<PlanningPage />} />
+          <Route path="code/:projectId?" element={<CodePage />} />
           <Route path="files" element={<FilesView />} />
-          <Route path="dashboard" element={<DashboardView />} />
+          <Route path="hub" element={<HubPage />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route
           path="/onboarding"

@@ -110,11 +110,11 @@ export function KanbanView() {
     setDraggedTask({ task, sourceColumnId: columnId });
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   };
 
-  const handleDrop = async (targetColumnId: string) => {
+  const handleDrop = (targetColumnId: string) => {
     if (!draggedTask) return;
     const { task, sourceColumnId } = draggedTask;
     if (sourceColumnId === targetColumnId) {
@@ -142,14 +142,11 @@ export function KanbanView() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high':
-        return 'bg-orange-500';
-      case 'medium':
-        return 'bg-yellow-500';
-      case 'low':
-        return 'bg-green-500';
-      default:
-        return 'bg-slate-500';
+      case 'urgent': return 'bg-red-500';
+      case 'high': return 'bg-orange-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-slate-500';
     }
   };
 
@@ -161,7 +158,7 @@ export function KanbanView() {
         className="mb-6"
       >
         <h2 className="text-2xl font-bold text-white mb-2">Канбан Доска</h2>
-        <p className="text-slate-400">Темы проекта распределены по категориям</p>
+        <p className="text-slate-400">Управляйте задачами с помощью drag & drop</p>
       </motion.div>
 
       <div className="flex gap-6 min-w-max pb-6">

@@ -318,13 +318,13 @@ export const CodePage: React.FC = () => {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-widest text-slate-500">Project</p>
-            <h1 className="text-2xl font-semibold">Code · {projectId}</h1>
+            <h1 className="text-2xl font-semibold">Code · {projectId ?? 'workspace'}</h1>
             <p className="text-sm text-slate-400">Repositories and files in one place.</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => navigate(`/projects/${projectId}`)}
+              onClick={() => navigate(`/workspace/chat/${projectId}`)}
               className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 transition hover:border-slate-500"
             >
               Back to workspace

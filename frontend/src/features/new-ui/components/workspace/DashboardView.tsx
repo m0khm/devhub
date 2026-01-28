@@ -1,14 +1,5 @@
 import { motion } from 'motion/react';
-import { useEffect, useMemo, useState } from 'react';
-import { Users, CheckCircle, Target, Zap, Award } from 'lucide-react';
-import { useOutletContext } from 'react-router-dom';
-import { apiClient } from '../../../../api/client';
-import type {
-  Notification,
-  ProjectMemberWithUser,
-  TopicWithStats,
-} from '../../../../shared/types';
-import type { WorkspaceOutletContext } from '../../pages/WorkspaceLayout';
+import { TrendingUp, Users, CheckCircle, Clock, Target, Zap, Award, BarChart3 } from 'lucide-react';
 
 interface DeployServer {
   id: string;
@@ -122,6 +113,7 @@ export function DashboardView() {
     time: formatTimeAgo(item.created_at),
   }));
 
+export function DashboardView() {
   return (
     <div className="h-full overflow-y-auto p-6">
       <motion.div
@@ -131,152 +123,134 @@ export function DashboardView() {
       >
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-white mb-2">Дашборд команды</h2>
-          <p className="text-slate-400">
-            {currentProject ? `Обзор активности проекта ${currentProject.name}` : 'Выберите проект, чтобы увидеть аналитику'}
-          </p>
+          <p className="text-slate-400">Обзор активности и метрик проекта</p>
         </div>
 
-        {loading ? (
-          <div className="text-slate-400">Загрузка данных...</div>
-        ) : !currentProject ? (
-          <div className="text-slate-500">Нет активного проекта</div>
-        ) : (
-          <>
-            {/* Stats Grid */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {stats.map((stat, index) => (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ y: -5, scale: 1.02 }}
-                  className="relative p-6 bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden group cursor-pointer"
-                >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-10 transition-opacity`}></div>
-                  
-                  <div className="relative z-10">
-                    <div className="flex items-start justify-between mb-4">
-                      <motion.div
-                        whileHover={{ rotate: 360 }}
-                        transition={{ duration: 0.6 }}
-                        className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-lg`}
-                      >
-                        <stat.icon className="w-6 h-6 text-white" />
-                      </motion.div>
-                      <span className="px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-full text-xs text-green-400 font-semibold">
-                        {stat.change}
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-400 mb-1">{stat.label}</p>
-                    <p className="text-3xl font-bold text-white">{stat.value}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            <div className="grid lg:grid-cols-3 gap-6">
-              {/* Team Members */}
-              <div className="lg:col-span-2">
-                <div className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-semibold text-white">Команда</h3>
-                    <button className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
-                      Все участники
-                    </button>
-                  </div>
-
-                  {members.length === 0 ? (
-                    <div className="text-slate-500">Пока нет участников проекта</div>
-                  ) : (
-                    <div className="space-y-3">
-                      {members.map((member, index) => (
-                        <motion.div
-                          key={member.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          whileHover={{ x: 5 }}
-                          className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/10 rounded-xl hover:border-white/20 transition-all cursor-pointer"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="relative">
-                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-semibold">
-                                {member.user?.name?.[0]?.toUpperCase() ?? 'U'}
-                              </div>
-                              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></div>
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-white">{member.user?.name ?? 'Участник'}</h4>
-                              <p className="text-sm text-slate-400">{member.role}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-bold text-white">{member.user?.handle ?? '—'}</p>
-                            <p className="text-xs text-slate-400">handle</p>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
+        {/* Stats Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {stats.map((stat, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ y: -5, scale: 1.02 }}
+              className="relative p-6 bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden group cursor-pointer"
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-10 transition-opacity`}></div>
+              
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-4">
+                  <motion.div
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.6 }}
+                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-lg`}
+                  >
+                    <stat.icon className="w-6 h-6 text-white" />
+                  </motion.div>
+                  <span className="px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-full text-xs text-green-400 font-semibold">
+                    {stat.change}
+                  </span>
                 </div>
+                <p className="text-sm text-slate-400 mb-1">{stat.label}</p>
+                <p className="text-3xl font-bold text-white">{stat.value}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Team Members */}
+          <div className="lg:col-span-2">
+            <div className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-white">Команда</h3>
+                <button className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+                  Все участники
+                </button>
               </div>
 
-              {/* Recent Activity */}
-              <div className="space-y-6">
-                <div className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                  <h3 className="text-xl font-semibold text-white mb-6">Активность</h3>
-                  {recentActivity.length === 0 ? (
-                    <div className="text-slate-500">Пока нет уведомлений</div>
-                  ) : (
-                    <div className="space-y-4">
-                      {recentActivity.map((activity, index) => (
-                        <motion.div
-                          key={`${activity.user}-${index}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          className="relative pl-6 border-l-2 border-white/10 pb-4 last:pb-0"
-                        >
-                          <div className="absolute left-[-5px] top-1 w-2 h-2 bg-blue-500 rounded-full"></div>
-                          <p className="text-sm text-white mb-1">
-                            <span className="font-semibold">{activity.user}</span>{' '}
-                            <span className="text-slate-400">{activity.action}</span>
-                          </p>
-                          <p className="text-sm text-blue-400 mb-1">{activity.item}</p>
-                          <p className="text-xs text-slate-500">{activity.time}</p>
-                        </motion.div>
-                      ))}
+              <div className="space-y-3">
+                {teamMembers.map((member, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ x: 5 }}
+                    className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/10 rounded-xl hover:border-white/20 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-semibold">
+                          {member.avatar}
+                        </div>
+                        <div className={`absolute bottom-0 right-0 w-3 h-3 ${member.status === 'online' ? 'bg-green-500' : 'bg-yellow-500'} border-2 border-slate-900 rounded-full`}></div>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-white">{member.name}</h4>
+                        <p className="text-sm text-slate-400">{member.role}</p>
+                      </div>
                     </div>
-                  )}
-                </div>
-
-                {/* Achievement */}
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-2xl p-6 cursor-pointer"
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <motion.div
-                      animate={{ rotate: [0, 10, -10, 0] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-lg"
-                    >
-                      <Award className="w-6 h-6 text-white" />
-                    </motion.div>
-                    <div>
-                      <h4 className="font-semibold text-white">Достижение!</h4>
-                      <p className="text-sm text-yellow-400">Новый уровень</p>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-white">{member.tasks}</p>
+                      <p className="text-xs text-slate-400">задач</p>
                     </div>
-                  </div>
-                  <p className="text-sm text-slate-300">
-                    Ваша команда развернула {deployServers.length} сервер(ов) и создала {topics.length} тем.
-                  </p>
-                </motion.div>
+                  </motion.div>
+                ))}
               </div>
             </div>
-          </>
-        )}
+          </div>
+
+          {/* Recent Activity */}
+          <div className="space-y-6">
+            <div className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+              <h3 className="text-xl font-semibold text-white mb-6">Активность</h3>
+              <div className="space-y-4">
+                {recentActivity.map((activity, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="relative pl-6 border-l-2 border-white/10 pb-4 last:pb-0"
+                  >
+                    <div className="absolute left-[-5px] top-1 w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <p className="text-sm text-white mb-1">
+                      <span className="font-semibold">{activity.user}</span>{' '}
+                      <span className="text-slate-400">{activity.action}</span>
+                    </p>
+                    <p className="text-sm text-blue-400 mb-1">{activity.item}</p>
+                    <p className="text-xs text-slate-500">{activity.time}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            {/* Achievement */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-2xl p-6 cursor-pointer"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-lg"
+                >
+                  <Award className="w-6 h-6 text-white" />
+                </motion.div>
+                <div>
+                  <h4 className="font-semibold text-white">Достижение!</h4>
+                  <p className="text-sm text-yellow-400">Новый уровень</p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-300">
+                Ваша команда завершила 150+ задач! Продолжайте в том же духе! 🎉
+              </p>
+            </motion.div>
+          </div>
+        </div>
       </motion.div>
     </div>
   );
