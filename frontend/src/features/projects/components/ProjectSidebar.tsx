@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useProjectStore } from '../../../store/projectStore';
 import { useAuthStore } from '../../../store/authStore';
 import {
@@ -12,16 +12,21 @@ import { CreateProjectModal } from './CreateProjectModal';
 
 interface ProjectSidebarProps {
   onOpenProfile?: () => void;
+  onOpenFavorites?: () => void;
+  onOpenProjectSettings?: () => void;
   onProjectCreated?: () => void;
 }
 
 export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
   onOpenProfile,
+  onOpenFavorites,
+  onOpenProjectSettings,
   onProjectCreated,
 }) => {
   const { projects, currentProject } = useProjectStore();
   const user = useAuthStore((state) => state.user);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const navigate = useNavigate();
   const userDisplayName = user?.name ?? user?.handle ?? user?.email ?? 'User';
   const userInitials = userDisplayName
     .split(' ')
@@ -29,6 +34,21 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
     .join('')
     .slice(0, 2)
     .toUpperCase();
+  const handleMessagesClick = () => {
+    if (currentProject?.id) {
+      navigate(`/projects/${currentProject.id}`);
+      return;
+    }
+    navigate('/hub');
+  };
+
+  const handleSettingsClick = () => {
+    if (currentProject?.id) {
+      onOpenProjectSettings?.();
+      return;
+    }
+    onOpenProfile?.();
+  };
 
   return (
     <div className="flex h-full flex-col items-center justify-between py-4">
@@ -98,6 +118,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           type="button"
           className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
           aria-label="Сообщения"
+          onClick={handleMessagesClick}
         >
           <ChatBubbleLeftRightIcon className="h-4 w-4 text-slate-300" />
           <span>Сообщения</span>
@@ -106,6 +127,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           type="button"
           className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
           aria-label="Избранное"
+          onClick={onOpenFavorites}
         >
           <StarIcon className="h-4 w-4 text-slate-300" />
           <span>Избранное</span>
@@ -124,6 +146,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           type="button"
           className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
           aria-label="Настройки"
+          onClick={handleSettingsClick}
         >
           <Cog6ToothIcon className="h-4 w-4 text-slate-300" />
           <span>Настройки</span>
