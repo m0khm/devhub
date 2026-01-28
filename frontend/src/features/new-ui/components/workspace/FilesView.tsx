@@ -1,8 +1,18 @@
-import { motion, AnimatePresence } from 'motion/react';
-import { FileText, Image, Film, Music, Download, Share2, Trash2, MoreVertical, Upload } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
+import {
+  FileText,
+  Image,
+  Film,
+  Music,
+  Download,
+  Share2,
+  Trash2,
+  MoreVertical,
+  Upload,
+  FolderOpen,
+} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { apiClient, API_URL } from '../../../../api/client';
 import type { Message, FileMetadata } from '../../../../shared/types';
@@ -37,12 +47,17 @@ const parseMetadata = (metadata?: Message['metadata']): FileMetadata => {
 };
 
 export function FilesView() {
-  const { currentTopic } = useOutletContext<WorkspaceOutletContext>();
+  const { currentProject, currentTopic, topics, setSelectedTopicId } =
+    useOutletContext<WorkspaceOutletContext>();
   const [files, setFiles] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedTopicId, setSelectedTopicIdState] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const currentTopics = useMemo(() => topics, [topics]);
 
   useEffect(() => {
-    if (!currentTopic) {
+    if (!currentProject?.id) {
       setFiles([]);
       return;
     }
@@ -51,11 +66,11 @@ export function FilesView() {
       setLoading(true);
       try {
         const response = await apiClient.get<Message[]>(
-          `/topics/${currentTopic.id}/messages`,
+          `/projects/${currentProject.id}/files`,
           { params: { limit: 100 } }
         );
         const data = Array.isArray(response.data) ? response.data : [];
-        setFiles(data.filter((item) => item.type === 'file'));
+        setFiles(data);
       } catch (error) {
         toast.error('Не удалось загрузить файлы');
       } finally {
@@ -64,6 +79,13 @@ export function FilesView() {
     };
 
     void loadFiles();
+  }, [currentProject?.id]);
+
+  useEffect(() => {
+    if (!currentTopic?.id) {
+      return;
+    }
+    setSelectedTopicIdState(currentTopic.id);
   }, [currentTopic?.id]);
 
   const stats = useMemo(() => {
@@ -94,14 +116,23 @@ export function FilesView() {
           <div className="flex items-center gap-3">
             <select
               value={selectedTopicId ?? ''}
-              onChange={(event) => setSelectedTopicId(event.target.value)}
+              onChange={(event) => {
+                setSelectedTopicIdState(event.target.value);
+                setSelectedTopicId(event.target.value);
+              }}
               className="bg-slate-900/60 border border-white/10 text-slate-200 rounded-lg px-3 py-2 text-sm"
             >
-              {currentTopics.map((topic: Topic) => (
-                <option key={topic.id} value={topic.id}>
-                  {topic.name}
+              {currentTopics.length === 0 ? (
+                <option value="" disabled>
+                  Нет доступных тем
                 </option>
-              ))}
+              ) : (
+                currentTopics.map((topic) => (
+                  <option key={topic.id} value={topic.id}>
+                    {topic.name}
+                  </option>
+                ))
+              )}
             </select>
             <motion.button
               whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)' }}
@@ -114,6 +145,13 @@ export function FilesView() {
             </motion.button>
           </div>
         </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          onChange={() => toast.info('Загрузка файлов пока недоступна')}
+        />
 
         {/* Storage Stats */}
         <div className="grid md:grid-cols-3 gap-4 mb-8">
@@ -145,7 +183,15 @@ export function FilesView() {
         {loading ? (
           <div className="text-slate-400">Загрузка файлов...</div>
         ) : files.length === 0 ? (
-          <div className="text-slate-500">Нет файлов для отображения</div>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-slate-900/40 p-10 text-center">
+            <div className="mb-4 rounded-full bg-slate-800/60 p-4">
+              <FolderOpen className="h-8 w-8 text-slate-300" />
+            </div>
+            <h3 className="text-lg font-semibold text-white">Файлы пока не загружены</h3>
+            <p className="mt-2 text-sm text-slate-400">
+              Добавьте первый файл или выберите другую тему, чтобы увидеть материалы.
+            </p>
+          </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {files.map((file, index) => {
@@ -217,69 +263,6 @@ export function FilesView() {
         )}
       </motion.div>
 
-      <AnimatePresence>
-        {selectedFile && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
-            onClick={() => setSelectedFile(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              onClick={(event) => event.stopPropagation()}
-              className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
-            >
-              <h3 className="text-2xl font-bold text-white mb-4">Карточка файла</h3>
-              <div className="space-y-3 text-sm text-slate-300">
-                <div className="flex items-center gap-3">
-                  <selectedFile.icon className="w-5 h-5 text-white" />
-                  <span>{selectedFile.type}</span>
-                </div>
-                <div className="text-slate-400">
-                  Размер: {selectedFile.size} • Дата: {selectedFile.date}
-                </div>
-                <label className="block">
-                  Название
-                  <input
-                    type="text"
-                    value={fileNameDraft}
-                    onChange={(event) => setFileNameDraft(event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
-                </label>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFileList((prev) =>
-                      prev.map((file) =>
-                        file.id === selectedFile.id ? { ...file, name: fileNameDraft } : file
-                      )
-                    );
-                    toast.success('Имя файла обновлено');
-                    setSelectedFile(null);
-                  }}
-                  className="flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 py-2.5 font-semibold text-white hover:from-blue-600 hover:to-purple-700 transition"
-                >
-                  Сохранить
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedFile(null)}
-                  className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 font-semibold text-white hover:bg-white/10 transition"
-                >
-                  Закрыть
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

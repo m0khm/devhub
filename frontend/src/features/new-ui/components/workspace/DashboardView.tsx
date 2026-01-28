@@ -18,6 +18,12 @@ interface DeployServer {
   created_at: string;
 }
 
+interface KanbanColumn {
+  id: string;
+  title: string;
+  tasks?: Array<{ id: string }>;
+}
+
 const formatTimeAgo = (value?: string) => {
   if (!value) return 'только что';
   const date = new Date(value);
@@ -37,6 +43,7 @@ export function DashboardView() {
   const [members, setMembers] = useState<ProjectMemberWithUser[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [deployServers, setDeployServers] = useState<DeployServer[]>([]);
+  const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,18 +55,20 @@ export function DashboardView() {
     const loadDashboard = async () => {
       setLoading(true);
       try {
-        const [topicsRes, membersRes, notificationsRes, serversRes] = await Promise.all([
+        const [topicsRes, membersRes, notificationsRes, serversRes, columnsRes] = await Promise.all([
           apiClient.get<TopicWithStats[]>(`/projects/${currentProject.id}/topics`, {
             params: { withStats: true },
           }),
           apiClient.get<ProjectMemberWithUser[]>(`/projects/${currentProject.id}/members`),
           apiClient.get<Notification[]>('/notifications', { params: { limit: 8 } }),
           apiClient.get<DeployServer[]>(`/projects/${currentProject.id}/deploy/servers`),
+          apiClient.get<KanbanColumn[]>(`/projects/${currentProject.id}/kanban/columns`),
         ]);
         setTopics(Array.isArray(topicsRes.data) ? topicsRes.data : []);
         setMembers(Array.isArray(membersRes.data) ? membersRes.data : []);
         setNotifications(Array.isArray(notificationsRes.data) ? notificationsRes.data : []);
         setDeployServers(Array.isArray(serversRes.data) ? serversRes.data : []);
+        setKanbanColumns(Array.isArray(columnsRes.data) ? columnsRes.data : []);
       } catch (error) {
         console.error('Failed to load dashboard data', error);
       } finally {
@@ -70,16 +79,16 @@ export function DashboardView() {
     void loadDashboard();
   }, [currentProject?.id]);
 
-  const unreadNotifications = useMemo(
-    () => notifications.filter((item) => !item.is_read).length,
-    [notifications]
+  const totalTasks = useMemo(
+    () => kanbanColumns.reduce((sum, column) => sum + (column.tasks?.length ?? 0), 0),
+    [kanbanColumns]
   );
 
   const stats = [
     {
-      label: 'Активных тем',
-      value: topics.length.toString(),
-      change: directThreads.length > 0 ? `+${directThreads.length} DM` : '—',
+      label: 'Задач в работе',
+      value: totalTasks.toString(),
+      change: totalTasks > 0 ? 'на доске' : 'нет',
       icon: CheckCircle,
       color: 'from-blue-500 to-cyan-500',
     },
@@ -91,18 +100,18 @@ export function DashboardView() {
       color: 'from-purple-500 to-pink-500',
     },
     {
-      label: 'Deploy серверы',
-      value: deployServers.length.toString(),
-      change: deployServers.length > 0 ? 'активны' : 'нет',
-      icon: Target,
-      color: 'from-green-500 to-emerald-500',
-    },
-    {
-      label: 'Новые уведомления',
-      value: unreadNotifications.toString(),
-      change: unreadNotifications > 0 ? 'требуют внимания' : 'нет',
+      label: 'Активность',
+      value: notifications.length.toString(),
+      change: notifications.length > 0 ? 'новые события' : 'тишина',
       icon: Zap,
       color: 'from-orange-500 to-red-500',
+    },
+    {
+      label: 'Активных тем',
+      value: topics.length.toString(),
+      change: directThreads.length > 0 ? `+${directThreads.length} DM` : '—',
+      icon: Target,
+      color: 'from-green-500 to-emerald-500',
     },
   ];
 
