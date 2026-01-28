@@ -10,12 +10,23 @@ import { ProfileModal } from '../../profile/ProfileModal';
 import { ProjectSidebar } from './ProjectSidebar';
 import { ProjectView } from './ProjectView';
 import { ProjectSettingsModal } from './ProjectSettingsModal';
+import { CreateTaskModal } from './CreateTaskModal';
+import { CreateTopicModal, InviteMemberModal } from '../../topics/components/TopicModals';
 
 export const ProjectWorkspace: React.FC = () => {
   const { projectId: routeProjectId } = useParams<{ projectId: string }>();
-  const { projects, currentProject, setCurrentProject, setProjects } = useProjectStore();
+  const {
+    projects,
+    currentProject,
+    setCurrentProject,
+    setProjects,
+    setCurrentTopics,
+  } = useProjectStore();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+  const [isCreateTopicOpen, setIsCreateTopicOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -25,6 +36,17 @@ export const ProjectWorkspace: React.FC = () => {
       toast.error('Failed to load projects');
     }
   }, [setProjects]);
+
+  const refreshTopics = useCallback(async () => {
+    if (!currentProject) return;
+    try {
+      const response = await apiClient.get(`/projects/${currentProject.id}/topics`);
+      const topics = Array.isArray(response.data) ? response.data : [];
+      setCurrentTopics(topics.filter((topic) => topic.type !== 'direct'));
+    } catch (error) {
+      toast.error('Failed to refresh topics');
+    }
+  }, [currentProject, setCurrentTopics]);
 
   useEffect(() => {
     void loadProjects();
@@ -48,6 +70,7 @@ export const ProjectWorkspace: React.FC = () => {
 
   const activeProjectId = routeProjectId ?? currentProject?.id;
   const openProfileModal = () => setIsProfileOpen(true);
+  const actionDisabled = !currentProject;
 
   const header = (
     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -66,6 +89,32 @@ export const ProjectWorkspace: React.FC = () => {
         )}
       </div>
       <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsCreateTaskOpen(true)}
+            disabled={actionDisabled}
+            className="rounded-full border border-border/80 px-3 py-1 text-xs font-semibold text-text transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Создать задачу
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsCreateTopicOpen(true)}
+            disabled={actionDisabled}
+            className="rounded-full border border-border/80 px-3 py-1 text-xs font-semibold text-text transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Новая тема
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsInviteOpen(true)}
+            disabled={actionDisabled}
+            className="rounded-full border border-border/80 px-3 py-1 text-xs font-semibold text-text transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Пригласить
+          </button>
+        </div>
         <Link
           to="/hub"
           className="rounded-full border border-border/80 px-3 py-1 text-xs font-semibold text-text transition hover:border-accent hover:text-accent"
@@ -101,6 +150,28 @@ export const ProjectWorkspace: React.FC = () => {
               membersLoading={slots.membersLoading}
               onMembersUpdated={slots.refreshMembers}
             />
+            {currentProject && isCreateTopicOpen && (
+              <CreateTopicModal
+                projectId={currentProject.id}
+                onClose={() => setIsCreateTopicOpen(false)}
+                onCreated={() => {
+                  setIsCreateTopicOpen(false);
+                  void refreshTopics();
+                }}
+              />
+            )}
+            {currentProject && isInviteOpen && (
+              <InviteMemberModal
+                projectId={currentProject.id}
+                onClose={() => setIsInviteOpen(false)}
+              />
+            )}
+            {currentProject && isCreateTaskOpen && (
+              <CreateTaskModal
+                projectId={currentProject.id}
+                onClose={() => setIsCreateTaskOpen(false)}
+              />
+            )}
           </>
         )}
       </ProjectView>
