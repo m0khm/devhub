@@ -5,7 +5,8 @@ import { Mail, Lock, User, ArrowLeft, Eye, EyeOff, Github, Chrome } from 'lucide
 import toast from 'react-hot-toast';
 import { apiClient } from '../../../api/client';
 import { useAuthStore } from '../../../store/authStore';
-import type { AuthResponse } from '../../../shared/types';
+import { useProjectStore } from '../../../store/projectStore';
+import type { AuthResponse, Project } from '../../../shared/types';
 
 const normalizeHandle = (value: string) => {
   let normalized = value.trim();
@@ -17,6 +18,8 @@ const normalizeHandle = (value: string) => {
 export function AuthPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const setProjects = useProjectStore((state) => state.setProjects);
+  const setCurrentProject = useProjectStore((state) => state.setCurrentProject);
   const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState<'login' | 'register'>(
     searchParams.get('mode') === 'register' ? 'register' : 'login'
@@ -60,6 +63,23 @@ export function AuthPage() {
     setSearchParams({ mode: nextMode });
   };
 
+  const loadProjectsAndRoute = async () => {
+    try {
+      const response = await apiClient.get<Project[]>('/projects');
+      const projects = Array.isArray(response.data) ? response.data : [];
+      setProjects(projects);
+      if (projects.length === 0) {
+        navigate('/onboarding');
+        return;
+      }
+      setCurrentProject(projects[0]);
+      navigate('/workspace');
+    } catch (error) {
+      toast.error('Не удалось загрузить проекты');
+      navigate('/workspace');
+    }
+  };
+
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -76,7 +96,7 @@ export function AuthPage() {
       });
       setAuth(response.data.user, response.data.token);
       toast.success('С возвращением!');
-      navigate('/workspace');
+      await loadProjectsAndRoute();
     } catch (error: any) {
       const message = error.response?.data?.error || 'Не удалось войти';
       toast.error(message);
@@ -211,7 +231,7 @@ export function AuthPage() {
       );
       setAuth(response.data.user, response.data.token);
       toast.success('Аккаунт создан!');
-      navigate('/workspace');
+      await loadProjectsAndRoute();
     } catch (error: any) {
       const message = error.response?.data?.error || 'Регистрация не удалась';
       toast.error(message);

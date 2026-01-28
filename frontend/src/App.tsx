@@ -12,9 +12,7 @@ import { CalendarView } from './features/new-ui/components/workspace/CalendarVie
 import { FilesView } from './features/new-ui/components/workspace/FilesView';
 import { DashboardView } from './features/new-ui/components/workspace/DashboardView';
 import { HubPage } from './features/new-ui/pages/HubPage';
-import { TermsPage } from './features/legal/TermsPage';
-import { PrivacyPage } from './features/legal/PrivacyPage';
-import { ContactPage } from './features/legal/ContactPage';
+import { CreateProjectPage } from './features/new-ui/pages/CreateProjectPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -70,6 +68,14 @@ function App() {
           <Route path="files" element={<FilesView />} />
           <Route path="dashboard" element={<DashboardView />} />
         </Route>
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <CreateProjectPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/hub"
           element={
