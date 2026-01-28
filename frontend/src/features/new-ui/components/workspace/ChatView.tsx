@@ -1,84 +1,135 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Send, Smile, Paperclip, Hash, ThumbsUp, Heart, Laugh, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import { useOutletContext } from 'react-router-dom';
+import { apiClient } from '../../../../api/client';
+import type { Message, ReactionGroup } from '../../../../shared/types';
+import type { WorkspaceOutletContext } from '../../pages/WorkspaceLayout';
 
-const messages = [
-  {
-    id: 1,
-    user: 'Алексей К.',
-    avatar: 'AK',
-    time: '14:23',
-    text: 'Привет! Кто-нибудь проверял последний коммит?',
-    reactions: [{ emoji: '👍', count: 2 }],
-  },
-  {
-    id: 2,
-    user: 'Мария С.',
-    avatar: 'MC',
-    time: '14:25',
-    text: 'Да, я посмотрела. Всё работает отлично! 🚀',
-    reactions: [{ emoji: '❤️', count: 3 }, { emoji: '🔥', count: 1 }],
-  },
-  {
-    id: 3,
-    user: 'Дмитрий В.',
-    avatar: 'ДВ',
-    time: '14:27',
-    text: 'Отлично! Можем двигаться дальше с новым спринтом.',
-    reactions: [{ emoji: '⚡', count: 1 }],
-  },
-];
+const formatTime = (value?: string) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+};
+
+const getInitials = (name?: string) => {
+  if (!name) return 'U';
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? 'U';
+  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+};
 
 export function ChatView() {
+  const { currentTopic, topicsLoading, user } = useOutletContext<WorkspaceOutletContext>();
   const [message, setMessage] = useState('');
-  const [hoveredMessage, setHoveredMessage] = useState<number | null>(null);
-  const [localMessages, setLocalMessages] = useState(messages);
+  const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
-  const reactions = [
-    { icon: ThumbsUp, emoji: '👍' },
-    { icon: Heart, emoji: '❤️' },
-    { icon: Laugh, emoji: '😂' },
-    { icon: Zap, emoji: '⚡' },
-  ];
+  const reactions = useMemo(
+    () => [
+      { icon: ThumbsUp, emoji: '👍' },
+      { icon: Heart, emoji: '❤️' },
+      { icon: Laugh, emoji: '😂' },
+      { icon: Zap, emoji: '⚡' },
+    ],
+    []
+  );
 
-  const handleSend = () => {
-    if (message.trim()) {
-      const newMessage = {
-        id: localMessages.length + 1,
-        user: 'Максим',
-        avatar: 'М',
-        time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-        text: message,
-        reactions: [],
-      };
-      setLocalMessages([...localMessages, newMessage]);
+  useEffect(() => {
+    if (!currentTopic) {
+      setMessages([]);
+      return;
+    }
+
+    const loadMessages = async () => {
+      setMessagesLoading(true);
+      try {
+        const response = await apiClient.get<Message[]>(
+          `/topics/${currentTopic.id}/messages`,
+          { params: { limit: 50 } }
+        );
+        const data = Array.isArray(response.data) ? response.data : [];
+        const sorted = [...data].sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        setMessages(sorted);
+      } catch (error) {
+        toast.error('Не удалось загрузить сообщения');
+      } finally {
+        setMessagesLoading(false);
+      }
+    };
+
+    void loadMessages();
+  }, [currentTopic?.id]);
+
+  const handleSend = async () => {
+    if (!message.trim() || !currentTopic) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.post<Message>(
+        `/topics/${currentTopic.id}/messages`,
+        { content: message.trim(), type: 'text' }
+      );
+      setMessages((prev) => [...prev, response.data]);
       setMessage('');
-      toast.success('Сообщение отправлено!');
+    } catch (error) {
+      toast.error('Не удалось отправить сообщение');
     }
   };
 
-  const addReaction = (messageId: number, emoji: string) => {
-    setLocalMessages(prev => prev.map(msg => {
-      if (msg.id === messageId) {
-        const existingReaction = msg.reactions.find(r => r.emoji === emoji);
-        if (existingReaction) {
-          return {
-            ...msg,
-            reactions: msg.reactions.map(r =>
-              r.emoji === emoji ? { ...r, count: r.count + 1 } : r
-            ),
-          };
-        }
-        return {
-          ...msg,
-          reactions: [...msg.reactions, { emoji, count: 1 }],
-        };
-      }
-      return msg;
-    }));
-    toast.success(`Реакция ${emoji} добавлена!`);
+  const addReaction = async (messageId: string, emoji: string) => {
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id !== messageId) return msg;
+        const reactionsList = msg.reactions ?? [];
+        const existing = reactionsList.find((reaction) => reaction.emoji === emoji);
+        const updated: ReactionGroup[] = existing
+          ? reactionsList.map((reaction) =>
+              reaction.emoji === emoji
+                ? {
+                    ...reaction,
+                    count: reaction.count + 1,
+                    has_self: true,
+                    users: reaction.users ?? [],
+                  }
+                : reaction
+            )
+          : [
+              ...reactionsList,
+              { emoji, count: 1, users: user?.id ? [user.id] : [], has_self: true },
+            ];
+        return { ...msg, reactions: updated };
+      })
+    );
+
+    try {
+      await apiClient.post(`/messages/${messageId}/reactions`, { emoji });
+    } catch (error) {
+      toast.error('Не удалось добавить реакцию');
+    }
   };
+
+  if (topicsLoading) {
+    return (
+      <div className="h-full flex items-center justify-center text-slate-400">
+        Загрузка чатов...
+      </div>
+    );
+  }
+
+  if (!currentTopic) {
+    return (
+      <div className="h-full flex items-center justify-center text-slate-500">
+        Выберите тему, чтобы начать общение.
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -93,8 +144,10 @@ export function ChatView() {
             <Hash className="w-5 h-5 text-white" />
           </motion.div>
           <div>
-            <div className="font-semibold text-white text-lg">custom</div>
-            <div className="text-sm text-slate-400">Кастомный топик • 3 участника онлайн</div>
+            <div className="font-semibold text-white text-lg">{currentTopic.name}</div>
+            <div className="text-sm text-slate-400">
+              {currentTopic.description || 'Обсуждение команды'}
+            </div>
           </div>
         </div>
       </div>
@@ -102,75 +155,81 @@ export function ChatView() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="space-y-6 max-w-4xl">
-          <AnimatePresence>
-            {localMessages.map((msg, index) => (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="flex gap-4 group relative"
-                onMouseEnter={() => setHoveredMessage(msg.id)}
-                onMouseLeave={() => setHoveredMessage(null)}
-              >
+          {messagesLoading ? (
+            <div className="text-slate-400">Загрузка сообщений...</div>
+          ) : messages.length === 0 ? (
+            <div className="text-slate-500">Пока нет сообщений. Напишите первым!</div>
+          ) : (
+            <AnimatePresence>
+              {messages.map((msg, index) => (
                 <motion.div
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-semibold text-sm flex-shrink-0 shadow-lg"
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex gap-4 group relative"
+                  onMouseEnter={() => setHoveredMessage(msg.id)}
+                  onMouseLeave={() => setHoveredMessage(null)}
                 >
-                  {msg.avatar}
-                </motion.div>
-                <div className="flex-1">
-                  <div className="flex items-baseline gap-3 mb-1">
-                    <span className="font-semibold text-white">{msg.user}</span>
-                    <span className="text-xs text-slate-500">{msg.time}</span>
-                  </div>
-                  <p className="text-slate-300 leading-relaxed mb-2">{msg.text}</p>
-                  
-                  {/* Reactions */}
-                  {msg.reactions.length > 0 && (
-                    <div className="flex gap-2 mb-2">
-                      {msg.reactions.map((reaction, idx) => (
-                        <motion.button
-                          key={idx}
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => addReaction(msg.id, reaction.emoji)}
-                          className="px-2 py-1 bg-white/5 border border-white/10 rounded-full text-xs flex items-center gap-1 hover:bg-white/10 transition-all"
-                        >
-                          <span>{reaction.emoji}</span>
-                          <span className="text-slate-400">{reaction.count}</span>
-                        </motion.button>
-                      ))}
+                  <motion.div
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-semibold text-sm flex-shrink-0 shadow-lg"
+                  >
+                    {getInitials(msg.user?.name)}
+                  </motion.div>
+                  <div className="flex-1">
+                    <div className="flex items-baseline gap-3 mb-1">
+                      <span className="font-semibold text-white">{msg.user?.name ?? 'Участник'}</span>
+                      <span className="text-xs text-slate-500">{formatTime(msg.created_at)}</span>
                     </div>
-                  )}
-
-                  {/* Quick reactions on hover */}
-                  <AnimatePresence>
-                    {hoveredMessage === msg.id && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="flex gap-1 mt-2"
-                      >
-                        {reactions.map((reaction, idx) => (
+                    <p className="text-slate-300 leading-relaxed mb-2">{msg.content}</p>
+                    
+                    {/* Reactions */}
+                    {(msg.reactions?.length ?? 0) > 0 && (
+                      <div className="flex gap-2 mb-2">
+                        {msg.reactions?.map((reaction, idx) => (
                           <motion.button
-                            key={idx}
-                            whileHover={{ scale: 1.2 }}
+                            key={`${reaction.emoji}-${idx}`}
+                            whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
                             onClick={() => addReaction(msg.id, reaction.emoji)}
-                            className="p-1.5 bg-slate-800/80 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-slate-700/80 transition-all"
+                            className="px-2 py-1 bg-white/5 border border-white/10 rounded-full text-xs flex items-center gap-1 hover:bg-white/10 transition-all"
                           >
-                            <reaction.icon className="w-4 h-4 text-slate-400" />
+                            <span>{reaction.emoji}</span>
+                            <span className="text-slate-400">{reaction.count}</span>
                           </motion.button>
                         ))}
-                      </motion.div>
+                      </div>
                     )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+
+                    {/* Quick reactions on hover */}
+                    <AnimatePresence>
+                      {hoveredMessage === msg.id && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="flex gap-1 mt-2"
+                        >
+                          {reactions.map((reaction, idx) => (
+                            <motion.button
+                              key={idx}
+                              whileHover={{ scale: 1.2 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => addReaction(msg.id, reaction.emoji)}
+                              className="p-1.5 bg-slate-800/80 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-slate-700/80 transition-all"
+                            >
+                              <reaction.icon className="w-4 h-4 text-slate-400" />
+                            </motion.button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
         </div>
       </div>
 
@@ -192,7 +251,7 @@ export function ChatView() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  handleSend();
+                  void handleSend();
                 }
               }}
             />
@@ -216,7 +275,7 @@ export function ChatView() {
               <motion.button
                 whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(59, 130, 246, 0.6)' }}
                 whileTap={{ scale: 0.95 }}
-                onClick={handleSend}
+                onClick={() => void handleSend()}
                 className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg"
               >
                 <Send className="w-5 h-5 text-white" />
