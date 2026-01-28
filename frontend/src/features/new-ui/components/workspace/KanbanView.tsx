@@ -1,9 +1,15 @@
 import { motion } from 'motion/react';
-import { useState } from 'react';
-import { Plus, MoreHorizontal, User, Calendar } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, MoreHorizontal, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { useProjectStore } from '../../../../store/projectStore';
+import {
+  type KanbanColumn,
+  loadKanbanColumns,
+  saveKanbanColumns,
+} from '../../utils/kanbanStorage';
 
-const initialColumns = [
+const demoColumns: KanbanColumn[] = [
   {
     id: 'todo',
     title: 'To Do',
@@ -40,8 +46,25 @@ const initialColumns = [
 ];
 
 export function KanbanView() {
-  const [columns, setColumns] = useState(initialColumns);
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const projectId = currentProject?.id;
+  const [columns, setColumns] = useState<KanbanColumn[]>(demoColumns);
   const [draggedTask, setDraggedTask] = useState<any>(null);
+
+  useEffect(() => {
+    if (!projectId) {
+      setColumns(demoColumns);
+      return;
+    }
+    setColumns(loadKanbanColumns(projectId));
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId) {
+      return;
+    }
+    saveKanbanColumns(projectId, columns);
+  }, [columns, projectId]);
 
   const handleDragStart = (task: any, columnId: string) => {
     setDraggedTask({ task, sourceColumn: columnId });

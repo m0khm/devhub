@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   MessageSquare,
@@ -23,6 +23,9 @@ import {
   Sun,
 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
+import { apiClient } from '../../../api/client';
+import { useProjectStore } from '../../../store/projectStore';
+import type { Project } from '../../../shared/types';
 
 const topics = [
   { id: 1, name: 'General', subtitle: 'Обсуждение', icon: MessageSquare, path: '/workspace/chat' },
@@ -37,6 +40,33 @@ export function WorkspaceLayout() {
   const [showProfile, setShowProfile] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const { projects, currentProject, setProjects, setCurrentProject } = useProjectStore();
+
+  const loadProjects = useCallback(async () => {
+    try {
+      const response = await apiClient.get<Project[]>('/projects');
+      const fetchedProjects = Array.isArray(response.data) ? response.data : [];
+      setProjects(fetchedProjects);
+      if (fetchedProjects.length === 0) {
+        navigate('/onboarding');
+        return;
+      }
+      if (!currentProject) {
+        setCurrentProject(fetchedProjects[0]);
+      }
+    } catch (error) {
+      toast.error('Не удалось загрузить проекты');
+    }
+  }, [currentProject, navigate, setCurrentProject, setProjects]);
+
+  useEffect(() => {
+    if (projects.length === 0) {
+      void loadProjects();
+    }
+  }, [loadProjects, projects.length]);
+
+  const workspaceName = currentProject?.name ?? 'My Workspace';
+  const workspaceInitial = useMemo(() => workspaceName.charAt(0).toUpperCase(), [workspaceName]);
 
   const navItems = [
     { icon: MessageSquare, label: 'Чаты', path: '/workspace/chat', badge: 3 },
@@ -75,12 +105,12 @@ export function WorkspaceLayout() {
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg blur-md opacity-70"></div>
                   <div className="relative w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold shadow-lg">
-                    M
+                    {workspaceInitial}
                   </div>
                 </motion.div>
                 <div className="text-left">
                   <div className="font-semibold text-white flex items-center gap-2">
-                    My Workspace
+                    {workspaceName}
                     <Crown className="w-3 h-3 text-yellow-400" />
                   </div>
                   <div className="text-xs text-slate-400">Premium plan</div>
