@@ -1,21 +1,25 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 import { Send, Smile, Paperclip, Hash, ThumbsUp, Heart, Laugh, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import { useOutletContext } from 'react-router-dom';
 import { apiClient } from '../../../../api/client';
-import { wsClient } from '../../../../api/websocket';
-import { useAuthStore } from '../../../../store/authStore';
-import { useProjectStore } from '../../../../store/projectStore';
-import type { FileMetadata, Message } from '../../../../shared/types';
-import { VideoCallButton } from '../../../video/components/VideoCallButton';
+import type { Message, ReactionGroup } from '../../../../shared/types';
+import type { WorkspaceOutletContext } from '../../pages/WorkspaceLayout';
 
-const reactions = [
-  { icon: ThumbsUp, emoji: '👍' },
-  { icon: Heart, emoji: '❤️' },
-  { icon: Laugh, emoji: '😂' },
-  { icon: Zap, emoji: '⚡' },
-];
+const formatTime = (value?: string) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+};
+
+const getInitials = (name?: string) => {
+  if (!name) return 'U';
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? 'U';
+  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+};
 
 const parseFileMetadata = (metadata: Message['metadata']): FileMetadata => {
   if (!metadata) return {};
@@ -38,111 +42,92 @@ const getInitials = (name: string) =>
     .toUpperCase();
 
 export function ChatView() {
-  const { topicId } = useParams();
-  const navigate = useNavigate();
-  const { token } = useAuthStore();
-  const { currentTopics } = useProjectStore();
+  const { currentTopic, topicsLoading, user } = useOutletContext<WorkspaceOutletContext>();
   const [message, setMessage] = useState('');
   const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
-  const currentTopic = useMemo(() => {
-    if (topicId) {
-      return currentTopics.find((topic) => topic.id === topicId) ?? null;
-    }
-    return currentTopics[0] ?? null;
-  }, [currentTopics, topicId]);
-
-  useEffect(() => {
-    if (!topicId && currentTopic) {
-      navigate(`/workspace/chat/${currentTopic.id}`, { replace: true });
-    }
-  }, [currentTopic, navigate, topicId]);
+  const reactions = useMemo(
+    () => [
+      { icon: ThumbsUp, emoji: '👍' },
+      { icon: Heart, emoji: '❤️' },
+      { icon: Laugh, emoji: '😂' },
+      { icon: Zap, emoji: '⚡' },
+    ],
+    []
+  );
 
   useEffect(() => {
+    if (!currentTopic) {
+      setMessages([]);
+      return;
+    }
+
     const loadMessages = async () => {
-      if (!currentTopic) return;
+      setMessagesLoading(true);
       try {
-        setLoading(true);
         const response = await apiClient.get<Message[]>(
-          `/topics/${currentTopic.id}/messages?limit=50`
+          `/topics/${currentTopic.id}/messages`,
+          { params: { limit: 50 } }
         );
-        const list = Array.isArray(response.data) ? response.data : [];
-        setMessages(list.reverse());
+        const data = Array.isArray(response.data) ? response.data : [];
+        const sorted = [...data].sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        setMessages(sorted);
       } catch (error) {
         toast.error('Не удалось загрузить сообщения');
       } finally {
-        setLoading(false);
+        setMessagesLoading(false);
       }
     };
 
-    loadMessages();
-  }, [currentTopic]);
-
-  useEffect(() => {
-    if (!currentTopic || !token) return;
-
-    wsClient.connect(currentTopic.id, token, {
-      onNewMessage: (payload) => {
-        setMessages((prev) => [...prev, payload.message]);
-      },
-      onMessageUpdated: (payload) => {
-        setMessages((prev) =>
-          prev.map((msg) => (msg.id === payload.message.id ? payload.message : msg))
-        );
-      },
-      onMessageDeleted: (payload) => {
-        setMessages((prev) => prev.filter((msg) => msg.id !== payload.message_id));
-      },
-      onReactionUpdated: (payload) => {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === payload.message_id ? { ...msg, reactions: payload.reactions } : msg
-          )
-        );
-      },
-    });
-
-    return () => {
-      wsClient.disconnect();
-    };
-  }, [currentTopic, token]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    void loadMessages();
+  }, [currentTopic?.id]);
 
   const handleSend = async () => {
-    if (!message.trim() || !currentTopic) return;
+    if (!message.trim() || !currentTopic) {
+      return;
+    }
+
     try {
-      await apiClient.post(`/topics/${currentTopic.id}/messages`, {
-        content: message.trim(),
-        type: 'text',
-      });
+      const response = await apiClient.post<Message>(
+        `/topics/${currentTopic.id}/messages`,
+        { content: message.trim(), type: 'text' }
+      );
+      setMessages((prev) => [...prev, response.data]);
       setMessage('');
     } catch (error) {
       toast.error('Не удалось отправить сообщение');
     }
   };
 
-  const handleFileUpload = async (file: File) => {
-    if (!currentTopic) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      await apiClient.post(`/topics/${currentTopic.id}/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      toast.success('Файл загружен');
-    } catch (error) {
-      toast.error('Не удалось загрузить файл');
-    }
-  };
-
   const addReaction = async (messageId: string, emoji: string) => {
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id !== messageId) return msg;
+        const reactionsList = msg.reactions ?? [];
+        const existing = reactionsList.find((reaction) => reaction.emoji === emoji);
+        const updated: ReactionGroup[] = existing
+          ? reactionsList.map((reaction) =>
+              reaction.emoji === emoji
+                ? {
+                    ...reaction,
+                    count: reaction.count + 1,
+                    has_self: true,
+                    users: reaction.users ?? [],
+                  }
+                : reaction
+            )
+          : [
+              ...reactionsList,
+              { emoji, count: 1, users: user?.id ? [user.id] : [], has_self: true },
+            ];
+        return { ...msg, reactions: updated };
+      })
+    );
+
     try {
       await apiClient.post(`/messages/${messageId}/reactions`, { emoji });
     } catch (error) {
@@ -150,24 +135,38 @@ export function ChatView() {
     }
   };
 
+  if (topicsLoading) {
+    return (
+      <div className="h-full flex items-center justify-center text-slate-400">
+        Загрузка чатов...
+      </div>
+    );
+  }
+
+  if (!currentTopic) {
+    return (
+      <div className="h-full flex items-center justify-center text-slate-500">
+        Выберите тему, чтобы начать общение.
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Chat Header */}
       <div className="px-6 py-4 border-b border-white/5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <motion.div
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-              className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg"
-            >
-              <Hash className="w-5 h-5 text-white" />
-            </motion.div>
-            <div>
-              <div className="font-semibold text-white text-lg">{currentTopic?.name ?? 'Чат'}</div>
-              <div className="text-sm text-slate-400">
-                {currentTopic ? `Тема • ${currentTopic.type}` : 'Выберите тему'}
-              </div>
+        <div className="flex items-center gap-3">
+          <motion.div
+            animate={{ rotate: [0, 360] }}
+            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+            className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg"
+          >
+            <Hash className="w-5 h-5 text-white" />
+          </motion.div>
+          <div>
+            <div className="font-semibold text-white text-lg">{currentTopic.name}</div>
+            <div className="text-sm text-slate-400">
+              {currentTopic.description || 'Обсуждение команды'}
             </div>
           </div>
           {currentTopic && <VideoCallButton topicId={currentTopic.id} />}
@@ -183,11 +182,13 @@ export function ChatView() {
           <div className="text-slate-400 text-sm">Сообщений пока нет</div>
         )}
         <div className="space-y-6 max-w-4xl">
-          <AnimatePresence>
-            {messages.map((msg, index) => {
-              const authorName = msg.user?.name || 'Unknown';
-              const fileMeta = msg.type === 'file' ? parseFileMetadata(msg.metadata) : null;
-              return (
+          {messagesLoading ? (
+            <div className="text-slate-400">Загрузка сообщений...</div>
+          ) : messages.length === 0 ? (
+            <div className="text-slate-500">Пока нет сообщений. Напишите первым!</div>
+          ) : (
+            <AnimatePresence>
+              {messages.map((msg, index) => (
                 <motion.div
                   key={msg.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -201,46 +202,21 @@ export function ChatView() {
                     whileHover={{ scale: 1.1, rotate: 5 }}
                     className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-semibold text-sm flex-shrink-0 shadow-lg"
                   >
-                    {getInitials(authorName)}
+                    {getInitials(msg.user?.name)}
                   </motion.div>
                   <div className="flex-1">
                     <div className="flex items-baseline gap-3 mb-1">
-                      <span className="font-semibold text-white">{authorName}</span>
-                      <span className="text-xs text-slate-500">
-                        {new Date(msg.created_at).toLocaleTimeString('ru-RU', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
+                      <span className="font-semibold text-white">{msg.user?.name ?? 'Участник'}</span>
+                      <span className="text-xs text-slate-500">{formatTime(msg.created_at)}</span>
                     </div>
-                    {msg.type === 'file' && fileMeta ? (
-                      <div className="rounded-xl border border-white/10 bg-slate-900/50 p-3 text-sm text-slate-200">
-                        <div className="font-medium">{fileMeta.filename ?? 'Файл'}</div>
-                        {fileMeta.size && (
-                          <div className="text-xs text-slate-400">
-                            {(fileMeta.size / 1024 / 1024).toFixed(2)} MB
-                          </div>
-                        )}
-                        <button
-                          className="mt-2 text-xs text-blue-400 hover:text-blue-300"
-                          onClick={() => {
-                            const url = fileMeta.url || `/api/files/${msg.id}/download`;
-                            window.open(url, '_blank');
-                          }}
-                        >
-                          Скачать
-                        </button>
-                      </div>
-                    ) : (
-                      <p className="text-slate-300 leading-relaxed mb-2">{msg.content}</p>
-                    )}
-
+                    <p className="text-slate-300 leading-relaxed mb-2">{msg.content}</p>
+                    
                     {/* Reactions */}
-                    {msg.reactions && msg.reactions.length > 0 && (
+                    {(msg.reactions?.length ?? 0) > 0 && (
                       <div className="flex gap-2 mb-2">
-                        {msg.reactions.map((reaction, idx) => (
+                        {msg.reactions?.map((reaction, idx) => (
                           <motion.button
-                            key={idx}
+                            key={`${reaction.emoji}-${idx}`}
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
                             onClick={() => addReaction(msg.id, reaction.emoji)}
@@ -278,10 +254,9 @@ export function ChatView() {
                     </AnimatePresence>
                   </div>
                 </motion.div>
-              );
-            })}
-          </AnimatePresence>
-          <div ref={messagesEndRef} />
+              ))}
+            </AnimatePresence>
+          )}
         </div>
       </div>
 
@@ -303,7 +278,7 @@ export function ChatView() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  handleSend();
+                  void handleSend();
                 }
               }}
             />
@@ -327,7 +302,7 @@ export function ChatView() {
               <motion.button
                 whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(59, 130, 246, 0.6)' }}
                 whileTap={{ scale: 0.95 }}
-                onClick={handleSend}
+                onClick={() => void handleSend()}
                 className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg"
               >
                 <Send className="w-5 h-5 text-white" />

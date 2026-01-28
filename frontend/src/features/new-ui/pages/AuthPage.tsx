@@ -5,7 +5,8 @@ import { Mail, Lock, User, ArrowLeft, Eye, EyeOff, Github, Chrome } from 'lucide
 import toast from 'react-hot-toast';
 import { apiClient } from '../../../api/client';
 import { useAuthStore } from '../../../store/authStore';
-import type { AuthResponse } from '../../../shared/types';
+import { useProjectStore } from '../../../store/projectStore';
+import type { AuthResponse, Project } from '../../../shared/types';
 
 const normalizeHandle = (value: string) => {
   let normalized = value.trim();
@@ -17,6 +18,8 @@ const normalizeHandle = (value: string) => {
 export function AuthPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const setProjects = useProjectStore((state) => state.setProjects);
+  const setCurrentProject = useProjectStore((state) => state.setCurrentProject);
   const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState<'login' | 'register'>(
     searchParams.get('mode') === 'register' ? 'register' : 'login'
@@ -60,6 +63,23 @@ export function AuthPage() {
     setSearchParams({ mode: nextMode });
   };
 
+  const loadProjectsAndRoute = async () => {
+    try {
+      const response = await apiClient.get<Project[]>('/projects');
+      const projects = Array.isArray(response.data) ? response.data : [];
+      setProjects(projects);
+      if (projects.length === 0) {
+        navigate('/onboarding');
+        return;
+      }
+      setCurrentProject(projects[0]);
+      navigate('/workspace');
+    } catch (error) {
+      toast.error('Не удалось загрузить проекты');
+      navigate('/workspace');
+    }
+  };
+
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -76,7 +96,7 @@ export function AuthPage() {
       });
       setAuth(response.data.user, response.data.token);
       toast.success('С возвращением!');
-      navigate('/workspace');
+      await loadProjectsAndRoute();
     } catch (error: any) {
       const message = error.response?.data?.error || 'Не удалось войти';
       toast.error(message);
@@ -211,7 +231,7 @@ export function AuthPage() {
       );
       setAuth(response.data.user, response.data.token);
       toast.success('Аккаунт создан!');
-      navigate('/workspace');
+      await loadProjectsAndRoute();
     } catch (error: any) {
       const message = error.response?.data?.error || 'Регистрация не удалась';
       toast.error(message);
@@ -237,6 +257,28 @@ export function AuthPage() {
     } finally {
       setRegisterLoading(false);
     }
+  };
+
+  const handleSocialLogin = (provider: 'github' | 'google') => {
+    const label = provider === 'github' ? 'GitHub' : 'Google';
+    toast((t) => (
+      <div className="rounded-xl bg-slate-900/90 border border-white/10 p-4 text-slate-100 shadow-xl">
+        <p className="text-sm font-semibold">{label}: функция в разработке</p>
+        <p className="text-xs text-slate-400 mt-1">
+          Используйте вход по email, он уже работает.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            handleModeChange('login');
+            toast.dismiss(t.id);
+          }}
+          className="mt-3 inline-flex items-center rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-600 transition"
+        >
+          Перейти к email-входу
+        </button>
+      </div>
+    ));
   };
 
   return (
@@ -373,6 +415,7 @@ export function AuthPage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSocialLogin('github')}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-all"
                 >
                   <Github className="w-5 h-5" />
@@ -381,6 +424,7 @@ export function AuthPage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSocialLogin('google')}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-all"
                 >
                   <Chrome className="w-5 h-5" />
