@@ -67,7 +67,7 @@ export const ProjectWorkspace: React.FC = () => {
       </div>
       <div className="flex items-center gap-3">
         <Link
-          to="/hub"
+          to="/workspace/hub"
           className="rounded-full border border-border/80 px-3 py-1 text-xs font-semibold text-text transition hover:border-accent hover:text-accent"
         >
           Хаб

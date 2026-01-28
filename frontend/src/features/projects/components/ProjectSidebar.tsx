@@ -69,7 +69,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           return (
             <Link
               key={project.id}
-              to={`/projects/${project.id}`}
+              to={`/workspace/chat/${project.id}`}
               title={project.name}
               className={`group flex h-11 w-11 items-center justify-center rounded-2xl border transition ${
                 isActive

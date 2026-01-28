@@ -41,7 +41,7 @@ export const PlanningPage: React.FC = () => {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-widest text-slate-500">Project</p>
-            <h1 className="text-2xl font-semibold">Planning · {projectId}</h1>
+            <h1 className="text-2xl font-semibold">Planning · {projectId ?? 'workspace'}</h1>
             <p className="text-sm text-slate-400">
               Track initiatives, milestones, and delivery plans.
             </p>

@@ -77,7 +77,7 @@ export const ProjectList: React.FC = () => {
             {projects.map((p) => (
               <Link
                 key={p.id}
-                to={`/projects/${p.id}`}
+                to={`/workspace/chat/${p.id}`}
                 className="flex items-center gap-3 rounded-lg border border-border/70 bg-surface/70 px-3 py-2 transition hover:border-border hover:bg-surface/90"
               >
                 <span className="text-text-muted">

@@ -1,42 +1,12 @@
-import { motion, AnimatePresence } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ArrowLeft, Users, Briefcase, Globe, Plus } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 export function HubPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'people' | 'groups' | 'communities'>('people');
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [profile, setProfile] = useState({
-    name: 'Максим',
-    role: 'Project Manager',
-    location: 'Москва',
-    bio: 'Помогаю командам запускать продукты быстрее.',
-  });
-  const [profileDraft, setProfileDraft] = useState(profile);
-
-  useEffect(() => {
-    const storedProfile = localStorage.getItem('devhub-profile');
-    if (storedProfile) {
-      const parsed = JSON.parse(storedProfile);
-      setProfile(parsed);
-      setProfileDraft(parsed);
-    }
-  }, []);
-
-  const openProfileModal = () => {
-    setProfileDraft(profile);
-    setShowProfileModal(true);
-  };
-
-  const handleProfileSave = () => {
-    setProfile(profileDraft);
-    localStorage.setItem('devhub-profile', JSON.stringify(profileDraft));
-    toast.success('Профиль обновлен');
-    setShowProfileModal(false);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
@@ -125,20 +95,18 @@ export function HubPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <Card className="text-center">
-                <CardBody className="py-12">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-6">
-                    <Users className="w-10 h-10 text-blue-400" />
-                  </div>
-                  <CardTitle className="mb-3">Люди</CardTitle>
-                  <CardDescription className="mb-6 max-w-md mx-auto text-base text-slate-300">
-                    Введите запрос, чтобы найти участников
-                  </CardDescription>
-                  <p className="text-sm text-slate-500">
-                    Пока нет подходящих пользователей.
-                  </p>
-                </CardBody>
-              </Card>
+              <div className="p-12 rounded-3xl bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm border border-white/10 text-center">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-6">
+                  <Users className="w-10 h-10 text-blue-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">Люди</h3>
+                <p className="text-slate-300 mb-6 max-w-md mx-auto">
+                  Введите запрос, чтобы найти участников
+                </p>
+                <p className="text-sm text-slate-500">
+                  Пока нет подходящих пользователей.
+                </p>
+              </div>
             </motion.div>
           )}
 
@@ -148,20 +116,18 @@ export function HubPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <Card className="text-center">
-                <CardBody className="py-12">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-6">
-                    <Briefcase className="w-10 h-10 text-purple-400" />
-                  </div>
-                  <CardTitle className="mb-3">Группы</CardTitle>
-                  <CardDescription className="mb-6 max-w-md mx-auto text-base text-slate-300">
-                    Команды внутри компании и проектные кружки
-                  </CardDescription>
-                  <p className="text-sm text-slate-500">
-                    Пока нет подходящих групп.
-                  </p>
-                </CardBody>
-              </Card>
+              <div className="p-12 rounded-3xl bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm border border-white/10 text-center">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-6">
+                  <Briefcase className="w-10 h-10 text-purple-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">Группы</h3>
+                <p className="text-slate-300 mb-6 max-w-md mx-auto">
+                  Команды внутри компании и проектные кружки
+                </p>
+                <p className="text-sm text-slate-500">
+                  Пока нет подходящих групп.
+                </p>
+              </div>
             </motion.div>
           )}
 
@@ -171,30 +137,26 @@ export function HubPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <Card className="text-center">
-                <CardBody className="py-12">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center mx-auto mb-6">
-                    <Globe className="w-10 h-10 text-cyan-400" />
-                  </div>
-                  <CardTitle className="mb-3">Сообщества</CardTitle>
-                  <CardDescription className="mb-6 max-w-md mx-auto text-base text-slate-300">
-                    Экосистемы, партнерские сети и внешние сообщества
-                  </CardDescription>
-                  <p className="text-sm text-slate-500">
-                    Пока нет подходящих сообществ.
-                  </p>
-                </CardBody>
-              </Card>
+              <div className="p-12 rounded-3xl bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm border border-white/10 text-center">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center mx-auto mb-6">
+                  <Globe className="w-10 h-10 text-cyan-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">Сообщества</h3>
+                <p className="text-slate-300 mb-6 max-w-md mx-auto">
+                  Экосистемы, партнерские сети и внешние сообщества
+                </p>
+                <p className="text-sm text-slate-500">
+                  Пока нет подходящих сообществ.
+                </p>
+              </div>
             </motion.div>
           )}
 
           {/* Action cards */}
           <div className="grid md:grid-cols-2 gap-6 mt-8">
-            <motion.button
+            <motion.div
               whileHover={{ scale: 1.02, y: -5 }}
-              onClick={() => navigate('/workspace')}
-              type="button"
-              className="p-8 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 cursor-pointer group text-left"
+              className="p-8 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 cursor-pointer group"
             >
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Plus className="w-6 h-6 text-white" />
@@ -205,13 +167,11 @@ export function HubPage() {
               <p className="text-slate-300">
                 Быстрый переход в рабочее пространство проектов
               </p>
-            </motion.button>
+            </motion.div>
 
-            <motion.button
+            <motion.div
               whileHover={{ scale: 1.02, y: -5 }}
-              onClick={openProfileModal}
-              type="button"
-              className="p-8 rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 cursor-pointer group text-left"
+              className="p-8 rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 cursor-pointer group"
             >
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Users className="w-6 h-6 text-white" />
@@ -222,94 +182,10 @@ export function HubPage() {
               <p className="text-slate-300">
                 Создайте групп и сообщества, чтобы расширить сеть вашей команды и подключить новые проекты
               </p>
-            </motion.button>
+            </motion.div>
           </div>
         </div>
       </div>
-
-      <AnimatePresence>
-        {showProfileModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
-            onClick={() => setShowProfileModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              onClick={(event) => event.stopPropagation()}
-              className="w-full max-w-lg bg-slate-950 border border-white/10 rounded-2xl p-6 shadow-2xl"
-            >
-              <h3 className="text-2xl font-bold text-white mb-4">Обновить профиль</h3>
-              <div className="space-y-4">
-                <label className="block text-sm text-slate-300">
-                  Имя
-                  <input
-                    type="text"
-                    value={profileDraft.name}
-                    onChange={(event) =>
-                      setProfileDraft((prev) => ({ ...prev, name: event.target.value }))
-                    }
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
-                </label>
-                <label className="block text-sm text-slate-300">
-                  Роль
-                  <input
-                    type="text"
-                    value={profileDraft.role}
-                    onChange={(event) =>
-                      setProfileDraft((prev) => ({ ...prev, role: event.target.value }))
-                    }
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
-                </label>
-                <label className="block text-sm text-slate-300">
-                  Локация
-                  <input
-                    type="text"
-                    value={profileDraft.location}
-                    onChange={(event) =>
-                      setProfileDraft((prev) => ({ ...prev, location: event.target.value }))
-                    }
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
-                </label>
-                <label className="block text-sm text-slate-300">
-                  О себе
-                  <textarea
-                    rows={3}
-                    value={profileDraft.bio}
-                    onChange={(event) =>
-                      setProfileDraft((prev) => ({ ...prev, bio: event.target.value }))
-                    }
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
-                  />
-                </label>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleProfileSave}
-                  className="flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 py-2.5 font-semibold text-white hover:from-blue-600 hover:to-purple-700 transition"
-                >
-                  Сохранить
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowProfileModal(false)}
-                  className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 font-semibold text-white hover:bg-white/10 transition"
-                >
-                  Отмена
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
