@@ -251,6 +251,47 @@ func (h *Handler) SearchMessages(c *fiber.Ctx) error {
 	return c.JSON(messages)
 }
 
+// Get file messages by project
+// GET /api/projects/:projectId/files?limit=50
+func (h *Handler) GetProjectFiles(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	projectID, err := uuid.Parse(c.Params("projectId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid project ID",
+		})
+	}
+
+	limit := c.QueryInt("limit", 100)
+	if limit <= 0 {
+		limit = 100
+	}
+
+	files, err := h.service.GetFileMessagesByProject(projectID, userID, limit)
+	if err != nil {
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Not a project member",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to load project files",
+		})
+	}
+
+	if files == nil {
+		files = []MessageWithUser{}
+	}
+
+	return c.JSON(files)
+}
+
 // Pin message
 // POST /api/messages/:id/pin
 func (h *Handler) PinMessage(c *fiber.Ctx) error {

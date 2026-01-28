@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   MessageSquare,
@@ -23,13 +23,10 @@ import {
   Sun,
 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
-
-const topics = [
-  { id: 1, name: 'General', subtitle: 'Обсуждение', icon: MessageSquare, path: '/workspace/chat' },
-  { id: 2, name: 'planning', subtitle: 'Планирование', icon: Hash, path: '/workspace/chat' },
-  { id: 3, name: 'Code', subtitle: 'Код', icon: Code, path: '/workspace/chat' },
-  { id: 4, name: 'custom', subtitle: 'Кастомный', icon: Hash, path: '/workspace/chat' },
-];
+import { apiClient } from '../../../api/client';
+import { useAuthStore } from '../../../store/authStore';
+import { useProjectStore } from '../../../store/projectStore';
+import type { Project, Topic } from '../../../shared/types';
 
 export function WorkspaceLayout() {
   const navigate = useNavigate();
@@ -37,6 +34,64 @@ export function WorkspaceLayout() {
   const [showProfile, setShowProfile] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const { isAuthenticated } = useAuthStore();
+  const {
+    projects,
+    currentProject,
+    currentTopics,
+    setProjects,
+    setCurrentProject,
+    setCurrentTopics,
+  } = useProjectStore();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const loadProjects = async () => {
+      try {
+        const response = await apiClient.get<Project[]>('/projects');
+        const list = Array.isArray(response.data) ? response.data : [];
+        setProjects(list);
+        if (!currentProject && list.length > 0) {
+          setCurrentProject(list[0]);
+        }
+      } catch (error) {
+        toast.error('Не удалось загрузить проекты');
+      }
+    };
+
+    loadProjects();
+  }, [isAuthenticated, currentProject, setCurrentProject, setProjects]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !currentProject) return;
+
+    const loadTopics = async () => {
+      try {
+        const response = await apiClient.get<Topic[]>(
+          `/projects/${currentProject.id}/topics?withStats=true`
+        );
+        const list = Array.isArray(response.data) ? response.data : [];
+        setCurrentTopics(list);
+      } catch (error) {
+        toast.error('Не удалось загрузить темы');
+      }
+    };
+
+    loadTopics();
+  }, [currentProject, isAuthenticated, setCurrentTopics]);
+
+  const topicItems = useMemo(() => {
+    return currentTopics.map((topic) => {
+      const icon = topic.type === 'code' ? Code : topic.type === 'planning' ? Hash : MessageSquare;
+      return {
+        ...topic,
+        icon,
+        subtitle: topic.type === 'direct' ? 'Личный чат' : topic.type,
+        path: `/workspace/chat/${topic.id}`,
+      };
+    });
+  }, [currentTopics]);
 
   const navItems = [
     { icon: MessageSquare, label: 'Чаты', path: '/workspace/chat', badge: 3 },
@@ -80,10 +135,12 @@ export function WorkspaceLayout() {
                 </motion.div>
                 <div className="text-left">
                   <div className="font-semibold text-white flex items-center gap-2">
-                    My Workspace
+                    {currentProject?.name ?? 'My Workspace'}
                     <Crown className="w-3 h-3 text-yellow-400" />
                   </div>
-                  <div className="text-xs text-slate-400">Premium plan</div>
+                  <div className="text-xs text-slate-400">
+                    {currentProject ? 'Активный проект' : 'Загрузка проекта...'}
+                  </div>
                 </div>
               </div>
               <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
@@ -161,7 +218,14 @@ export function WorkspaceLayout() {
                 </motion.button>
               </div>
               <div className="space-y-1">
-                {topics.map((topic, index) => (
+                {topicItems.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-slate-500">
+                    {projects.length === 0
+                      ? 'Нет доступных проектов'
+                      : 'Темы пока не созданы'}
+                  </div>
+                )}
+                {topicItems.map((topic, index) => (
                   <motion.button
                     key={topic.id}
                     initial={{ opacity: 0, x: -20 }}

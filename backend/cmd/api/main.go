@@ -13,6 +13,7 @@ import (
 
 	"github.com/m0khm/devhub/backend/internal/admin"
 	"github.com/m0khm/devhub/backend/internal/auth"
+	"github.com/m0khm/devhub/backend/internal/calendar"
 	"github.com/m0khm/devhub/backend/internal/code"
 	"github.com/m0khm/devhub/backend/internal/community"
 	"github.com/m0khm/devhub/backend/internal/config"
@@ -20,6 +21,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/deploy"
 	"github.com/m0khm/devhub/backend/internal/dm"
 	"github.com/m0khm/devhub/backend/internal/group"
+	"github.com/m0khm/devhub/backend/internal/kanban"
 	"github.com/m0khm/devhub/backend/internal/mailer"
 	"github.com/m0khm/devhub/backend/internal/message"
 	"github.com/m0khm/devhub/backend/internal/metrics"
@@ -99,6 +101,8 @@ func main() {
 	notificationRepo := notification.NewRepository(db)
 	dmRepo := dm.NewRepository(db)
 	userRepo := user.NewRepository(db)
+	kanbanRepo := kanban.NewRepository(db)
+	calendarRepo := calendar.NewRepository(db)
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager, mailerClient)
@@ -117,6 +121,8 @@ func main() {
 	dmService := dm.NewService(dmRepo, projectRepo)
 	notificationService := notification.NewService(notificationRepo, projectRepo, topicRepo)
 	invitationService := project.NewInvitationService(projectRepo, userRepo)
+	kanbanService := kanban.NewService(kanbanRepo, projectRepo)
+	calendarService := calendar.NewService(calendarRepo, projectRepo)
 	deployRepo := deploy.NewRepository(db)
 	deployEncryptor, err := deploy.NewEncryptor(cfg.Deploy.SecretsKey)
 	if err != nil {
@@ -132,6 +138,8 @@ func main() {
 	invitationHandler := project.NewInvitationHandler(invitationService)
 	topicHandler := topic.NewHandler(topicService)
 	messageHandler := message.NewHandler(messageService)
+	kanbanHandler := kanban.NewHandler(kanbanService)
+	calendarHandler := calendar.NewHandler(calendarService)
 	dmHandler := dm.NewHandler(dmService)
 	wsHandler := message.NewWSHandler(wsHub, messageService)
 	messageHandler.SetWSHandler(wsHandler)
@@ -274,6 +282,18 @@ func main() {
 	projectRoutes.Get("/:projectId/deploy/servers/:serverId", deployHandler.GetServer)
 	projectRoutes.Post("/:projectId/topics", topicHandler.Create)
 	projectRoutes.Get("/:projectId/topics", topicHandler.GetByProjectID)
+	projectRoutes.Get("/:projectId/files", messageHandler.GetProjectFiles)
+	projectRoutes.Get("/:projectId/kanban/columns", kanbanHandler.ListColumns)
+	projectRoutes.Post("/:projectId/kanban/columns", kanbanHandler.CreateColumn)
+	projectRoutes.Put("/:projectId/kanban/columns/:columnId", kanbanHandler.UpdateColumn)
+	projectRoutes.Delete("/:projectId/kanban/columns/:columnId", kanbanHandler.DeleteColumn)
+	projectRoutes.Post("/:projectId/kanban/columns/:columnId/tasks", kanbanHandler.CreateTask)
+	projectRoutes.Put("/:projectId/kanban/tasks/:taskId", kanbanHandler.UpdateTask)
+	projectRoutes.Delete("/:projectId/kanban/tasks/:taskId", kanbanHandler.DeleteTask)
+	projectRoutes.Get("/:projectId/calendar/events", calendarHandler.ListEvents)
+	projectRoutes.Post("/:projectId/calendar/events", calendarHandler.CreateEvent)
+	projectRoutes.Put("/:projectId/calendar/events/:eventId", calendarHandler.UpdateEvent)
+	projectRoutes.Delete("/:projectId/calendar/events/:eventId", calendarHandler.DeleteEvent)
 
 	// Topic routes (по id)
 	topicRoutes := protected.Group("/topics")
