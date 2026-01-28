@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { ArrowRight, Sparkles, Zap, Shield, Users, MessageSquare, BarChart3, Globe } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -188,21 +188,23 @@ export function LandingPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: MessageSquare, title: 'Умные чаты', desc: 'Обсуждения, которые превращаются в задачи одним кликом', color: 'from-blue-500 to-cyan-500' },
-              { icon: BarChart3, title: 'Аналитика в реальном времени', desc: 'Видите прогресс команды без статус-митингов', color: 'from-purple-500 to-pink-500' },
-              { icon: Users, title: 'Командные пространства', desc: 'Создавайте неограниченное количество workspace', color: 'from-orange-500 to-red-500' },
-              { icon: Zap, title: 'Мгновенная синхронизация', desc: 'Все изменения видны команде в реальном времени', color: 'from-green-500 to-emerald-500' },
-              { icon: Shield, title: 'Защита корпоративного уровня', desc: 'Шифрование данных и соответствие GDPR', color: 'from-indigo-500 to-blue-500' },
-              { icon: Globe, title: 'Работа из любой точки', desc: 'Доступ с любого устройства, офлайн-режим', color: 'from-teal-500 to-cyan-500' },
+              { icon: MessageSquare, title: 'Умные чаты', desc: 'Обсуждения, которые превращаются в задачи одним кликом', color: 'from-blue-500 to-cyan-500', path: '/workspace/chat' },
+              { icon: BarChart3, title: 'Аналитика в реальном времени', desc: 'Видите прогресс команды без статус-митингов', color: 'from-purple-500 to-pink-500', path: '/workspace/dashboard' },
+              { icon: Users, title: 'Командные пространства', desc: 'Создавайте неограниченное количество workspace', color: 'from-orange-500 to-red-500', path: '/workspace' },
+              { icon: Zap, title: 'Мгновенная синхронизация', desc: 'Все изменения видны команде в реальном времени', color: 'from-green-500 to-emerald-500', path: '/workspace/chat' },
+              { icon: Shield, title: 'Защита корпоративного уровня', desc: 'Шифрование данных и соответствие GDPR', color: 'from-indigo-500 to-blue-500', path: '/auth?mode=register' },
+              { icon: Globe, title: 'Работа из любой точки', desc: 'Доступ с любого устройства, офлайн-режим', color: 'from-teal-500 to-cyan-500', path: '/workspace' },
             ].map((feature, index) => (
-              <motion.div
+              <motion.button
                 key={index}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 viewport={{ once: true }}
                 whileHover={{ y: -10, scale: 1.02 }}
-                className="group relative p-8 rounded-3xl bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm border border-white/10 hover:border-white/30 transition-all cursor-pointer overflow-hidden"
+                onClick={() => navigate(feature.path)}
+                type="button"
+                className="group relative p-8 rounded-3xl bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm border border-white/10 hover:border-white/30 transition-all cursor-pointer overflow-hidden text-left"
               >
                 <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity" style={{ backgroundImage: `linear-gradient(to bottom right, var(--tw-gradient-stops))` }}></div>
                 <div className="relative">
@@ -212,7 +214,7 @@ export function LandingPage() {
                   <h3 className="text-2xl font-bold text-white mb-3">{feature.title}</h3>
                   <p className="text-slate-400 leading-relaxed">{feature.desc}</p>
                 </div>
-              </motion.div>
+              </motion.button>
             ))}
           </div>
         </div>
@@ -267,9 +269,9 @@ export function LandingPage() {
             </div>
             <p className="text-slate-400">© 2026 DevHub. Все права защищены.</p>
             <div className="flex gap-8 text-slate-400">
-              <a href="#" className="hover:text-white transition-colors">Конфиденциальность</a>
-              <a href="#" className="hover:text-white transition-colors">Условия</a>
-              <a href="#" className="hover:text-white transition-colors">Контакты</a>
+              <Link to="/privacy" className="hover:text-white transition-colors">Конфиденциальность</Link>
+              <Link to="/terms" className="hover:text-white transition-colors">Условия</Link>
+              <Link to="/contacts" className="hover:text-white transition-colors">Контакты</Link>
             </div>
           </div>
         </div>

@@ -1,8 +1,9 @@
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { FileText, Image, Film, Music, Download, Share2, Trash2, MoreVertical, Upload } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
-const files = [
+const initialFiles = [
   { id: 1, name: 'Project_Proposal.pdf', type: 'document', size: '2.4 MB', date: '26 янв', icon: FileText, color: 'from-red-500 to-orange-500' },
   { id: 2, name: 'Design_Mockup.fig', type: 'design', size: '8.1 MB', date: '25 янв', icon: Image, color: 'from-purple-500 to-pink-500' },
   { id: 3, name: 'Demo_Video.mp4', type: 'video', size: '45 MB', date: '24 янв', icon: Film, color: 'from-blue-500 to-cyan-500' },
@@ -12,6 +13,21 @@ const files = [
 ];
 
 export function FilesView() {
+  const [fileList, setFileList] = useState(initialFiles);
+  const [selectedFile, setSelectedFile] = useState<typeof initialFiles[number] | null>(null);
+  const [fileNameDraft, setFileNameDraft] = useState('');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('devhub-files');
+    if (stored) {
+      setFileList(JSON.parse(stored));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('devhub-files', JSON.stringify(fileList));
+  }, [fileList]);
+
   return (
     <div className="h-full overflow-y-auto p-6">
       <motion.div
@@ -74,13 +90,17 @@ export function FilesView() {
 
         {/* Files Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {files.map((file, index) => (
+          {fileList.map((file, index) => (
             <motion.div
               key={file.id}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.05 }}
               whileHover={{ y: -5, scale: 1.02 }}
+              onClick={() => {
+                setSelectedFile(file);
+                setFileNameDraft(file.name);
+              }}
               className="group p-5 bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl hover:border-white/20 transition-all cursor-pointer"
             >
               <div className="flex items-start justify-between mb-4">
@@ -90,7 +110,15 @@ export function FilesView() {
                 >
                   <file.icon className="w-6 h-6 text-white" />
                 </motion.div>
-                <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/5 rounded transition-all">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setSelectedFile(file);
+                    setFileNameDraft(file.name);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/5 rounded transition-all"
+                >
                   <MoreVertical className="w-4 h-4 text-slate-400" />
                 </button>
               </div>
@@ -131,6 +159,70 @@ export function FilesView() {
           ))}
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {selectedFile && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setSelectedFile(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(event) => event.stopPropagation()}
+              className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+            >
+              <h3 className="text-2xl font-bold text-white mb-4">Карточка файла</h3>
+              <div className="space-y-3 text-sm text-slate-300">
+                <div className="flex items-center gap-3">
+                  <selectedFile.icon className="w-5 h-5 text-white" />
+                  <span>{selectedFile.type}</span>
+                </div>
+                <div className="text-slate-400">
+                  Размер: {selectedFile.size} • Дата: {selectedFile.date}
+                </div>
+                <label className="block">
+                  Название
+                  <input
+                    type="text"
+                    value={fileNameDraft}
+                    onChange={(event) => setFileNameDraft(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </label>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFileList((prev) =>
+                      prev.map((file) =>
+                        file.id === selectedFile.id ? { ...file, name: fileNameDraft } : file
+                      )
+                    );
+                    toast.success('Имя файла обновлено');
+                    setSelectedFile(null);
+                  }}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 py-2.5 font-semibold text-white hover:from-blue-600 hover:to-purple-700 transition"
+                >
+                  Сохранить
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedFile(null)}
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 font-semibold text-white hover:bg-white/10 transition"
+                >
+                  Закрыть
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

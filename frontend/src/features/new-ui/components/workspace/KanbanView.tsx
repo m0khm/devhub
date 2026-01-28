@@ -119,7 +119,18 @@ export function KanbanView() {
                     {column.tasks.length}
                   </span>
                 </div>
-                <button className="p-1 hover:bg-white/5 rounded transition-all">
+                <button
+                  type="button"
+                  onClick={() =>
+                    toast('Меню колонки скоро будет доступно', {
+                      action: {
+                        label: 'Добавить задачу',
+                        onClick: () => toast.info('Создание новой задачи'),
+                      },
+                    })
+                  }
+                  className="p-1 hover:bg-white/5 rounded transition-all"
+                >
                   <MoreHorizontal className="w-4 h-4 text-slate-400" />
                 </button>
               </div>
@@ -135,6 +146,14 @@ export function KanbanView() {
                     draggable
                     onDragStart={() => handleDragStart(task, column.id)}
                     whileHover={{ scale: 1.02, y: -2 }}
+                    onClick={() =>
+                      toast('Детали задачи', {
+                        action: {
+                          label: 'Открыть',
+                          onClick: () => toast.info('Карточка задачи в разработке'),
+                        },
+                      })
+                    }
                     className="p-4 bg-slate-800/50 border border-white/10 rounded-xl cursor-move hover:border-white/20 transition-all group"
                   >
                     <div className="flex items-start justify-between mb-2">

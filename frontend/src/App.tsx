@@ -12,6 +12,9 @@ import { CalendarView } from './features/new-ui/components/workspace/CalendarVie
 import { FilesView } from './features/new-ui/components/workspace/FilesView';
 import { DashboardView } from './features/new-ui/components/workspace/DashboardView';
 import { HubPage } from './features/new-ui/pages/HubPage';
+import { TermsPage } from './features/legal/TermsPage';
+import { PrivacyPage } from './features/legal/PrivacyPage';
+import { ContactPage } from './features/legal/ContactPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -49,6 +52,9 @@ function App() {
           path="/register"
           element={<Navigate to="/auth?mode=register" replace />}
         />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/contacts" element={<ContactPage />} />
         <Route
           path="/workspace"
           element={

@@ -1,5 +1,7 @@
 import { motion } from 'motion/react';
 import { TrendingUp, Users, CheckCircle, Clock, Target, Zap, Award, BarChart3 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const stats = [
   { label: 'Активных задач', value: '24', change: '+12%', icon: CheckCircle, color: 'from-blue-500 to-cyan-500' },
@@ -23,6 +25,27 @@ const recentActivity = [
 ];
 
 export function DashboardView() {
+  const navigate = useNavigate();
+
+  const handleStatClick = (label: string) => {
+    if (label === 'Участников') {
+      toast('Переходим в Hub', {
+        action: {
+          label: 'Открыть Hub',
+          onClick: () => navigate('/hub'),
+        },
+      });
+      return;
+    }
+
+    toast('Открываем задачи', {
+      action: {
+        label: 'Канбан',
+        onClick: () => navigate('/workspace/kanban'),
+      },
+    });
+  };
+
   return (
     <div className="h-full overflow-y-auto p-6">
       <motion.div
@@ -38,13 +61,15 @@ export function DashboardView() {
         {/* Stats Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, index) => (
-            <motion.div
+            <motion.button
               key={index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ y: -5, scale: 1.02 }}
-              className="relative p-6 bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden group cursor-pointer"
+              onClick={() => handleStatClick(stat.label)}
+              type="button"
+              className="relative p-6 bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden group cursor-pointer text-left"
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-10 transition-opacity`}></div>
               
@@ -64,7 +89,7 @@ export function DashboardView() {
                 <p className="text-sm text-slate-400 mb-1">{stat.label}</p>
                 <p className="text-3xl font-bold text-white">{stat.value}</p>
               </div>
-            </motion.div>
+            </motion.button>
           ))}
         </div>
 
@@ -74,20 +99,33 @@ export function DashboardView() {
             <div className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-white">Команда</h3>
-                <button className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => navigate('/hub')}
+                  className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                >
                   Все участники
                 </button>
               </div>
 
               <div className="space-y-3">
                 {teamMembers.map((member, index) => (
-                  <motion.div
+                  <motion.button
                     key={index}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
                     whileHover={{ x: 5 }}
-                    className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/10 rounded-xl hover:border-white/20 transition-all cursor-pointer"
+                    onClick={() =>
+                      toast('Профиль участника', {
+                        action: {
+                          label: 'Открыть в Hub',
+                          onClick: () => navigate('/hub'),
+                        },
+                      })
+                    }
+                    type="button"
+                    className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/10 rounded-xl hover:border-white/20 transition-all cursor-pointer text-left"
                   >
                     <div className="flex items-center gap-4">
                       <div className="relative">
@@ -105,7 +143,7 @@ export function DashboardView() {
                       <p className="text-2xl font-bold text-white">{member.tasks}</p>
                       <p className="text-xs text-slate-400">задач</p>
                     </div>
-                  </motion.div>
+                  </motion.button>
                 ))}
               </div>
             </div>
@@ -137,9 +175,18 @@ export function DashboardView() {
             </div>
 
             {/* Achievement */}
-            <motion.div
+            <motion.button
               whileHover={{ scale: 1.02 }}
-              className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-2xl p-6 cursor-pointer"
+              onClick={() =>
+                toast('Поздравляем! Продолжайте выполнение задач.', {
+                  action: {
+                    label: 'Канбан',
+                    onClick: () => navigate('/workspace/kanban'),
+                  },
+                })
+              }
+              type="button"
+              className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-2xl p-6 cursor-pointer text-left"
             >
               <div className="flex items-center gap-3 mb-4">
                 <motion.div
@@ -157,7 +204,7 @@ export function DashboardView() {
               <p className="text-sm text-slate-300">
                 Ваша команда завершила 150+ задач! Продолжайте в том же духе! 🎉
               </p>
-            </motion.div>
+            </motion.button>
           </div>
         </div>
       </motion.div>

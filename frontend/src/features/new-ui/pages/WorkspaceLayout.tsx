@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   MessageSquare,
@@ -31,12 +31,53 @@ const topics = [
   { id: 4, name: 'custom', subtitle: 'Кастомный', icon: Hash, path: '/workspace/chat' },
 ];
 
+const defaultWorkspaces = [
+  { id: 'main', name: 'My Workspace', plan: 'Premium plan' },
+];
+
 export function WorkspaceLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showProfile, setShowProfile] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [workspaces, setWorkspaces] = useState(defaultWorkspaces);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState(defaultWorkspaces[0].id);
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [settingsDraft, setSettingsDraft] = useState({
+    notifications: true,
+    emailDigest: false,
+    compactMode: false,
+  });
+
+  useEffect(() => {
+    const storedWorkspaces = localStorage.getItem('devhub-workspaces');
+    const storedActive = localStorage.getItem('devhub-active-workspace');
+    const storedSettings = localStorage.getItem('devhub-settings');
+    if (storedWorkspaces) {
+      const parsed = JSON.parse(storedWorkspaces);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setWorkspaces(parsed);
+      }
+    }
+    if (storedActive) {
+      setActiveWorkspaceId(storedActive);
+    }
+    if (storedSettings) {
+      setSettingsDraft(JSON.parse(storedSettings));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('devhub-workspaces', JSON.stringify(workspaces));
+    localStorage.setItem('devhub-active-workspace', activeWorkspaceId);
+  }, [workspaces, activeWorkspaceId]);
+
+  const activeWorkspace =
+    workspaces.find((workspace) => workspace.id === activeWorkspaceId) ??
+    workspaces[0];
 
   const navItems = [
     { icon: MessageSquare, label: 'Чаты', path: '/workspace/chat', badge: 3 },
@@ -66,7 +107,11 @@ export function WorkspaceLayout() {
         <div className="relative z-10 flex flex-col h-full">
           {/* Workspace Header */}
           <div className="p-4 border-b border-white/5">
-            <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
+            <button
+              type="button"
+              onClick={() => setShowWorkspaceModal(true)}
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
+            >
               <div className="flex items-center gap-3">
                 <motion.div 
                   whileHover={{ rotate: 360 }}
@@ -80,10 +125,10 @@ export function WorkspaceLayout() {
                 </motion.div>
                 <div className="text-left">
                   <div className="font-semibold text-white flex items-center gap-2">
-                    My Workspace
+                    {activeWorkspace?.name}
                     <Crown className="w-3 h-3 text-yellow-400" />
                   </div>
-                  <div className="text-xs text-slate-400">Premium plan</div>
+                  <div className="text-xs text-slate-400">{activeWorkspace?.plan}</div>
                 </div>
               </div>
               <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
@@ -227,6 +272,7 @@ export function WorkspaceLayout() {
             <motion.button
               whileHover={{ x: 5 }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 text-slate-300 hover:text-white transition-all"
+              onClick={() => setShowSettingsModal(true)}
             >
               <Settings className="w-5 h-5" />
               <span className="font-medium">Настройки</span>
@@ -270,17 +316,26 @@ export function WorkspaceLayout() {
                     className="absolute bottom-full left-0 right-0 mb-2 bg-slate-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden"
                   >
                     <button
+                      type="button"
                       onClick={() => setDarkMode(!darkMode)}
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all text-left"
                     >
                       {darkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
                       <span>Переключить тему</span>
                     </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all text-left">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowSettingsModal(true);
+                        setShowProfile(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all text-left"
+                    >
                       <Settings className="w-4 h-4" />
                       <span>Настройки</span>
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         navigate('/');
                         toast.success('Вы вышли из аккаунта');
@@ -403,6 +458,158 @@ export function WorkspaceLayout() {
                 >
                   Отмена
                 </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showWorkspaceModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setShowWorkspaceModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(event) => event.stopPropagation()}
+              className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+            >
+              <h3 className="text-2xl font-bold text-white mb-4">Рабочие пространства</h3>
+              <div className="space-y-3 mb-5">
+                {workspaces.map((workspace) => (
+                  <button
+                    key={workspace.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveWorkspaceId(workspace.id);
+                      toast.success(`Активирован ${workspace.name}`);
+                    }}
+                    className={`w-full rounded-xl border px-4 py-3 text-left transition ${
+                      workspace.id === activeWorkspaceId
+                        ? 'border-blue-500/60 bg-blue-500/10 text-white'
+                        : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
+                    }`}
+                  >
+                    <div className="font-semibold">{workspace.name}</div>
+                    <div className="text-xs text-slate-400">{workspace.plan}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-slate-300">
+                  Новое workspace
+                  <input
+                    type="text"
+                    value={newWorkspaceName}
+                    onChange={(event) => setNewWorkspaceName(event.target.value)}
+                    placeholder="Название"
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const trimmedName = newWorkspaceName.trim();
+                      if (!trimmedName) {
+                        toast.error('Введите название workspace');
+                        return;
+                      }
+                      const id = trimmedName.toLowerCase().replace(/\s+/g, '-') + Date.now();
+                      const nextWorkspace = { id, name: trimmedName, plan: 'Free plan' };
+                      setWorkspaces((prev) => [...prev, nextWorkspace]);
+                      setActiveWorkspaceId(id);
+                      setNewWorkspaceName('');
+                      toast.success('Workspace создан');
+                    }}
+                    className="flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 py-2.5 font-semibold text-white hover:from-blue-600 hover:to-purple-700 transition"
+                  >
+                    Создать
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowWorkspaceModal(false)}
+                    className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 font-semibold text-white hover:bg-white/10 transition"
+                  >
+                    Закрыть
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSettingsModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setShowSettingsModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(event) => event.stopPropagation()}
+              className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+            >
+              <h3 className="text-2xl font-bold text-white mb-4">Настройки</h3>
+              <div className="space-y-4">
+                {[
+                  { id: 'notifications', label: 'Пуш-уведомления' },
+                  { id: 'emailDigest', label: 'Ежедневная сводка на почту' },
+                  { id: 'compactMode', label: 'Компактный режим интерфейса' },
+                ].map((item) => (
+                  <label
+                    key={item.id}
+                    className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300"
+                  >
+                    <span>{item.label}</span>
+                    <input
+                      type="checkbox"
+                      checked={settingsDraft[item.id as keyof typeof settingsDraft]}
+                      onChange={(event) =>
+                        setSettingsDraft((prev) => {
+                          const key = item.id as keyof typeof settingsDraft;
+                          return {
+                            ...prev,
+                            [key]: event.target.checked,
+                          };
+                        })
+                      }
+                      className="h-4 w-4 rounded border-white/30 bg-white/10"
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem('devhub-settings', JSON.stringify(settingsDraft));
+                    toast.success('Настройки сохранены');
+                    setShowSettingsModal(false);
+                  }}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 py-2.5 font-semibold text-white hover:from-blue-600 hover:to-purple-700 transition"
+                >
+                  Сохранить
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsModal(false)}
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 font-semibold text-white hover:bg-white/10 transition"
+                >
+                  Отмена
+                </button>
               </div>
             </motion.div>
           </motion.div>
