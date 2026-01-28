@@ -42,6 +42,17 @@ export function CalendarView() {
     (event) => event.month === currentMonthDate.getMonth()
   );
 
+  useEffect(() => {
+    const stored = localStorage.getItem('devhub-events');
+    if (stored) {
+      setEventList(JSON.parse(stored));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('devhub-events', JSON.stringify(eventList));
+  }, [eventList]);
+
   return (
     <div className="h-full overflow-y-auto p-6">
       <motion.div
@@ -190,6 +201,92 @@ export function CalendarView() {
           </div>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {selectedEvent && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setSelectedEvent(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(event) => event.stopPropagation()}
+              className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+            >
+              <h3 className="text-2xl font-bold text-white mb-4">Детали события</h3>
+              <div className="space-y-4">
+                <label className="block text-sm text-slate-300">
+                  Название
+                  <input
+                    type="text"
+                    value={eventDraft.title}
+                    onChange={(event) =>
+                      setEventDraft((prev) => ({ ...prev, title: event.target.value }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </label>
+                <label className="block text-sm text-slate-300">
+                  Время
+                  <input
+                    type="time"
+                    value={eventDraft.time}
+                    onChange={(event) =>
+                      setEventDraft((prev) => ({ ...prev, time: event.target.value }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </label>
+                <label className="block text-sm text-slate-300">
+                  Дата
+                  <input
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={eventDraft.date}
+                    onChange={(event) =>
+                      setEventDraft((prev) => ({
+                        ...prev,
+                        date: Number(event.target.value) || 1,
+                      }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </label>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEventList((prev) =>
+                      prev.map((event) =>
+                        event.id === selectedEvent.id ? { ...event, ...eventDraft } : event
+                      )
+                    );
+                    toast.success('Событие обновлено');
+                    setSelectedEvent(null);
+                  }}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 py-2.5 font-semibold text-white hover:from-blue-600 hover:to-purple-700 transition"
+                >
+                  Сохранить
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedEvent(null)}
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 font-semibold text-white hover:bg-white/10 transition"
+                >
+                  Отмена
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

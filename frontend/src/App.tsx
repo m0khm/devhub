@@ -50,6 +50,9 @@ function App() {
           path="/register"
           element={<Navigate to="/auth?mode=register" replace />}
         />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/contacts" element={<ContactPage />} />
         <Route
           path="/workspace"
           element={

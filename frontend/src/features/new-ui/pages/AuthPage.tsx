@@ -259,6 +259,28 @@ export function AuthPage() {
     }
   };
 
+  const handleSocialLogin = (provider: 'github' | 'google') => {
+    const label = provider === 'github' ? 'GitHub' : 'Google';
+    toast((t) => (
+      <div className="rounded-xl bg-slate-900/90 border border-white/10 p-4 text-slate-100 shadow-xl">
+        <p className="text-sm font-semibold">{label}: функция в разработке</p>
+        <p className="text-xs text-slate-400 mt-1">
+          Используйте вход по email, он уже работает.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            handleModeChange('login');
+            toast.dismiss(t.id);
+          }}
+          className="mt-3 inline-flex items-center rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-600 transition"
+        >
+          Перейти к email-входу
+        </button>
+      </div>
+    ));
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 flex items-center justify-center p-6 overflow-hidden relative">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -393,6 +415,7 @@ export function AuthPage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSocialLogin('github')}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-all"
                 >
                   <Github className="w-5 h-5" />
@@ -401,6 +424,7 @@ export function AuthPage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSocialLogin('google')}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-all"
                 >
                   <Chrome className="w-5 h-5" />

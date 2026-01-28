@@ -80,6 +80,10 @@ const getUserInitials = (user?: User | null) => {
   return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 };
 
+const defaultWorkspaces = [
+  { id: 'main', name: 'My Workspace', plan: 'Premium plan' },
+];
+
 export function WorkspaceLayout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -277,7 +281,11 @@ export function WorkspaceLayout() {
         <div className="relative z-10 flex flex-col h-full">
           {/* Workspace Header */}
           <div className="p-4 border-b border-white/5">
-            <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
+            <button
+              type="button"
+              onClick={() => setShowWorkspaceModal(true)}
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group"
+            >
               <div className="flex items-center gap-3">
                 <motion.div 
                   whileHover={{ rotate: 360 }}
@@ -490,6 +498,7 @@ export function WorkspaceLayout() {
             <motion.button
               whileHover={{ x: 5 }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 text-slate-300 hover:text-white transition-all"
+              onClick={() => setShowSettingsModal(true)}
             >
               <Settings className="w-5 h-5" />
               <span className="font-medium">Настройки</span>
@@ -533,17 +542,26 @@ export function WorkspaceLayout() {
                     className="absolute bottom-full left-0 right-0 mb-2 bg-slate-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden"
                   >
                     <button
+                      type="button"
                       onClick={() => setDarkMode(!darkMode)}
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all text-left"
                     >
                       {darkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
                       <span>Переключить тему</span>
                     </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all text-left">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowSettingsModal(true);
+                        setShowProfile(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all text-left"
+                    >
                       <Settings className="w-4 h-4" />
                       <span>Настройки</span>
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         logout();
                         navigate('/');
@@ -694,6 +712,158 @@ export function WorkspaceLayout() {
                 >
                   Отмена
                 </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showWorkspaceModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setShowWorkspaceModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(event) => event.stopPropagation()}
+              className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+            >
+              <h3 className="text-2xl font-bold text-white mb-4">Рабочие пространства</h3>
+              <div className="space-y-3 mb-5">
+                {workspaces.map((workspace) => (
+                  <button
+                    key={workspace.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveWorkspaceId(workspace.id);
+                      toast.success(`Активирован ${workspace.name}`);
+                    }}
+                    className={`w-full rounded-xl border px-4 py-3 text-left transition ${
+                      workspace.id === activeWorkspaceId
+                        ? 'border-blue-500/60 bg-blue-500/10 text-white'
+                        : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
+                    }`}
+                  >
+                    <div className="font-semibold">{workspace.name}</div>
+                    <div className="text-xs text-slate-400">{workspace.plan}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-slate-300">
+                  Новое workspace
+                  <input
+                    type="text"
+                    value={newWorkspaceName}
+                    onChange={(event) => setNewWorkspaceName(event.target.value)}
+                    placeholder="Название"
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const trimmedName = newWorkspaceName.trim();
+                      if (!trimmedName) {
+                        toast.error('Введите название workspace');
+                        return;
+                      }
+                      const id = trimmedName.toLowerCase().replace(/\s+/g, '-') + Date.now();
+                      const nextWorkspace = { id, name: trimmedName, plan: 'Free plan' };
+                      setWorkspaces((prev) => [...prev, nextWorkspace]);
+                      setActiveWorkspaceId(id);
+                      setNewWorkspaceName('');
+                      toast.success('Workspace создан');
+                    }}
+                    className="flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 py-2.5 font-semibold text-white hover:from-blue-600 hover:to-purple-700 transition"
+                  >
+                    Создать
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowWorkspaceModal(false)}
+                    className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 font-semibold text-white hover:bg-white/10 transition"
+                  >
+                    Закрыть
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSettingsModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setShowSettingsModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(event) => event.stopPropagation()}
+              className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+            >
+              <h3 className="text-2xl font-bold text-white mb-4">Настройки</h3>
+              <div className="space-y-4">
+                {[
+                  { id: 'notifications', label: 'Пуш-уведомления' },
+                  { id: 'emailDigest', label: 'Ежедневная сводка на почту' },
+                  { id: 'compactMode', label: 'Компактный режим интерфейса' },
+                ].map((item) => (
+                  <label
+                    key={item.id}
+                    className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300"
+                  >
+                    <span>{item.label}</span>
+                    <input
+                      type="checkbox"
+                      checked={settingsDraft[item.id as keyof typeof settingsDraft]}
+                      onChange={(event) =>
+                        setSettingsDraft((prev) => {
+                          const key = item.id as keyof typeof settingsDraft;
+                          return {
+                            ...prev,
+                            [key]: event.target.checked,
+                          };
+                        })
+                      }
+                      className="h-4 w-4 rounded border-white/30 bg-white/10"
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem('devhub-settings', JSON.stringify(settingsDraft));
+                    toast.success('Настройки сохранены');
+                    setShowSettingsModal(false);
+                  }}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 py-2.5 font-semibold text-white hover:from-blue-600 hover:to-purple-700 transition"
+                >
+                  Сохранить
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsModal(false)}
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 font-semibold text-white hover:bg-white/10 transition"
+                >
+                  Отмена
+                </button>
               </div>
             </motion.div>
           </motion.div>
