@@ -12,8 +12,7 @@ import { CalendarView } from './features/new-ui/components/workspace/CalendarVie
 import { FilesView } from './features/new-ui/components/workspace/FilesView';
 import { DashboardView } from './features/new-ui/components/workspace/DashboardView';
 import { HubPage } from './features/new-ui/pages/HubPage';
-import { DeployPage } from './features/deploy/DeployPage';
-import { ProfilePage } from './features/profile/ProfilePage';
+import { CreateProjectPage } from './features/new-ui/pages/CreateProjectPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -51,6 +50,9 @@ function App() {
           path="/register"
           element={<Navigate to="/auth?mode=register" replace />}
         />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/contacts" element={<ContactPage />} />
         <Route
           path="/workspace"
           element={
@@ -61,11 +63,20 @@ function App() {
         >
           <Route index element={<ChatView />} />
           <Route path="chat" element={<ChatView />} />
+          <Route path="chat/:topicId" element={<ChatView />} />
           <Route path="kanban" element={<KanbanView />} />
           <Route path="calendar" element={<CalendarView />} />
           <Route path="files" element={<FilesView />} />
           <Route path="dashboard" element={<DashboardView />} />
         </Route>
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <CreateProjectPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/hub"
           element={

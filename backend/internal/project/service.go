@@ -22,6 +22,18 @@ type Service struct {
 	repo *Repository
 }
 
+type defaultTopic struct {
+	ProjectID uuid.UUID `gorm:"column:project_id"`
+	Name      string    `gorm:"column:name"`
+	Type      string    `gorm:"column:type"`
+	Position  int       `gorm:"column:position"`
+	CreatedBy uuid.UUID `gorm:"column:created_by"`
+}
+
+func (defaultTopic) TableName() string {
+	return "topics"
+}
+
 func NewService(repo *Repository) *Service {
 	return &Service{repo: repo}
 }
@@ -65,6 +77,17 @@ func (s *Service) Create(userID uuid.UUID, req CreateProjectRequest) (*Project, 
 		}
 		if err := tx.Create(&member).Error; err != nil {
 			return fmt.Errorf("failed to add owner as member: %w", err)
+		}
+
+		defaultTopics := []defaultTopic{
+			{ProjectID: project.ID, Name: "chat", Type: "chat", Position: 0, CreatedBy: userID},
+			{ProjectID: project.ID, Name: "planning", Type: "planning", Position: 1, CreatedBy: userID},
+			{ProjectID: project.ID, Name: "code", Type: "code", Position: 2, CreatedBy: userID},
+			{ProjectID: project.ID, Name: "deploy", Type: "deploy", Position: 3, CreatedBy: userID},
+			{ProjectID: project.ID, Name: "bugs", Type: "bugs", Position: 4, CreatedBy: userID},
+		}
+		if err := tx.Create(&defaultTopics).Error; err != nil {
+			return fmt.Errorf("failed to create default topics: %w", err)
 		}
 
 		return nil

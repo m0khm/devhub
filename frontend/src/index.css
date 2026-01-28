@@ -14,6 +14,10 @@
   --color-accent-foreground: 255 255 255;
 }
 
+html {
+  font-size: 90%;
+}
+
 [data-theme='dark'] {
   color-scheme: dark;
   --color-bg: 2 6 23;
