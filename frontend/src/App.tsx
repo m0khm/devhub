@@ -7,12 +7,15 @@ import { LandingPage } from './features/new-ui/pages/LandingPage';
 import { AuthPage } from './features/new-ui/pages/AuthPage';
 import { WorkspaceLayout } from './features/new-ui/pages/WorkspaceLayout';
 import { FilesView } from './features/new-ui/components/workspace/FilesView';
-import { ProjectWorkspace } from './features/projects/components/ProjectWorkspace';
+import { DashboardView } from './features/new-ui/components/workspace/DashboardView';
+import { HubPage } from './features/new-ui/pages/HubPage';
+import { CreateProjectPage } from './features/new-ui/pages/CreateProjectPage';
 import { DeployPage } from './features/deploy/DeployPage';
-import { PlanningPage } from './features/planning/PlanningPage';
-import { CodePage } from './features/code/CodePage';
-import { HubPage } from './features/hub/HubPage';
+import { DeployRedirect, LegacyDeployRedirect } from './features/deploy/DeployRedirect';
 import { ProfilePage } from './features/profile/ProfilePage';
+import { TermsPage } from './features/legal/TermsPage';
+import { PrivacyPage } from './features/legal/PrivacyPage';
+import { ContactPage } from './features/legal/ContactPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -62,6 +65,54 @@ function App() {
           <Route path="hub" element={<HubPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <CreateProjectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hub"
+          element={
+            <ProtectedRoute>
+              <HubPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/deploy"
+          element={
+            <ProtectedRoute>
+              <DeployRedirect />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/deploy/:projectId"
+          element={
+            <ProtectedRoute>
+              <LegacyDeployRedirect />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/deploy"
+          element={
+            <ProtectedRoute>
+              <DeployPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
