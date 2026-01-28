@@ -207,3 +207,27 @@ func (r *Repository) Search(topicID uuid.UUID, query string, limit int) ([]Messa
 
 	return messages, err
 }
+
+// Get file messages by project
+func (r *Repository) GetFileMessagesByProject(projectID uuid.UUID, limit int) ([]MessageWithUser, error) {
+	var messages []MessageWithUser
+
+	err := r.db.Table("messages").
+		Select(`
+			messages.*,
+			users.id as "user__id",
+			users.name as "user__name",
+			users.handle as "user__handle",
+			users.email as "user__email",
+			users.avatar_url as "user__avatar_url"
+		`).
+		Joins("JOIN topics ON topics.id = messages.topic_id").
+		Joins("LEFT JOIN users ON users.id = messages.user_id").
+		Where("topics.project_id = ?", projectID).
+		Where("messages.type = ?", "file").
+		Order("messages.created_at DESC").
+		Limit(limit).
+		Scan(&messages).Error
+
+	return messages, err
+}

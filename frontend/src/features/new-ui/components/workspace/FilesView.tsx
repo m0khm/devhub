@@ -91,15 +91,28 @@ export function FilesView() {
               {currentTopic ? `Файлы из темы ${currentTopic.name}` : 'Выберите тему, чтобы увидеть файлы'}
             </p>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)' }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => toast.success('Загрузка файла')}
-            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg"
-          >
-            <Upload className="w-5 h-5" />
-            Загрузить файл
-          </motion.button>
+          <div className="flex items-center gap-3">
+            <select
+              value={selectedTopicId ?? ''}
+              onChange={(event) => setSelectedTopicId(event.target.value)}
+              className="bg-slate-900/60 border border-white/10 text-slate-200 rounded-lg px-3 py-2 text-sm"
+            >
+              {currentTopics.map((topic: Topic) => (
+                <option key={topic.id} value={topic.id}>
+                  {topic.name}
+                </option>
+              ))}
+            </select>
+            <motion.button
+              whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => fileInputRef.current?.click()}
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg"
+            >
+              <Upload className="w-5 h-5" />
+              Загрузить файл
+            </motion.button>
+          </div>
         </div>
 
         {/* Storage Stats */}

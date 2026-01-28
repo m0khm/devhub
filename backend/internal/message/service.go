@@ -520,3 +520,29 @@ func (s *Service) GetPinnedByTopicID(topicID, userID uuid.UUID) ([]MessageWithUs
 
 	return messages, nil
 }
+
+// Get file messages by project
+func (s *Service) GetFileMessagesByProject(projectID, userID uuid.UUID, limit int) ([]MessageWithUser, error) {
+	isMember, err := s.projectRepo.IsUserMember(projectID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check membership: %w", err)
+	}
+	if !isMember {
+		return nil, ErrNotProjectMember
+	}
+
+	messages, err := s.repo.GetFileMessagesByProject(projectID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file messages: %w", err)
+	}
+	for i := range messages {
+		reactions, err := s.repo.GetReactions(messages[i].ID, userID)
+		if err != nil {
+			log.Printf("failed to get reactions for message %s: %v", messages[i].ID, err)
+			continue
+		}
+		messages[i].Reactions = reactions
+	}
+
+	return messages, nil
+}

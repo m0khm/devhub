@@ -63,6 +63,7 @@ function App() {
         >
           <Route index element={<ChatView />} />
           <Route path="chat" element={<ChatView />} />
+          <Route path="chat/:topicId" element={<ChatView />} />
           <Route path="kanban" element={<KanbanView />} />
           <Route path="calendar" element={<CalendarView />} />
           <Route path="files" element={<FilesView />} />

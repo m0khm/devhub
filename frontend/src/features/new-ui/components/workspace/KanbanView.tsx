@@ -54,7 +54,7 @@ export function KanbanView() {
     e.preventDefault();
   };
 
-  const handleDrop = (targetColumnId: string) => {
+  const handleDrop = async (targetColumnId: string) => {
     if (!draggedTask) return;
 
     toast.success(`Задача перемещена в ${columnConfig.find(c => c.id === targetColumnId)?.title}`);

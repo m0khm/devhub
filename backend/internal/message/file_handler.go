@@ -198,35 +198,35 @@ func (h *FileHandler) DownloadFile(c *fiber.Ctx) error {
 	}
 
 	if metadata.StorageKey == "" {
-                return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-                        "error": "File not available",
-                })
-        }
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "File not available",
+		})
+	}
 
 	ctx := context.Background()
 
-        obj, err := h.s3Client.GetObject(ctx, metadata.StorageKey)
-        if err != nil {
-                return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-                        "error": "Failed to fetch file",
-                })
-        }
+	obj, err := h.s3Client.GetObject(ctx, metadata.StorageKey)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch file",
+		})
+	}
 
-        if metadata.MimeType != "" {
-                c.Set("Content-Type", metadata.MimeType)
-        } else {
-                c.Set("Content-Type", "application/octet-stream")
-        }
+	if metadata.MimeType != "" {
+		c.Set("Content-Type", metadata.MimeType)
+	} else {
+		c.Set("Content-Type", "application/octet-stream")
+	}
 
-        disposition := c.Query("disposition", "attachment")
+	disposition := c.Query("disposition", "attachment")
 
-        if metadata.Filename != "" {
-                if disposition == "inline" {
-                        c.Set("Content-Disposition", "inline; filename=\"" + metadata.Filename + "\"")
-                } else {
-                        c.Attachment(metadata.Filename)
-                }
-        }
+	if metadata.Filename != "" {
+		if disposition == "inline" {
+			c.Set("Content-Disposition", "inline; filename=\""+metadata.Filename+"\"")
+		} else {
+			c.Attachment(metadata.Filename)
+		}
+	}
 
-        return c.SendStream(obj)
+	return c.SendStream(obj)
 }

@@ -68,7 +68,26 @@ export function CalendarView() {
           <motion.button
             whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)' }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => toast.success('Создание нового события')}
+            onClick={async () => {
+              if (!currentProject) return;
+              const title = window.prompt('Название события');
+              if (!title) return;
+              const date = window.prompt('Дата (YYYY-MM-DD)');
+              if (!date) return;
+              const time = window.prompt('Время (HH:MM)', '10:00');
+              if (!time) return;
+              const startsAt = new Date(`${date}T${time}:00`).toISOString();
+              try {
+                const response = await apiClient.post<CalendarEvent>(
+                  `/projects/${currentProject.id}/calendar/events`,
+                  { title, starts_at: startsAt }
+                );
+                setEvents((prev) => [...prev, response.data]);
+                toast.success('Событие создано');
+              } catch (error) {
+                toast.error('Не удалось создать событие');
+              }
+            }}
             className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg"
           >
             <Plus className="w-5 h-5" />

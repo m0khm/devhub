@@ -21,6 +21,26 @@ const getInitials = (name?: string) => {
   return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 };
 
+const parseFileMetadata = (metadata: Message['metadata']): FileMetadata => {
+  if (!metadata) return {};
+  if (typeof metadata === 'string') {
+    try {
+      return JSON.parse(metadata) as FileMetadata;
+    } catch {
+      return {};
+    }
+  }
+  return metadata as FileMetadata;
+};
+
+const getInitials = (name: string) =>
+  name
+    .split(' ')
+    .map((part) => part.charAt(0))
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
 export function ChatView() {
   const { currentTopic, topicsLoading, user } = useOutletContext<WorkspaceOutletContext>();
   const [message, setMessage] = useState('');
@@ -149,11 +169,18 @@ export function ChatView() {
               {currentTopic.description || 'Обсуждение команды'}
             </div>
           </div>
+          {currentTopic && <VideoCallButton topicId={currentTopic.id} />}
         </div>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6">
+        {loading && (
+          <div className="text-slate-400 text-sm">Загрузка сообщений...</div>
+        )}
+        {!loading && messages.length === 0 && (
+          <div className="text-slate-400 text-sm">Сообщений пока нет</div>
+        )}
         <div className="space-y-6 max-w-4xl">
           {messagesLoading ? (
             <div className="text-slate-400">Загрузка сообщений...</div>
@@ -267,7 +294,7 @@ export function ChatView() {
               <motion.button
                 whileHover={{ scale: 1.1, rotate: -15 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => toast.info('📎 Прикрепление файлов')}
+                onClick={() => fileInputRef.current?.click()}
                 className="p-2 rounded-lg hover:bg-white/10 transition-all"
               >
                 <Paperclip className="w-5 h-5 text-slate-400" />
@@ -281,10 +308,19 @@ export function ChatView() {
                 <Send className="w-5 h-5 text-white" />
               </motion.button>
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  handleFileUpload(file);
+                }
+                event.currentTarget.value = '';
+              }}
+            />
           </div>
-          <p className="text-xs text-slate-500 mt-2">
-            Shift+Enter для новой строки • Enter для отправки
-          </p>
         </div>
       </motion.div>
     </div>
