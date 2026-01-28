@@ -85,6 +85,22 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/deploy/:projectId?"
+          element={
+            <ProtectedRoute>
+              <DeployPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

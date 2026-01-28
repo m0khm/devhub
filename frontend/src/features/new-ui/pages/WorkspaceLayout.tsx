@@ -677,7 +677,6 @@ export function WorkspaceLayout() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
             >
               <h3 className="text-2xl font-bold text-white mb-4">Создать новую тему</h3>
               <input
