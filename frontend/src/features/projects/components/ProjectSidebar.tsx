@@ -7,6 +7,7 @@ import {
   StarIcon,
   PlusIcon,
   Cog6ToothIcon,
+  ServerStackIcon,
 } from '@heroicons/react/24/outline';
 import { CreateProjectModal } from './CreateProjectModal';
 
@@ -110,6 +111,14 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           <StarIcon className="h-4 w-4 text-slate-300" />
           <span>Избранное</span>
         </button>
+        <Link
+          to={currentProject?.id ? `/projects/${currentProject.id}/deploy` : '/deploy'}
+          className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
+          aria-label="Сервер"
+        >
+          <ServerStackIcon className="h-4 w-4 text-slate-300" />
+          <span>Сервер</span>
+        </Link>
         <button
           type="button"
           className="flex w-full items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"

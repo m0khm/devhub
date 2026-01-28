@@ -13,6 +13,12 @@ import { FilesView } from './features/new-ui/components/workspace/FilesView';
 import { DashboardView } from './features/new-ui/components/workspace/DashboardView';
 import { HubPage } from './features/new-ui/pages/HubPage';
 import { CreateProjectPage } from './features/new-ui/pages/CreateProjectPage';
+import { DeployPage } from './features/deploy/DeployPage';
+import { DeployRedirect, LegacyDeployRedirect } from './features/deploy/DeployRedirect';
+import { ProfilePage } from './features/profile/ProfilePage';
+import { TermsPage } from './features/legal/TermsPage';
+import { PrivacyPage } from './features/legal/PrivacyPage';
+import { ContactPage } from './features/legal/ContactPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -86,7 +92,23 @@ function App() {
           }
         />
         <Route
-          path="/deploy/:projectId?"
+          path="/deploy"
+          element={
+            <ProtectedRoute>
+              <DeployRedirect />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/deploy/:projectId"
+          element={
+            <ProtectedRoute>
+              <LegacyDeployRedirect />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/deploy"
           element={
             <ProtectedRoute>
               <DeployPage />
