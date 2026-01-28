@@ -2,6 +2,8 @@ import { motion } from 'motion/react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ArrowLeft, Users, Briefcase, Globe, Plus } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Card, CardBody, CardDescription, CardTitle } from '../components/ui/Card';
 
 export function HubPage() {
   const navigate = useNavigate();
@@ -95,18 +97,20 @@ export function HubPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <div className="p-12 rounded-3xl bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm border border-white/10 text-center">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-6">
-                  <Users className="w-10 h-10 text-blue-400" />
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-3">Люди</h3>
-                <p className="text-slate-300 mb-6 max-w-md mx-auto">
-                  Введите запрос, чтобы найти участников
-                </p>
-                <p className="text-sm text-slate-500">
-                  Пока нет подходящих пользователей.
-                </p>
-              </div>
+              <Card className="text-center">
+                <CardBody className="py-12">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-6">
+                    <Users className="w-10 h-10 text-blue-400" />
+                  </div>
+                  <CardTitle className="mb-3">Люди</CardTitle>
+                  <CardDescription className="mb-6 max-w-md mx-auto text-base text-slate-300">
+                    Введите запрос, чтобы найти участников
+                  </CardDescription>
+                  <p className="text-sm text-slate-500">
+                    Пока нет подходящих пользователей.
+                  </p>
+                </CardBody>
+              </Card>
             </motion.div>
           )}
 
@@ -116,18 +120,20 @@ export function HubPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <div className="p-12 rounded-3xl bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm border border-white/10 text-center">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-6">
-                  <Briefcase className="w-10 h-10 text-purple-400" />
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-3">Группы</h3>
-                <p className="text-slate-300 mb-6 max-w-md mx-auto">
-                  Команды внутри компании и проектные кружки
-                </p>
-                <p className="text-sm text-slate-500">
-                  Пока нет подходящих групп.
-                </p>
-              </div>
+              <Card className="text-center">
+                <CardBody className="py-12">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-6">
+                    <Briefcase className="w-10 h-10 text-purple-400" />
+                  </div>
+                  <CardTitle className="mb-3">Группы</CardTitle>
+                  <CardDescription className="mb-6 max-w-md mx-auto text-base text-slate-300">
+                    Команды внутри компании и проектные кружки
+                  </CardDescription>
+                  <p className="text-sm text-slate-500">
+                    Пока нет подходящих групп.
+                  </p>
+                </CardBody>
+              </Card>
             </motion.div>
           )}
 
@@ -137,18 +143,20 @@ export function HubPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <div className="p-12 rounded-3xl bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm border border-white/10 text-center">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center mx-auto mb-6">
-                  <Globe className="w-10 h-10 text-cyan-400" />
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-3">Сообщества</h3>
-                <p className="text-slate-300 mb-6 max-w-md mx-auto">
-                  Экосистемы, партнерские сети и внешние сообщества
-                </p>
-                <p className="text-sm text-slate-500">
-                  Пока нет подходящих сообществ.
-                </p>
-              </div>
+              <Card className="text-center">
+                <CardBody className="py-12">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center mx-auto mb-6">
+                    <Globe className="w-10 h-10 text-cyan-400" />
+                  </div>
+                  <CardTitle className="mb-3">Сообщества</CardTitle>
+                  <CardDescription className="mb-6 max-w-md mx-auto text-base text-slate-300">
+                    Экосистемы, партнерские сети и внешние сообщества
+                  </CardDescription>
+                  <p className="text-sm text-slate-500">
+                    Пока нет подходящих сообществ.
+                  </p>
+                </CardBody>
+              </Card>
             </motion.div>
           )}
 
@@ -156,32 +164,44 @@ export function HubPage() {
           <div className="grid md:grid-cols-2 gap-6 mt-8">
             <motion.div
               whileHover={{ scale: 1.02, y: -5 }}
-              className="p-8 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 cursor-pointer group"
+              className="cursor-pointer group"
+              onClick={() => navigate('/workspace')}
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Plus className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">
-                Перейти в Workspace
-              </h3>
-              <p className="text-slate-300">
-                Быстрый переход в рабочее пространство проектов
-              </p>
+              <Card className="h-full border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-purple-500/10">
+                <CardBody className="p-8">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Plus className="w-6 h-6 text-white" />
+                  </div>
+                  <CardTitle className="text-xl mb-2">Перейти в Workspace</CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Быстрый переход в рабочее пространство проектов
+                  </CardDescription>
+                  <div className="mt-5">
+                    <Button variant="outline">Открыть</Button>
+                  </div>
+                </CardBody>
+              </Card>
             </motion.div>
 
             <motion.div
               whileHover={{ scale: 1.02, y: -5 }}
-              className="p-8 rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 cursor-pointer group"
+              className="cursor-pointer group"
+              onClick={() => navigate('/profile')}
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">
-                Обновить профиль
-              </h3>
-              <p className="text-slate-300">
-                Создайте групп и сообщества, чтобы расширить сеть вашей команды и подключить новые проекты
-              </p>
+              <Card className="h-full border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-pink-500/10">
+                <CardBody className="p-8">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Users className="w-6 h-6 text-white" />
+                  </div>
+                  <CardTitle className="text-xl mb-2">Обновить профиль</CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Создайте групп и сообщества, чтобы расширить сеть вашей команды и подключить новые проекты
+                  </CardDescription>
+                  <div className="mt-5">
+                    <Button variant="outline">Редактировать</Button>
+                  </div>
+                </CardBody>
+              </Card>
             </motion.div>
           </div>
         </div>

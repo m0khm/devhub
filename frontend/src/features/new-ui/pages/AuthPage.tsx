@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import { apiClient } from '../../../api/client';
 import { useAuthStore } from '../../../store/authStore';
 import type { AuthResponse } from '../../../shared/types';
+import { Button } from '../components/ui/Button';
+import { Card, CardBody, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 
 const normalizeHandle = (value: string) => {
   let normalized = value.trim();
@@ -331,18 +333,22 @@ export function AuthPage() {
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-3xl blur-2xl"></div>
 
-            <div className="relative bg-slate-900/50 backdrop-blur-2xl border border-white/10 rounded-3xl p-10 shadow-2xl">
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h2 className="text-3xl font-bold text-white mb-2">
+            <Card className="relative bg-slate-900/50 border-white/10">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-3xl">
+                  {mode === 'login' ? 'Вход в аккаунт' : 'Создание аккаунта'}
+                </CardTitle>
+                <CardDescription className="text-base text-slate-400">
+                  {mode === 'login'
+                    ? 'Рады видеть вас снова!'
+                    : 'Начните работу с DevHub за минуту'}
+                </CardDescription>
+              </CardHeader>
+              <CardBody className="pt-0">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="sr-only">
                     {mode === 'login' ? 'Вход в аккаунт' : 'Создание аккаунта'}
-                  </h2>
-                  <p className="text-slate-400">
-                    {mode === 'login'
-                      ? 'Рады видеть вас снова!'
-                      : 'Начните работу с DevHub за минуту'}
-                  </p>
-                </div>
+                  </div>
                 <div className="inline-flex bg-white/5 rounded-full p-1 text-sm">
                   <button
                     type="button"
@@ -370,22 +376,14 @@ export function AuthPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-8">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-all"
-                >
+                <Button variant="secondary" size="lg">
                   <Github className="w-5 h-5" />
                   <span className="font-medium">GitHub</span>
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-all"
-                >
+                </Button>
+                <Button variant="secondary" size="lg">
                   <Chrome className="w-5 h-5" />
                   <span className="font-medium">Google</span>
-                </motion.button>
+                </Button>
               </div>
 
               <div className="relative mb-8">
@@ -446,15 +444,16 @@ export function AuthPage() {
                     </div>
                   </div>
 
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <Button
                     type="submit"
+                    variant="primary"
+                    size="lg"
+                    fullWidth
                     disabled={loginLoading}
-                    className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold text-lg hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/30 disabled:opacity-60"
+                    className="py-4 text-lg"
                   >
                     {loginLoading ? 'Входим...' : 'Войти'}
-                  </motion.button>
+                  </Button>
                 </form>
               ) : (
                 <form onSubmit={handleRegisterSubmit} className="space-y-5">
@@ -577,52 +576,61 @@ export function AuthPage() {
                         />
                         <span>Я принимаю условия использования DevHub.</span>
                       </label>
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={handleResend}
                         disabled={resendCountdown > 0 || registerLoading}
-                        className="text-sm text-blue-300 hover:text-blue-200 transition disabled:opacity-50"
+                        className="justify-start px-0 text-blue-300 hover:text-blue-200"
                       >
                         {resendCountdown > 0
                           ? `Отправить снова через ${resendCountdown}s`
                           : 'Отправить код ещё раз'}
-                      </button>
+                      </Button>
                     </>
                   )}
 
                   <div className="flex flex-col gap-3">
                     {registerStep > 1 && (
-                      <button
+                      <Button
                         type="button"
+                        variant="secondary"
+                        size="lg"
+                        fullWidth
                         onClick={handleRegisterBack}
-                        className="w-full rounded-xl border border-white/10 bg-white/5 py-3 font-medium text-white hover:bg-white/10 transition"
                       >
                         Назад
-                      </button>
+                      </Button>
                     )}
 
                     {registerStep < 3 ? (
-                      <button
+                      <Button
                         type="button"
+                        variant="primary"
+                        size="lg"
+                        fullWidth
                         onClick={handleRegisterNext}
                         disabled={registerLoading}
-                        className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition disabled:opacity-60"
                       >
                         {registerLoading ? 'Отправляем...' : 'Продолжить'}
-                      </button>
+                      </Button>
                     ) : (
-                      <button
+                      <Button
                         type="submit"
+                        variant="primary"
+                        size="lg"
+                        fullWidth
                         disabled={registerLoading}
-                        className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition disabled:opacity-60"
                       >
                         {registerLoading ? 'Создаем...' : 'Создать аккаунт'}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </form>
               )}
-            </div>
+              </CardBody>
+            </Card>
           </div>
         </motion.div>
       </div>

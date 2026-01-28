@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { apiClient, getAuthToken, getDeployTerminalWsUrl } from '../../api/client';
+import { Button } from '../new-ui/components/ui/Button';
+import { Panel, PanelBody, PanelDescription, PanelHeader, PanelTitle } from '../new-ui/components/ui/Panel';
 
 interface DeployServer {
   id: string;
@@ -124,59 +126,59 @@ export const DeployPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="border-b border-slate-800 bg-slate-950/90 px-6 py-5">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-slate-100">
+      <div className="border-b border-white/10 bg-slate-950/70 backdrop-blur px-6 py-5">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-widest text-slate-500">Project</p>
-            <h1 className="text-2xl font-semibold">Deploy · {projectId}</h1>
+            <h1 className="text-2xl font-semibold">Deploy · {projectId ?? 'workspace'}</h1>
             <p className="text-sm text-slate-400">Register servers and open SSH terminals.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            <Button
               type="button"
-              onClick={() =>
-                setActivePanel((prev) => (prev === 'deploy' ? null : 'deploy'))
-              }
-              className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-emerald-500"
+              variant="outline"
+              onClick={() => setActivePanel((prev) => (prev === 'deploy' ? null : 'deploy'))}
             >
               Deploy options
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
               onClick={() => setActivePanel((prev) => (prev === 'env' ? null : 'env'))}
-              className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-emerald-500"
             >
               Env variables
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="primary"
               onClick={handleConnect}
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-800"
               disabled={!selectedServerId || isConnecting}
             >
               {isConnecting ? 'Connecting...' : 'Connect terminal'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-6 py-6 lg:grid-cols-[320px_1fr]">
         <aside className="space-y-4">
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
-            <h2 className="text-sm font-semibold text-slate-200">Add server</h2>
-            <div className="mt-3 space-y-2">
+          <Panel className="border-white/10 bg-slate-900/60">
+            <PanelHeader>
+              <PanelTitle>Add server</PanelTitle>
+            </PanelHeader>
+            <PanelBody className="pt-3 space-y-2">
               <input
                 value={formState.name}
                 onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
                 placeholder="Server name"
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
               />
               <input
                 value={formState.host}
                 onChange={(event) => setFormState((prev) => ({ ...prev, host: event.target.value }))}
                 placeholder="Host"
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
               />
               <div className="grid grid-cols-2 gap-2">
                 <input
@@ -186,7 +188,7 @@ export const DeployPage: React.FC = () => {
                     setFormState((prev) => ({ ...prev, port: Number(event.target.value) }))
                   }
                   placeholder="Port"
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
                 />
                 <input
                   value={formState.username}
@@ -194,7 +196,7 @@ export const DeployPage: React.FC = () => {
                     setFormState((prev) => ({ ...prev, username: event.target.value }))
                   }
                   placeholder="Username"
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
                 />
               </div>
               <select
@@ -205,7 +207,7 @@ export const DeployPage: React.FC = () => {
                     auth_type: event.target.value as 'password' | 'key',
                   }))
                 }
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
               >
                 <option value="password">Password</option>
                 <option value="key">SSH key</option>
@@ -218,7 +220,7 @@ export const DeployPage: React.FC = () => {
                   }
                   type="password"
                   placeholder="Password"
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
                 />
               ) : (
                 <textarea
@@ -228,71 +230,65 @@ export const DeployPage: React.FC = () => {
                   }
                   rows={4}
                   placeholder="Private key"
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
                 />
               )}
-              <button
-                type="button"
-                onClick={handleCreateServer}
-                className="w-full rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
-              >
+              <Button type="button" variant="primary" fullWidth onClick={handleCreateServer}>
                 Save server
-              </button>
-            </div>
-          </div>
+              </Button>
+            </PanelBody>
+          </Panel>
 
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60">
-            <div className="border-b border-slate-800 px-4 py-3 text-sm font-semibold text-slate-200">
-              Servers
-            </div>
-            <div className="max-h-[420px] overflow-y-auto">
-              {servers.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-slate-400">No servers yet.</div>
-              ) : (
-                servers.map((server) => (
-                  <button
-                    key={server.id}
-                    type="button"
-                    onClick={() => setSelectedServerId(server.id)}
-                    className={`w-full border-b border-slate-800 px-4 py-3 text-left transition hover:bg-slate-800/60 ${
-                      server.id === selectedServerId ? 'bg-slate-800/70' : ''
-                    }`}
-                  >
-                    <p className="text-sm font-semibold text-slate-100">{server.name}</p>
-                    <p className="text-xs text-slate-400">
-                      {server.username}@{server.host}:{server.port}
-                    </p>
-                    <p className="mt-1 text-[11px] text-slate-500">Auth: {server.auth_type}</p>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
+          <Panel className="border-white/10 bg-slate-900/60">
+            <PanelHeader className="pb-3">
+              <PanelTitle>Servers</PanelTitle>
+            </PanelHeader>
+            <PanelBody className="pt-0">
+              <div className="max-h-[420px] overflow-y-auto">
+                {servers.length === 0 ? (
+                  <div className="px-1 py-6 text-sm text-slate-400">No servers yet.</div>
+                ) : (
+                  servers.map((server) => (
+                    <button
+                      key={server.id}
+                      type="button"
+                      onClick={() => setSelectedServerId(server.id)}
+                      className={`w-full border-b border-white/5 px-2 py-3 text-left transition hover:bg-slate-800/60 ${
+                        server.id === selectedServerId ? 'bg-slate-800/70' : ''
+                      }`}
+                    >
+                      <p className="text-sm font-semibold text-slate-100">{server.name}</p>
+                      <p className="text-xs text-slate-400">
+                        {server.username}@{server.host}:{server.port}
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-500">Auth: {server.auth_type}</p>
+                    </button>
+                  ))
+                )}
+              </div>
+            </PanelBody>
+          </Panel>
         </aside>
 
         <section className="space-y-4">
           {activePanel && (
-            <div className="rounded-lg border border-slate-800 bg-slate-900/60">
-              <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+            <Panel className="border-white/10 bg-slate-900/60">
+              <PanelHeader>
                 <div>
-                  <p className="text-sm font-semibold text-slate-200">
+                  <PanelTitle>
                     {activePanel === 'deploy' ? 'Deployment options' : 'Environment variables'}
-                  </p>
-                  <p className="text-xs text-slate-400">
+                  </PanelTitle>
+                  <PanelDescription>
                     {activePanel === 'deploy'
                       ? 'Configure runtime, build, and rollout preferences.'
                       : 'Store secrets and configuration for deploy steps.'}
-                  </p>
+                  </PanelDescription>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setActivePanel(null)}
-                  className="text-xs text-slate-400 hover:text-slate-200"
-                >
+                <Button type="button" variant="ghost" size="sm" onClick={() => setActivePanel(null)}>
                   Close
-                </button>
-              </div>
-              <div className="space-y-3 px-4 py-4 text-sm text-slate-300">
+                </Button>
+              </PanelHeader>
+              <PanelBody className="space-y-3 pt-2 text-sm text-slate-300">
                 {activePanel === 'deploy' ? (
                   <>
                     <div>
@@ -302,7 +298,7 @@ export const DeployPage: React.FC = () => {
                       <input
                         disabled
                         placeholder="Rolling / Blue-green / Canary"
-                        className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                        className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
                       />
                     </div>
                     <div>
@@ -312,7 +308,7 @@ export const DeployPage: React.FC = () => {
                       <input
                         disabled
                         placeholder="npm run build"
-                        className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                        className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
                       />
                     </div>
                   </>
@@ -325,7 +321,7 @@ export const DeployPage: React.FC = () => {
                       <input
                         disabled
                         placeholder="DATABASE_URL"
-                        className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                        className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
                       />
                     </div>
                     <div>
@@ -335,7 +331,7 @@ export const DeployPage: React.FC = () => {
                       <input
                         disabled
                         placeholder="••••••••"
-                        className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                        className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
                       />
                     </div>
                   </>
@@ -344,38 +340,38 @@ export const DeployPage: React.FC = () => {
                   These forms are placeholders. We can enable editing once the deploy pipeline is
                   wired in.
                 </p>
-              </div>
-            </div>
+              </PanelBody>
+            </Panel>
           )}
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60">
-            <div className="border-b border-slate-800 px-4 py-3 text-sm text-slate-300">
-              Terminal {selectedServer ? `· ${selectedServer.name}` : ''}
-            </div>
-            <pre className="h-[420px] overflow-y-auto bg-black px-4 py-3 font-mono text-sm text-emerald-200 whitespace-pre-wrap">
-              {terminalOutput || 'Select a server and connect to start.'}
-            </pre>
-            <div className="flex items-center gap-2 border-t border-slate-800 px-4 py-3">
-              <input
-                value={terminalInput}
-                onChange={(event) => setTerminalInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    handleSendCommand();
-                  }
-                }}
-                placeholder="Type a command and press Enter"
-                className="flex-1 rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={handleSendCommand}
-                className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-emerald-500"
-              >
-                Send
-              </button>
-            </div>
-          </div>
+          <Panel className="border-white/10 bg-slate-900/60">
+            <PanelHeader className="pb-3">
+              <PanelTitle>
+                Terminal {selectedServer ? `· ${selectedServer.name}` : ''}
+              </PanelTitle>
+            </PanelHeader>
+            <PanelBody className="pt-0">
+              <pre className="h-[420px] overflow-y-auto bg-black/80 px-4 py-3 font-mono text-sm text-emerald-200 whitespace-pre-wrap rounded-xl border border-white/5">
+                {terminalOutput || 'Select a server and connect to start.'}
+              </pre>
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  value={terminalInput}
+                  onChange={(event) => setTerminalInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      handleSendCommand();
+                    }
+                  }}
+                  placeholder="Type a command and press Enter"
+                  className="flex-1 rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 focus:border-blue-400 focus:outline-none"
+                />
+                <Button type="button" variant="outline" onClick={handleSendCommand}>
+                  Send
+                </Button>
+              </div>
+            </PanelBody>
+          </Panel>
         </section>
       </div>
     </div>

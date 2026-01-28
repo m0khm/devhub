@@ -23,6 +23,8 @@ import {
   Sun,
 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
+import { Button } from '../components/ui/Button';
+import { Panel, PanelBody, PanelHeader, PanelTitle } from '../components/ui/Panel';
 
 const topics = [
   { id: 1, name: 'General', subtitle: 'Обсуждение', icon: MessageSquare, path: '/workspace/chat' },
@@ -370,40 +372,43 @@ export function WorkspaceLayout() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
             >
-              <h3 className="text-2xl font-bold text-white mb-4">Создать новую тему</h3>
-              <input
-                type="text"
-                placeholder="Название темы"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-4"
-              />
-              <textarea
-                placeholder="Описание (опционально)"
-                rows={3}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-4 resize-none"
-              ></textarea>
-              <div className="flex gap-3">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    toast.success('Тема создана! 🎉');
-                  }}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all"
-                >
-                  Создать
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-lg font-semibold hover:bg-white/10 transition-all"
-                >
-                  Отмена
-                </motion.button>
-              </div>
+              <Panel className="w-full max-w-md bg-slate-900/90 border-white/10 shadow-2xl">
+                <PanelHeader className="items-center">
+                  <PanelTitle className="text-2xl">Создать новую тему</PanelTitle>
+                </PanelHeader>
+                <PanelBody>
+                  <input
+                    type="text"
+                    placeholder="Название темы"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-4"
+                  />
+                  <textarea
+                    placeholder="Описание (опционально)"
+                    rows={3}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-4 resize-none"
+                  ></textarea>
+                  <div className="flex gap-3">
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
+                      <Button
+                        variant="primary"
+                        fullWidth
+                        onClick={() => {
+                          setShowCreateModal(false);
+                          toast.success('Тема создана! 🎉');
+                        }}
+                      >
+                        Создать
+                      </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
+                        Отмена
+                      </Button>
+                    </motion.div>
+                  </div>
+                </PanelBody>
+              </Panel>
             </motion.div>
           </motion.div>
         )}
