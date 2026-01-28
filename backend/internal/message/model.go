@@ -12,8 +12,8 @@ type Message struct {
 	UserID    *uuid.UUID `json:"user_id"` // NULL for system messages
 	Content   string     `json:"content" gorm:"not null"`
 	Type      string     `json:"type" gorm:"not null;default:'text'"` // text, file, system, code, integration
-	Metadata  *string    `json:"metadata" gorm:"type:jsonb"`           // For files, code blocks, etc (code: {"language":"ts","filename":"index.ts","content":"..."})
-	ParentID  *uuid.UUID `json:"parent_id"`                            // For threads
+	Metadata  *string    `json:"metadata" gorm:"type:jsonb"`          // For files, code blocks, etc (code: {"language":"ts","filename":"index.ts","content":"..."})
+	ParentID  *uuid.UUID `json:"parent_id"`                           // For threads
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 }
@@ -66,10 +66,10 @@ type MessageWithUser struct {
 }
 
 type ReactionGroup struct {
-	Emoji  string      `json:"emoji"`
-	Count  int         `json:"count"`
-	Users  []uuid.UUID `json:"users"` // User IDs who reacted
-	HasSelf bool       `json:"has_self"` // Did current user react with this emoji
+	Emoji   string      `json:"emoji"`
+	Count   int         `json:"count"`
+	Users   []uuid.UUID `json:"users"`    // User IDs who reacted
+	HasSelf bool        `json:"has_self"` // Did current user react with this emoji
 }
 
 func (Message) TableName() string {

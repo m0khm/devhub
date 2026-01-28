@@ -1,26 +1,117 @@
 import { motion } from 'motion/react';
 import { TrendingUp, Users, CheckCircle, Clock, Target, Zap, Award, BarChart3 } from 'lucide-react';
 
-const stats = [
-  { label: 'Активных задач', value: '24', change: '+12%', icon: CheckCircle, color: 'from-blue-500 to-cyan-500' },
-  { label: 'Участников', value: '8', change: '+2', icon: Users, color: 'from-purple-500 to-pink-500' },
-  { label: 'Завершено', value: '156', change: '+23%', icon: Target, color: 'from-green-500 to-emerald-500' },
-  { label: 'Продуктивность', value: '94%', change: '+8%', icon: Zap, color: 'from-orange-500 to-red-500' },
-];
+interface DeployServer {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  created_at: string;
+}
 
-const teamMembers = [
-  { name: 'Алексей К.', role: 'Frontend Dev', tasks: 12, avatar: 'AK', status: 'online' },
-  { name: 'Мария С.', role: 'Designer', tasks: 8, avatar: 'MC', status: 'online' },
-  { name: 'Дмитрий В.', role: 'Backend Dev', tasks: 15, avatar: 'ДВ', status: 'away' },
-  { name: 'Максим', role: 'Project Manager', tasks: 6, avatar: 'М', status: 'online' },
-];
+interface KanbanColumn {
+  id: string;
+  title: string;
+  tasks?: Array<{ id: string }>;
+}
 
-const recentActivity = [
-  { user: 'Алексей К.', action: 'завершил задачу', item: 'Redesign homepage', time: '5 мин назад' },
-  { user: 'Мария С.', action: 'добавила файл', item: 'Design_Mockup.fig', time: '12 мин назад' },
-  { user: 'Дмитрий В.', action: 'создал PR', item: '#234 API Integration', time: '1 час назад' },
-  { user: 'Максим', action: 'назначил задачу', item: 'Code Review', time: '2 часа назад' },
-];
+const formatTimeAgo = (value?: string) => {
+  if (!value) return 'только что';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'только что';
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 60) return `${minutes} мин назад`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} ч назад`;
+  const days = Math.floor(hours / 24);
+  return `${days} дн назад`;
+};
+
+export function DashboardView() {
+  const { currentProject, directThreads } = useOutletContext<WorkspaceOutletContext>();
+  const [topics, setTopics] = useState<TopicWithStats[]>([]);
+  const [members, setMembers] = useState<ProjectMemberWithUser[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [deployServers, setDeployServers] = useState<DeployServer[]>([]);
+  const [kanbanColumns, setKanbanColumns] = useState<KanbanColumn[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!currentProject?.id) {
+      setLoading(false);
+      return;
+    }
+
+    const loadDashboard = async () => {
+      setLoading(true);
+      try {
+        const [topicsRes, membersRes, notificationsRes, serversRes, columnsRes] = await Promise.all([
+          apiClient.get<TopicWithStats[]>(`/projects/${currentProject.id}/topics`, {
+            params: { withStats: true },
+          }),
+          apiClient.get<ProjectMemberWithUser[]>(`/projects/${currentProject.id}/members`),
+          apiClient.get<Notification[]>('/notifications', { params: { limit: 8 } }),
+          apiClient.get<DeployServer[]>(`/projects/${currentProject.id}/deploy/servers`),
+          apiClient.get<KanbanColumn[]>(`/projects/${currentProject.id}/kanban/columns`),
+        ]);
+        setTopics(Array.isArray(topicsRes.data) ? topicsRes.data : []);
+        setMembers(Array.isArray(membersRes.data) ? membersRes.data : []);
+        setNotifications(Array.isArray(notificationsRes.data) ? notificationsRes.data : []);
+        setDeployServers(Array.isArray(serversRes.data) ? serversRes.data : []);
+        setKanbanColumns(Array.isArray(columnsRes.data) ? columnsRes.data : []);
+      } catch (error) {
+        console.error('Failed to load dashboard data', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadDashboard();
+  }, [currentProject?.id]);
+
+  const totalTasks = useMemo(
+    () => kanbanColumns.reduce((sum, column) => sum + (column.tasks?.length ?? 0), 0),
+    [kanbanColumns]
+  );
+
+  const stats = [
+    {
+      label: 'Задач в работе',
+      value: totalTasks.toString(),
+      change: totalTasks > 0 ? 'на доске' : 'нет',
+      icon: CheckCircle,
+      color: 'from-blue-500 to-cyan-500',
+    },
+    {
+      label: 'Участников',
+      value: members.length.toString(),
+      change: members.length > 0 ? `${members.length} в команде` : 'нет',
+      icon: Users,
+      color: 'from-purple-500 to-pink-500',
+    },
+    {
+      label: 'Активность',
+      value: notifications.length.toString(),
+      change: notifications.length > 0 ? 'новые события' : 'тишина',
+      icon: Zap,
+      color: 'from-orange-500 to-red-500',
+    },
+    {
+      label: 'Активных тем',
+      value: topics.length.toString(),
+      change: directThreads.length > 0 ? `+${directThreads.length} DM` : '—',
+      icon: Target,
+      color: 'from-green-500 to-emerald-500',
+    },
+  ];
+
+  const recentActivity = notifications.slice(0, 4).map((item) => ({
+    user: item.title,
+    action: item.body,
+    item: item.type,
+    time: formatTimeAgo(item.created_at),
+  }));
 
 export function DashboardView() {
   return (

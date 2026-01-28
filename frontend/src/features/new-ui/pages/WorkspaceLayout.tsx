@@ -14,7 +14,6 @@ import {
   ChevronDown,
   Users,
   Sparkles,
-  LayoutDashboard,
   Calendar,
   FolderOpen,
   Zap,
@@ -40,9 +39,9 @@ export function WorkspaceLayout() {
 
   const navItems = [
     { icon: MessageSquare, label: 'Чаты', path: '/workspace/chat', badge: 3 },
-    { icon: LayoutDashboard, label: 'Дашборд', path: '/workspace/dashboard', gradient: 'from-purple-500 to-pink-500' },
-    { icon: Users, label: 'Канбан', path: '/workspace/kanban', gradient: 'from-blue-500 to-cyan-500' },
-    { icon: Calendar, label: 'Календарь', path: '/workspace/calendar', gradient: 'from-orange-500 to-red-500' },
+    { icon: Zap, label: 'Deploy', path: '/workspace/deploy', gradient: 'from-orange-500 to-red-500' },
+    { icon: Calendar, label: 'Planning', path: '/workspace/planning', gradient: 'from-blue-500 to-cyan-500' },
+    { icon: Code, label: 'Code', path: '/workspace/code', gradient: 'from-purple-500 to-pink-500' },
     { icon: FolderOpen, label: 'Файлы', path: '/workspace/files', gradient: 'from-green-500 to-emerald-500' },
   ];
 
@@ -94,7 +93,9 @@ export function WorkspaceLayout() {
           <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-1 mb-6">
               {navItems.map((item, index) => {
-                const isActive = location.pathname === item.path;
+                const isActive =
+                  location.pathname === item.path ||
+                  location.pathname.startsWith(`${item.path}/`);
                 return (
                   <motion.button
                     key={item.path}
@@ -130,7 +131,7 @@ export function WorkspaceLayout() {
               })}
 
               <motion.button
-                onClick={() => navigate('/hub')}
+                onClick={() => navigate('/workspace/hub')}
                 whileHover={{ x: 5, scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-gradient-to-r hover:from-cyan-500/10 hover:to-blue-500/10 hover:text-cyan-400 transition-all group relative overflow-hidden"
@@ -226,10 +227,11 @@ export function WorkspaceLayout() {
             </motion.button>
             <motion.button
               whileHover={{ x: 5 }}
+              onClick={() => navigate('/workspace/profile')}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 text-slate-300 hover:text-white transition-all"
             >
               <Settings className="w-5 h-5" />
-              <span className="font-medium">Настройки</span>
+              <span className="font-medium">Профиль</span>
             </motion.button>
           </div>
 
@@ -276,9 +278,15 @@ export function WorkspaceLayout() {
                       {darkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
                       <span>Переключить тему</span>
                     </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all text-left">
+                    <button
+                      onClick={() => {
+                        navigate('/workspace/profile');
+                        setShowProfile(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all text-left"
+                    >
                       <Settings className="w-4 h-4" />
-                      <span>Настройки</span>
+                      <span>Профиль</span>
                     </button>
                     <button
                       onClick={() => {

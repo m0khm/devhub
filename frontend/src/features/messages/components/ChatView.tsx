@@ -49,19 +49,19 @@ export const ChatView: React.FC<ChatViewProps> = ({ topic, onOpenProfile }) => {
     if (topic.type === 'code') {
       return {
         label: 'Code',
-        path: `/projects/${topic.project_id}/code`,
+        path: `/workspace/code/${topic.project_id}`,
       };
     }
     if (topic.type === 'deploy') {
       return {
         label: 'Deploy',
-        path: `/projects/${topic.project_id}/deploy`,
+        path: `/workspace/deploy/${topic.project_id}`,
       };
     }
     if (topic.type === 'planning') {
       return {
         label: 'Planning',
-        path: `/projects/${topic.project_id}/planning`,
+        path: `/workspace/planning/${topic.project_id}`,
       };
     }
     return null;
