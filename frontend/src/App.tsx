@@ -7,10 +7,13 @@ import { LandingPage } from './features/new-ui/pages/LandingPage';
 import { AuthPage } from './features/new-ui/pages/AuthPage';
 import { WorkspaceLayout } from './features/new-ui/pages/WorkspaceLayout';
 import { FilesView } from './features/new-ui/components/workspace/FilesView';
+import { ChatView } from "./features/new-ui/components/workspace/ChatView";
 import { DashboardView } from './features/new-ui/components/workspace/DashboardView';
 import { HubPage } from './features/new-ui/pages/HubPage';
 import { CreateProjectPage } from './features/new-ui/pages/CreateProjectPage';
+import { PlanningPage } from "./features/planning/PlanningPage";
 import { DeployPage } from './features/deploy/DeployPage';
+import { CodePage } from "./features/code/CodePage";
 import { DeployRedirect, LegacyDeployRedirect } from './features/deploy/DeployRedirect';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { TermsPage } from './features/legal/TermsPage';
@@ -22,7 +25,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   if (!isHydrated) {
-    return null;
+      return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff"}}>Loading…</div>;
   }
   return isAuthenticated ? <>{children}</> : <Navigate to="/auth?mode=login" />;
 };
@@ -57,7 +60,7 @@ function App() {
           }
         >
           <Route index element={<Navigate to="chat" replace />} />
-          <Route path="chat/:projectId?" element={<ProjectWorkspace />} />
+          <Route path="chat/:projectId?" element={<ChatView />} />
           <Route path="deploy/:projectId?" element={<DeployPage />} />
           <Route path="planning/:projectId?" element={<PlanningPage />} />
           <Route path="code/:projectId?" element={<CodePage />} />

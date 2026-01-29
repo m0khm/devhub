@@ -113,7 +113,6 @@ export function DashboardView() {
     time: formatTimeAgo(item.created_at),
   }));
 
-export function DashboardView() {
   return (
     <div className="h-full overflow-y-auto p-6">
       <motion.div
