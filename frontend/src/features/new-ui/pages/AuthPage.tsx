@@ -11,10 +11,11 @@ import type { AuthResponse } from '../../../shared/types';
 export function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState<'login' | 'register'>(
-    (searchParams.get('mode') as 'login' | 'register') || 'login'
+  const [mode, setMode] = useState<'login' | 'register' | 'reset'>(
+    (searchParams.get('mode') as 'login' | 'register' | 'reset') || 'login'
   );
   const [registerStep, setRegisterStep] = useState<1 | 2>(1);
+  const [resetStep, setResetStep] = useState<1 | 2>(1);
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
   const [confirm, setConfirm] = useState(false);
@@ -24,6 +25,11 @@ export function AuthPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
+  });
+  const [resetData, setResetData] = useState({
+    email: '',
+    code: '',
     password: '',
   });
 
@@ -41,10 +47,15 @@ export function AuthPage() {
 
   useEffect(() => {
     setRegisterStep(1);
+    setResetStep(1);
     setCode('');
     setConfirm(false);
     setLoading(false);
     setResendCountdown(0);
+
+    if (mode === 'reset') {
+      setResetData((prev) => ({ ...prev, email: formData.email || prev.email }));
+    }
   }, [mode]);
 
   const validateRegisterStep = (step: 1 | 2) => {
@@ -158,6 +169,72 @@ export function AuthPage() {
     }
   };
 
+  const validateResetStep = (step: 1 | 2) => {
+    if (!resetData.email.trim()) {
+      toast.error('Введите email');
+      return false;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(resetData.email)) {
+      toast.error('Введите корректный email');
+      return false;
+    }
+
+    if (step === 2) {
+      if (!resetData.code.trim()) {
+        toast.error('Введите код');
+        return false;
+      }
+
+      if (resetData.password.length < 8) {
+        toast.error('Пароль должен быть не менее 8 символов');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleRequestReset = async () => {
+    if (!validateResetStep(1)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await apiClient.post('/auth/forgot-password', { email: resetData.email });
+      setResetStep(2);
+      toast.success('Если аккаунт существует, код отправлен на почту');
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Не удалось отправить код';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!validateResetStep(2)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await apiClient.post('/auth/reset-password', {
+        email: resetData.email,
+        code: resetData.code,
+        password: resetData.password,
+      });
+      toast.success('Пароль обновлен. Войдите снова.');
+      setMode('login');
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Не удалось сбросить пароль';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -177,6 +254,16 @@ export function AuthPage() {
       } finally {
         setLoading(false);
       }
+      return;
+    }
+
+    if (mode === 'reset') {
+      if (resetStep === 1) {
+        await handleRequestReset();
+        return;
+      }
+
+      await handleResetPassword();
       return;
     }
 
@@ -275,11 +362,17 @@ export function AuthPage() {
             <div className="relative bg-slate-900/50 backdrop-blur-2xl border border-white/10 rounded-3xl p-10 shadow-2xl">
               <div className="mb-8">
                 <h2 className="text-3xl font-bold text-white mb-2">
-                  {mode === 'login' ? 'Вход в аккаунт' : 'Создание аккаунта'}
+                  {mode === 'login'
+                    ? 'Вход в аккаунт'
+                    : mode === 'reset'
+                    ? 'Восстановление пароля'
+                    : 'Создание аккаунта'}
                 </h2>
                 <p className="text-slate-400">
                   {mode === 'login'
                     ? 'Рады видеть вас снова!'
+                    : mode === 'reset'
+                    ? 'Получите код и установите новый пароль'
                     : 'Начните работу с DevHub за минуту'}
                 </p>
               </div>
@@ -341,40 +434,50 @@ export function AuthPage() {
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input
                       type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      value={mode === 'reset' ? resetData.email : formData.email}
+                      onChange={(e) =>
+                        mode === 'reset'
+                          ? setResetData({ ...resetData, email: e.target.value })
+                          : setFormData({ ...formData, email: e.target.value })
+                      }
                       placeholder="your@email.com"
-                      disabled={mode === 'register' && registerStep === 2}
+                      disabled={(mode === 'register' && registerStep === 2) || (mode === 'reset' && resetStep === 2)}
                       className="w-full pl-12 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all"
                       required
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Пароль
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="••••••••"
-                      disabled={mode === 'register' && registerStep === 2}
-                      className="w-full pl-12 pr-12 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
+                {(mode === 'login' || mode === 'register' || (mode === 'reset' && resetStep === 2)) && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Пароль
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={mode === 'reset' ? resetData.password : formData.password}
+                        onChange={(e) =>
+                          mode === 'reset'
+                            ? setResetData({ ...resetData, password: e.target.value })
+                            : setFormData({ ...formData, password: e.target.value })
+                        }
+                        placeholder="••••••••"
+                        disabled={mode === 'register' && registerStep === 2}
+                        className="w-full pl-12 pr-12 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {mode === 'register' && registerStep === 2 && (
                   <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -434,15 +537,49 @@ export function AuthPage() {
                   </div>
                 )}
 
+                {mode === 'reset' && resetStep === 2 && (
+                  <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-sm text-slate-300">
+                      Мы отправили 6-значный код на {resetData.email || 'вашу почту'}.
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Код подтверждения
+                      </label>
+                      <input
+                        type="text"
+                        value={resetData.code}
+                        onChange={(e) => setResetData({ ...resetData, code: e.target.value })}
+                        placeholder="Введите код"
+                        inputMode="numeric"
+                        maxLength={6}
+                        className="w-full px-4 py-3.5 bg-white/10 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setResetStep(1)}
+                      className="text-left text-sm text-slate-400 hover:text-white transition-colors"
+                    >
+                      Изменить email
+                    </button>
+                  </div>
+                )}
+
                 {mode === 'login' && (
                   <div className="flex items-center justify-between text-sm">
                     <label className="flex items-center gap-2 text-slate-400 cursor-pointer">
                       <input type="checkbox" className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-500 focus:ring-2 focus:ring-blue-500/50" />
                       <span>Запомнить меня</span>
                     </label>
-                    <a href="#" className="text-blue-400 hover:text-blue-300 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => setMode('reset')}
+                      className="text-blue-400 hover:text-blue-300 transition-colors"
+                    >
                       Забыли пароль?
-                    </a>
+                    </button>
                   </div>
                 )}
 
@@ -457,6 +594,14 @@ export function AuthPage() {
                     ? loading
                       ? 'Входим...'
                       : 'Войти'
+                    : mode === 'reset'
+                    ? resetStep === 1
+                      ? loading
+                        ? 'Отправляем код...'
+                        : 'Отправить код'
+                      : loading
+                      ? 'Сохраняем...'
+                      : 'Сбросить пароль'
                     : registerStep === 1
                     ? loading
                       ? 'Отправляем код...'
@@ -469,9 +614,15 @@ export function AuthPage() {
 
               <div className="mt-8 text-center">
                 <p className="text-slate-400">
-                  {mode === 'login' ? 'Нет аккаунта?' : 'Уже есть аккаунт?'}{' '}
+                  {mode === 'login'
+                    ? 'Нет аккаунта?'
+                    : mode === 'reset'
+                    ? 'Вспомнили пароль?'
+                    : 'Уже есть аккаунт?'}{' '}
                   <button
-                    onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+                    onClick={() =>
+                      setMode(mode === 'login' ? 'register' : 'login')
+                    }
                     className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
                   >
                     {mode === 'login' ? 'Зарегистрироваться' : 'Войти'}

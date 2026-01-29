@@ -192,6 +192,8 @@ func main() {
 	authRoutes.Post("/register/confirm", authHandler.ConfirmRegister)
 	authRoutes.Post("/register/resend", authHandler.ResendRegister)
 	authRoutes.Post("/login", authHandler.Login)
+	authRoutes.Post("/forgot-password", authHandler.ForgotPassword)
+	authRoutes.Post("/reset-password", authHandler.ResetPassword)
 	authRoutes.Get("/me", middleware.Auth(jwtManager), authHandler.GetMe)
 
 	// Admin routes (public login + protected dashboard)
