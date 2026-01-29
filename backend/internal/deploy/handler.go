@@ -108,6 +108,69 @@ func (h *Handler) GetServer(c *fiber.Ctx) error {
 	return c.JSON(server.ToResponse())
 }
 
+// DELETE /api/projects/:projectId/deploy/servers/:serverId
+func (h *Handler) DeleteServer(c *fiber.Ctx) error {
+	userID, err := uuid.Parse(c.Locals("userID").(string))
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+	projectID, err := uuid.Parse(c.Params("projectId"))
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+	serverID, err := uuid.Parse(c.Params("serverId"))
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	if err := h.service.DeleteServer(projectID, serverID, userID); err != nil {
+		switch {
+		case errors.Is(err, ErrNotProjectMember):
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not a project member"})
+		case errors.Is(err, ErrNotProjectAdmin):
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Insufficient permissions"})
+		case errors.Is(err, ErrServerNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Server not found"})
+		default:
+			return fiber.ErrInternalServerError
+		}
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// POST /api/projects/:projectId/deploy/servers/:serverId/test
+func (h *Handler) TestServerConnection(c *fiber.Ctx) error {
+	userID, err := uuid.Parse(c.Locals("userID").(string))
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+	projectID, err := uuid.Parse(c.Params("projectId"))
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+	serverID, err := uuid.Parse(c.Params("serverId"))
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	response, err := h.service.TestServerConnection(projectID, serverID, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrNotProjectMember):
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not a project member"})
+		case errors.Is(err, ErrNotProjectAdmin):
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Insufficient permissions"})
+		case errors.Is(err, ErrServerNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Server not found"})
+		default:
+			return fiber.ErrInternalServerError
+		}
+	}
+
+	return c.JSON(response)
+}
+
 // GET /api/projects/:projectId/deploy/settings
 func (h *Handler) GetSettings(c *fiber.Ctx) error {
 	userID, err := uuid.Parse(c.Locals("userID").(string))

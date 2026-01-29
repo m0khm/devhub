@@ -33,6 +33,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/topic"
 	"github.com/m0khm/devhub/backend/internal/user"
 	"github.com/m0khm/devhub/backend/internal/video" // NEW
+	"github.com/m0khm/devhub/backend/internal/workspace"
 )
 
 func main() {
@@ -105,6 +106,7 @@ func main() {
 	userRepo := user.NewRepository(db)
 	kanbanRepo := kanban.NewRepository(db)
 	calendarRepo := calendar.NewRepository(db)
+	workspaceRepo := workspace.NewRepository(db)
 
 	// Initialize services
 	authService := auth.NewService(db, jwtManager, mailerClient)
@@ -127,6 +129,7 @@ func main() {
 	invitationService := project.NewInvitationService(projectRepo, userRepo)
 	kanbanService := kanban.NewService(kanbanRepo, projectRepo)
 	calendarService := calendar.NewService(calendarRepo, projectRepo)
+	workspaceService := workspace.NewService(workspaceRepo, projectService)
 	deployRepo := deploy.NewRepository(db)
 	deployEncryptor, err := deploy.NewEncryptor(cfg.Deploy.SecretsKey)
 	if err != nil {
@@ -144,6 +147,7 @@ func main() {
 	messageHandler := message.NewHandler(messageService)
 	kanbanHandler := kanban.NewHandler(kanbanService)
 	calendarHandler := calendar.NewHandler(calendarService)
+	workspaceHandler := workspace.NewHandler(workspaceService)
 	dmHandler := dm.NewHandler(dmService)
 	wsHandler := message.NewWSHandler(wsHub, messageService)
 	messageHandler.SetWSHandler(wsHandler)
@@ -193,7 +197,9 @@ func main() {
 	authRoutes.Post("/register/confirm", authHandler.ConfirmRegister)
 	authRoutes.Post("/register/resend", authHandler.ResendRegister)
 	authRoutes.Post("/login", authHandler.Login)
-	authRoutes.Get("/me", middleware.Auth(jwtManager, db), authHandler.GetMe)
+	authRoutes.Post("/forgot-password", authHandler.ForgotPassword)
+	authRoutes.Post("/reset-password", authHandler.ResetPassword)
+	authRoutes.Get("/me", middleware.Auth(jwtManager), authHandler.GetMe)
 
 	// Admin routes (public login + protected dashboard)
 	adminRoutes := api.Group("/admin")
@@ -267,6 +273,7 @@ func main() {
 	projectRoutes := protected.Group("/projects")
 	projectRoutes.Post("/", projectHandler.Create)
 	projectRoutes.Get("/", projectHandler.GetUserProjects)
+	projectRoutes.Post("/join", projectHandler.Join)
 	projectRoutes.Get("/:id", projectHandler.GetByID)
 	projectRoutes.Put("/:id", projectHandler.Update)
 	projectRoutes.Delete("/:id", projectHandler.Delete)
@@ -285,6 +292,8 @@ func main() {
 	projectRoutes.Post("/:projectId/deploy/servers", deployHandler.CreateServer)
 	projectRoutes.Get("/:projectId/deploy/servers", deployHandler.ListServers)
 	projectRoutes.Get("/:projectId/deploy/servers/:serverId", deployHandler.GetServer)
+	projectRoutes.Delete("/:projectId/deploy/servers/:serverId", deployHandler.DeleteServer)
+	projectRoutes.Post("/:projectId/deploy/servers/:serverId/test", deployHandler.TestServerConnection)
 	projectRoutes.Get("/:projectId/deploy/settings", deployHandler.GetSettings)
 	projectRoutes.Put("/:projectId/deploy/settings", deployHandler.UpdateSettings)
 	projectRoutes.Get("/:projectId/deploy/env", deployHandler.ListEnvVars)
@@ -304,6 +313,13 @@ func main() {
 	projectRoutes.Post("/:projectId/calendar/events", calendarHandler.CreateEvent)
 	projectRoutes.Put("/:projectId/calendar/events/:eventId", calendarHandler.UpdateEvent)
 	projectRoutes.Delete("/:projectId/calendar/events/:eventId", calendarHandler.DeleteEvent)
+
+	// Workspace routes
+	workspaceRoutes := protected.Group("/workspaces")
+	workspaceRoutes.Get("/", workspaceHandler.GetUserWorkspaces)
+	workspaceRoutes.Post("/", workspaceHandler.Create)
+	workspaceRoutes.Get("/:id/projects", workspaceHandler.GetProjects)
+	workspaceRoutes.Post("/:id/projects", workspaceHandler.CreateProject)
 
 	// Topic routes (по id)
 	topicRoutes := protected.Group("/topics")

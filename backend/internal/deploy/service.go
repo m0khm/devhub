@@ -3,11 +3,16 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/m0khm/devhub/backend/internal/project"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 	"gorm.io/gorm"
 )
 
@@ -117,6 +122,36 @@ func (s *Service) CreateServer(projectID, userID uuid.UUID, req CreateDeployServ
 	return server, nil
 }
 
+func (s *Service) DeleteServer(projectID, serverID, userID uuid.UUID) error {
+	if err := s.requireAdmin(projectID, userID); err != nil {
+		return err
+	}
+	server, err := s.repo.GetServer(projectID, serverID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrServerNotFound
+		}
+		return err
+	}
+	if err := s.repo.DeleteServer(projectID, serverID); err != nil {
+		return err
+	}
+
+	_ = s.repo.CreateAuditEvent(&DeployAuditEvent{
+		ProjectID: projectID,
+		ServerID:  &server.ID,
+		UserID:    userID,
+		Action:    "server_deleted",
+		Metadata: map[string]any{
+			"host": server.Host,
+			"port": server.Port,
+		},
+		CreatedAt: time.Now(),
+	})
+
+	return nil
+}
+
 func (s *Service) ListServers(projectID, userID uuid.UUID) ([]DeployServer, error) {
 	isMember, err := s.projectRepo.IsUserMember(projectID, userID)
 	if err != nil {
@@ -144,6 +179,88 @@ func (s *Service) GetServer(projectID, serverID, userID uuid.UUID) (*DeployServe
 		return nil, err
 	}
 	return server, nil
+}
+
+func (s *Service) TestServerConnection(projectID, serverID, userID uuid.UUID) (DeployConnectionTestResponse, error) {
+	if err := s.requireAdmin(projectID, userID); err != nil {
+		return DeployConnectionTestResponse{}, err
+	}
+
+	server, err := s.repo.GetServer(projectID, serverID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return DeployConnectionTestResponse{}, ErrServerNotFound
+		}
+		return DeployConnectionTestResponse{}, err
+	}
+
+	logs := make([]DeployConnectionLog, 0, 8)
+	addLog := func(level, message string) {
+		logs = append(logs, DeployConnectionLog{
+			Timestamp: time.Now().UTC(),
+			Level:     level,
+			Message:   message,
+		})
+	}
+
+	addLog("info", "Starting connection test.")
+	if err := ValidateHost(server.Host); err != nil {
+		addLog("error", fmt.Sprintf("Host validation failed: %v", err))
+		return DeployConnectionTestResponse{Success: false, Logs: logs}, nil
+	}
+
+	var auth ssh.AuthMethod
+	switch server.AuthType {
+	case "password":
+		addLog("info", "Using password authentication.")
+		password, err := s.DecryptPassword(server)
+		if err != nil {
+			addLog("error", fmt.Sprintf("Failed to decrypt password: %v", err))
+			return DeployConnectionTestResponse{Success: false, Logs: logs}, nil
+		}
+		auth = ssh.Password(password)
+	case "key":
+		addLog("info", "Using private key authentication.")
+		key, err := s.DecryptPrivateKey(server)
+		if err != nil {
+			addLog("error", fmt.Sprintf("Failed to decrypt private key: %v", err))
+			return DeployConnectionTestResponse{Success: false, Logs: logs}, nil
+		}
+		signer, err := ssh.ParsePrivateKey([]byte(key))
+		if err != nil {
+			addLog("error", fmt.Sprintf("Failed to parse private key: %v", err))
+			return DeployConnectionTestResponse{Success: false, Logs: logs}, nil
+		}
+		auth = ssh.PublicKeys(signer)
+	default:
+		addLog("error", "Unsupported authentication type.")
+		return DeployConnectionTestResponse{Success: false, Logs: logs}, nil
+	}
+
+	hostKeyCallback, err := s.hostKeyCallback(&logs)
+	if err != nil {
+		addLog("error", err.Error())
+		return DeployConnectionTestResponse{Success: false, Logs: logs}, nil
+	}
+
+	address := fmt.Sprintf("%s:%d", server.Host, server.Port)
+	addLog("info", fmt.Sprintf("Dialing %s.", address))
+	config := &ssh.ClientConfig{
+		User:            server.Username,
+		Auth:            []ssh.AuthMethod{auth},
+		HostKeyCallback: hostKeyCallback,
+		Timeout:         10 * time.Second,
+	}
+
+	client, err := ssh.Dial("tcp", address, config)
+	if err != nil {
+		addLog("error", fmt.Sprintf("SSH dial failed: %v", err))
+		return DeployConnectionTestResponse{Success: false, Logs: logs}, nil
+	}
+	_ = client.Close()
+
+	addLog("info", "SSH handshake succeeded.")
+	return DeployConnectionTestResponse{Success: true, Logs: logs}, nil
 }
 
 func (s *Service) GetSettings(projectID, userID uuid.UUID) (*DeploySettings, error) {
@@ -304,4 +421,64 @@ func (s *Service) DecryptPrivateKey(server *DeployServer) (string, error) {
 		return "", err
 	}
 	return string(plain), nil
+}
+
+func (s *Service) hostKeyCallback(logs *[]DeployConnectionLog) (ssh.HostKeyCallback, error) {
+	paths := knownHostsPaths()
+	if len(paths) == 0 {
+		return nil, fmt.Errorf("no known_hosts files found for host key verification")
+	}
+	if logs != nil {
+		*logs = append(*logs, DeployConnectionLog{
+			Timestamp: time.Now().UTC(),
+			Level:     "info",
+			Message:   fmt.Sprintf("Using known_hosts files: %s", strings.Join(paths, ", ")),
+		})
+	}
+
+	callback, err := knownhosts.New(paths...)
+	if err != nil {
+		return nil, err
+	}
+
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		fingerprint := ssh.FingerprintSHA256(key)
+		if logs != nil {
+			*logs = append(*logs, DeployConnectionLog{
+				Timestamp: time.Now().UTC(),
+				Level:     "info",
+				Message:   fmt.Sprintf("Verifying host key %s for %s.", fingerprint, hostname),
+			})
+		}
+		if err := callback(hostname, remote, key); err != nil {
+			if logs != nil {
+				*logs = append(*logs, DeployConnectionLog{
+					Timestamp: time.Now().UTC(),
+					Level:     "error",
+					Message:   fmt.Sprintf("Host key verification failed: %v", err),
+				})
+			}
+			return err
+		}
+		return nil
+	}, nil
+}
+
+func knownHostsPaths() []string {
+	paths := make([]string, 0, 2)
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		path := filepath.Join(home, ".ssh", "known_hosts")
+		if fileExists(path) {
+			paths = append(paths, path)
+		}
+	}
+	if fileExists("/etc/ssh/ssh_known_hosts") {
+		paths = append(paths, "/etc/ssh/ssh_known_hosts")
+	}
+	return paths
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }

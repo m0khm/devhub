@@ -8,6 +8,7 @@ import type  { AuthResponse } from '../../../shared/types';
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const refreshMe = useAuthStore((state) => state.refreshMe);
   
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
@@ -63,6 +64,7 @@ export const LoginPage: React.FC = () => {
       });
 
       setAuth(response.data.user, response.data.token);
+      await refreshMe();
       toast.success('Welcome back!');
       navigate('/app');
     } catch (error: any) {

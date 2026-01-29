@@ -51,6 +51,50 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(project)
 }
 
+// Join project
+// POST /api/projects/join
+func (h *Handler) Join(c *fiber.Ctx) error {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	var req JoinProjectRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"details": errs,
+		})
+	}
+
+	project, err := h.service.JoinProject(req.ProjectID, userID)
+	if err != nil {
+		if errors.Is(err, ErrProjectNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Project not found",
+			})
+		}
+		if errors.Is(err, ErrAlreadyMember) {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "Already a project member",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to join project",
+		})
+	}
+
+	return c.JSON(project)
+}
+
 // Get user's projects
 // GET /api/projects
 func (h *Handler) GetUserProjects(c *fiber.Ctx) error {

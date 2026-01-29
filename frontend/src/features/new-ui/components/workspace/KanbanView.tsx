@@ -1,11 +1,41 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Plus, MoreHorizontal, Calendar, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useParams } from 'react-router-dom';
+import { apiClient } from '../../../../api/client';
 import type { WorkspaceOutletContext } from '../../pages/WorkspaceLayout';
-import type { KanbanColumn, KanbanTask } from '../../utils/kanbanStorage';
-import { getDefaultKanbanColumns, loadKanbanColumns, saveKanbanColumns } from '../../utils/kanbanStorage';
+
+type KanbanTask = {
+  id: string;
+  title: string;
+  description?: string | null;
+  assignee?: string | null;
+  priority?: string | null;
+};
+
+type KanbanColumn = {
+  id: string;
+  title: string;
+  position: number;
+  color: string;
+  tasks: KanbanTask[];
+};
+
+type ApiKanbanTask = {
+  id: string;
+  title: string;
+  description?: string | null;
+  assignee?: string | null;
+  priority?: string | null;
+};
+
+type ApiKanbanColumn = {
+  id: string;
+  title: string;
+  position?: number;
+  tasks?: ApiKanbanTask[];
+};
 
 const defaultTaskDraft = {
   title: '',
@@ -14,26 +44,66 @@ const defaultTaskDraft = {
   priority: 'medium',
 };
 
+const columnColorPalette = [
+  'from-slate-500 to-slate-600',
+  'from-blue-500 to-cyan-500',
+  'from-purple-500 to-pink-500',
+  'from-green-500 to-emerald-500',
+  'from-orange-500 to-amber-500',
+  'from-indigo-500 to-violet-500',
+];
+
 export function KanbanView() {
   const { currentProject } = useOutletContext<WorkspaceOutletContext>();
+  const { projectId } = useParams();
   const [draggedTask, setDraggedTask] = useState<{
     task: KanbanTask;
     sourceColumnId: string;
   } | null>(null);
-  const [columns, setColumns] = useState<KanbanColumn[]>(() => getDefaultKanbanColumns());
+  const [columns, setColumns] = useState<KanbanColumn[]>([]);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<KanbanTask | null>(null);
   const [taskDraft, setTaskDraft] = useState(defaultTaskDraft);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const storageProjectId = currentProject?.id ?? 'default';
+  const activeProjectId = projectId ?? currentProject?.id;
+
+  const mapColumns = (list: ApiKanbanColumn[]) =>
+    list
+      .slice()
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+      .map((column, index) => ({
+        id: column.id,
+        title: column.title,
+        position: column.position ?? index,
+        color: columnColorPalette[index % columnColorPalette.length],
+        tasks: Array.isArray(column.tasks) ? column.tasks : [],
+      }));
+
+  const loadColumns = useCallback(async () => {
+    if (!activeProjectId) {
+      setColumns([]);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await apiClient.get<ApiKanbanColumn[]>(
+        `/projects/${activeProjectId}/kanban/columns`
+      );
+      const list = Array.isArray(response.data) ? response.data : [];
+      setColumns(mapColumns(list));
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Не удалось загрузить колонки');
+      setColumns([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeProjectId]);
 
   useEffect(() => {
-    setColumns(loadKanbanColumns(storageProjectId));
-  }, [storageProjectId]);
-
-  useEffect(() => {
-    saveKanbanColumns(storageProjectId, columns);
-  }, [columns, storageProjectId]);
+    void loadColumns();
+  }, [loadColumns]);
 
   const openNewTaskModal = (columnId: string) => {
     setActiveColumnId(columnId);
@@ -46,9 +116,9 @@ export function KanbanView() {
     setEditingTask(task);
     setTaskDraft({
       title: task.title,
-      description: task.description,
-      assignee: task.assignee,
-      priority: task.priority,
+      description: task.description ?? '',
+      assignee: task.assignee ?? '',
+      priority: task.priority ?? 'medium',
     });
   };
 
@@ -59,51 +129,66 @@ export function KanbanView() {
   };
 
   const handleSaveTask = () => {
-    if (!activeColumnId) return;
+    if (!activeProjectId || !activeColumnId) {
+      toast.error('Сначала выберите проект');
+      return;
+    }
     if (!taskDraft.title.trim()) {
       toast.error('Введите название задачи');
       return;
     }
 
-    setColumns((prev) =>
-      prev.map((column) => {
-        if (column.id !== activeColumnId) return column;
+    const saveTask = async () => {
+      setIsSaving(true);
+      try {
         if (editingTask) {
-          return {
-            ...column,
-            tasks: column.tasks.map((task) =>
-              task.id === editingTask.id ? { ...task, ...taskDraft } : task
-            ),
-          };
+          await apiClient.put(`/projects/${activeProjectId}/kanban/tasks/${editingTask.id}`, {
+            title: taskDraft.title.trim(),
+            description: taskDraft.description.trim() || undefined,
+            assignee: taskDraft.assignee.trim() || undefined,
+            priority: taskDraft.priority,
+          });
+          toast.success('Задача обновлена');
+        } else {
+          await apiClient.post(
+            `/projects/${activeProjectId}/kanban/columns/${activeColumnId}/tasks`,
+            {
+              title: taskDraft.title.trim(),
+              description: taskDraft.description.trim() || undefined,
+              assignee: taskDraft.assignee.trim() || undefined,
+              priority: taskDraft.priority,
+            }
+          );
+          toast.success('Задача создана');
         }
-        const newTask: KanbanTask = {
-          id: Date.now(),
-          title: taskDraft.title.trim(),
-          description: taskDraft.description.trim() || 'Без описания',
-          assignee: taskDraft.assignee.trim() || 'DH',
-          priority: taskDraft.priority,
-        };
-        return { ...column, tasks: [...column.tasks, newTask] };
-      })
-    );
+        await loadColumns();
+        closeTaskModal();
+      } catch (error: any) {
+        toast.error(error.response?.data?.error || 'Не удалось сохранить задачу');
+      } finally {
+        setIsSaving(false);
+      }
+    };
 
-    toast.success(editingTask ? 'Задача обновлена' : 'Задача создана');
-    closeTaskModal();
+    void saveTask();
   };
 
   const handleDeleteTask = () => {
-    if (!activeColumnId || !editingTask) return;
-    setColumns((prev) =>
-      prev.map((column) => {
-        if (column.id !== activeColumnId) return column;
-        return {
-          ...column,
-          tasks: column.tasks.filter((task) => task.id !== editingTask.id),
-        };
-      })
-    );
-    toast.success('Задача удалена');
-    closeTaskModal();
+    if (!activeProjectId || !editingTask) return;
+    const deleteTask = async () => {
+      setIsSaving(true);
+      try {
+        await apiClient.delete(`/projects/${activeProjectId}/kanban/tasks/${editingTask.id}`);
+        toast.success('Задача удалена');
+        await loadColumns();
+        closeTaskModal();
+      } catch (error: any) {
+        toast.error(error.response?.data?.error || 'Не удалось удалить задачу');
+      } finally {
+        setIsSaving(false);
+      }
+    };
+    void deleteTask();
   };
 
   const handleDragStart = (task: KanbanTask, columnId: string) => {
@@ -115,32 +200,42 @@ export function KanbanView() {
   };
 
   const handleDrop = (targetColumnId: string) => {
-    if (!draggedTask) return;
+    if (!draggedTask || !activeProjectId) return;
     const { task, sourceColumnId } = draggedTask;
     if (sourceColumnId === targetColumnId) {
       setDraggedTask(null);
       return;
     }
 
-    setColumns((prev) =>
-      prev.map((column) => {
-        if (column.id === sourceColumnId) {
-          return { ...column, tasks: column.tasks.filter((item) => item.id !== task.id) };
-        }
-        if (column.id === targetColumnId) {
-          return { ...column, tasks: [...column.tasks, task] };
-        }
-        return column;
-      })
-    );
-
-    toast.success(
-      `Задача перемещена в ${columns.find((col) => col.id === targetColumnId)?.title ?? 'новую колонку'}`
-    );
+    const targetTitle =
+      columns.find((col) => col.id === targetColumnId)?.title ?? 'новую колонку';
+    const optimistic = columns.map((column) => {
+      if (column.id === sourceColumnId) {
+        return { ...column, tasks: column.tasks.filter((item) => item.id !== task.id) };
+      }
+      if (column.id === targetColumnId) {
+        return { ...column, tasks: [...column.tasks, task] };
+      }
+      return column;
+    });
+    setColumns(optimistic);
     setDraggedTask(null);
+    const moveTask = async () => {
+      try {
+        await apiClient.put(`/projects/${activeProjectId}/kanban/tasks/${task.id}`, {
+          column_id: targetColumnId,
+        });
+        await loadColumns();
+        toast.success(`Задача перемещена в ${targetTitle}`);
+      } catch (error: any) {
+        toast.error(error.response?.data?.error || 'Не удалось переместить задачу');
+        await loadColumns();
+      }
+    };
+    void moveTask();
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority?: string | null) => {
     switch (priority) {
       case 'urgent': return 'bg-red-500';
       case 'high': return 'bg-orange-500';
@@ -160,6 +255,16 @@ export function KanbanView() {
         <h2 className="text-2xl font-bold text-white mb-2">Канбан Доска</h2>
         <p className="text-slate-400">Управляйте задачами с помощью drag & drop</p>
       </motion.div>
+
+      {isLoading && (
+        <div className="text-sm text-slate-400 mb-4">Загрузка колонок...</div>
+      )}
+
+      {!isLoading && columns.length === 0 && (
+        <div className="rounded-xl border border-white/10 bg-slate-900/40 p-6 text-sm text-slate-400">
+          В этом проекте пока нет канбан-колонок.
+        </div>
+      )}
 
       <div className="flex gap-6 min-w-max pb-6">
         {columns.map((column, colIndex) => (
@@ -208,11 +313,13 @@ export function KanbanView() {
                         <h4 className="font-medium text-white text-sm">{task.title}</h4>
                         <div className={`w-2 h-2 rounded-full ${getPriorityColor(task.priority)} flex-shrink-0`}></div>
                       </div>
-                      <p className="text-xs text-slate-400 mb-3">{task.description}</p>
+                      <p className="text-xs text-slate-400 mb-3">
+                        {task.description?.trim() ? task.description : 'Без описания'}
+                      </p>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-xs font-semibold">
-                            {task.assignee}
+                            {task.assignee?.trim() ? task.assignee : 'DH'}
                           </div>
                         </div>
                         <div className="flex items-center gap-1 text-xs text-slate-500">
@@ -323,9 +430,10 @@ export function KanbanView() {
                 <button
                   type="button"
                   onClick={handleSaveTask}
+                  disabled={isSaving}
                   className="flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 py-2.5 font-semibold text-white hover:from-blue-600 hover:to-purple-700 transition"
                 >
-                  Сохранить
+                  {isSaving ? 'Сохранение...' : 'Сохранить'}
                 </button>
                 <button
                   type="button"

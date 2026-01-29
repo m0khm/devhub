@@ -33,6 +33,10 @@ func (r *Repository) UpdateServer(server *DeployServer) error {
 	return r.db.Save(server).Error
 }
 
+func (r *Repository) DeleteServer(projectID, serverID uuid.UUID) error {
+	return r.db.Where("project_id = ? AND id = ?", projectID, serverID).Delete(&DeployServer{}).Error
+}
+
 func (r *Repository) CreateAuditEvent(event *DeployAuditEvent) error {
 	return r.db.Create(event).Error
 }
