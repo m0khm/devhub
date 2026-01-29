@@ -22,6 +22,7 @@ import {
   Sun,
 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
+import { useAuthStore } from '../../../store/authStore';
 
 const topics = [
   { id: 1, name: 'General', subtitle: 'Обсуждение', icon: MessageSquare, path: '/workspace/chat' },
@@ -36,6 +37,10 @@ export function WorkspaceLayout() {
   const [showProfile, setShowProfile] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const user = useAuthStore((state) => state.user);
+  const userName = user?.name?.trim() || 'Пользователь';
+  const userInitial = (user?.name || user?.email || '?').trim().charAt(0).toUpperCase();
+  const userAvatarUrl = user?.avatar_url;
 
   const navItems = [
     { icon: MessageSquare, label: 'Чаты', path: '/workspace/chat', badge: 3 },
@@ -74,7 +79,15 @@ export function WorkspaceLayout() {
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg blur-md opacity-70"></div>
                   <div className="relative w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold shadow-lg">
-                    M
+                    {userAvatarUrl ? (
+                      <img
+                        src={userAvatarUrl}
+                        alt={userName}
+                        className="h-full w-full rounded-lg object-cover"
+                      />
+                    ) : (
+                      userInitial
+                    )}
                   </div>
                 </motion.div>
                 <div className="text-left">
@@ -250,13 +263,21 @@ export function WorkspaceLayout() {
                     transition={{ duration: 2, repeat: Infinity }}
                     className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full blur-md opacity-50"
                   ></motion.div>
-                  <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold">
-                    М
+                  <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold overflow-hidden">
+                    {userAvatarUrl ? (
+                      <img
+                        src={userAvatarUrl}
+                        alt={userName}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      userInitial
+                    )}
                   </div>
                   <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></div>
                 </div>
                 <div className="text-left flex-1">
-                  <div className="font-semibold text-white">Максим</div>
+                  <div className="font-semibold text-white">{userName}</div>
                   <div className="text-xs text-green-400">● В сети</div>
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-400" />

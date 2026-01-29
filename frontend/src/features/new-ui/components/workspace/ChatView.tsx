@@ -1,39 +1,49 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Send, Smile, Paperclip, Hash, ThumbsUp, Heart, Laugh, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-
-const messages = [
-  {
-    id: 1,
-    user: 'Алексей К.',
-    avatar: 'AK',
-    time: '14:23',
-    text: 'Привет! Кто-нибудь проверял последний коммит?',
-    reactions: [{ emoji: '👍', count: 2 }],
-  },
-  {
-    id: 2,
-    user: 'Мария С.',
-    avatar: 'MC',
-    time: '14:25',
-    text: 'Да, я посмотрела. Всё работает отлично! 🚀',
-    reactions: [{ emoji: '❤️', count: 3 }, { emoji: '🔥', count: 1 }],
-  },
-  {
-    id: 3,
-    user: 'Дмитрий В.',
-    avatar: 'ДВ',
-    time: '14:27',
-    text: 'Отлично! Можем двигаться дальше с новым спринтом.',
-    reactions: [{ emoji: '⚡', count: 1 }],
-  },
-];
+import { useAuthStore } from '../../../../store/authStore';
 
 export function ChatView() {
+  const user = useAuthStore((state) => state.user);
+  const userName = user?.name?.trim() || 'Пользователь';
+  const userInitial = (user?.name || user?.email || '?').trim().charAt(0).toUpperCase();
   const [message, setMessage] = useState('');
   const [hoveredMessage, setHoveredMessage] = useState<number | null>(null);
-  const [localMessages, setLocalMessages] = useState(messages);
+  const initialMessages = useMemo(
+    () => [
+      {
+        id: 1,
+        user: userName,
+        avatar: userInitial,
+        time: '14:23',
+        text: 'Привет! Кто-нибудь проверял последний коммит?',
+        reactions: [{ emoji: '👍', count: 2 }],
+      },
+      {
+        id: 2,
+        user: userName,
+        avatar: userInitial,
+        time: '14:25',
+        text: 'Да, я посмотрела. Всё работает отлично! 🚀',
+        reactions: [{ emoji: '❤️', count: 3 }, { emoji: '🔥', count: 1 }],
+      },
+      {
+        id: 3,
+        user: userName,
+        avatar: userInitial,
+        time: '14:27',
+        text: 'Отлично! Можем двигаться дальше с новым спринтом.',
+        reactions: [{ emoji: '⚡', count: 1 }],
+      },
+    ],
+    [userInitial, userName]
+  );
+  const [localMessages, setLocalMessages] = useState(initialMessages);
+
+  useEffect(() => {
+    setLocalMessages(initialMessages);
+  }, [initialMessages]);
 
   const reactions = [
     { icon: ThumbsUp, emoji: '👍' },
@@ -46,8 +56,8 @@ export function ChatView() {
     if (message.trim()) {
       const newMessage = {
         id: localMessages.length + 1,
-        user: 'Максим',
-        avatar: 'М',
+        user: userName,
+        avatar: userInitial,
         time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
         text: message,
         reactions: [],
