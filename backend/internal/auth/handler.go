@@ -211,3 +211,79 @@ func (h *Handler) GetMe(c *fiber.Ctx) error {
 
 	return c.JSON(foundUser)
 }
+
+// ForgotPassword handler
+// POST /api/auth/forgot-password
+func (h *Handler) ForgotPassword(c *fiber.Ctx) error {
+	var req ForgotPasswordRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"details": errs,
+		})
+	}
+
+	if err := h.service.StartPasswordReset(req.Email, c.IP()); err != nil {
+		if errors.Is(err, ErrRateLimited) {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Too many requests",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to start password reset",
+		})
+	}
+
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"message": "If an account exists, a reset code has been sent.",
+	})
+}
+
+// ResetPassword handler
+// POST /api/auth/reset-password
+func (h *Handler) ResetPassword(c *fiber.Ctx) error {
+	var req ResetPasswordRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"details": errs,
+		})
+	}
+
+	if err := h.service.ResetPassword(req, c.IP()); err != nil {
+		switch {
+		case errors.Is(err, ErrRateLimited):
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Too many requests",
+			})
+		case errors.Is(err, ErrCodeExpired):
+			return c.Status(fiber.StatusGone).JSON(fiber.Map{
+				"error": "Reset code expired",
+			})
+		case errors.Is(err, ErrInvalidCode):
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid reset code",
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to reset password",
+			})
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Password reset successful",
+	})
+}

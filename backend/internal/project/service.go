@@ -40,6 +40,14 @@ func NewService(repo *Repository) *Service {
 
 // Create project
 func (s *Service) Create(userID uuid.UUID, req CreateProjectRequest) (*Project, error) {
+	return s.createProject(userID, nil, req)
+}
+
+func (s *Service) CreateInWorkspace(userID, workspaceID uuid.UUID, req CreateProjectRequest) (*Project, error) {
+	return s.createProject(userID, &workspaceID, req)
+}
+
+func (s *Service) createProject(userID uuid.UUID, workspaceID *uuid.UUID, req CreateProjectRequest) (*Project, error) {
 	accessLevel := "private"
 	if req.AccessLevel != nil && *req.AccessLevel != "" {
 		accessLevel = *req.AccessLevel
@@ -60,6 +68,7 @@ func (s *Service) Create(userID uuid.UUID, req CreateProjectRequest) (*Project, 
 		Visibility:         visibility,
 		NotificationsMuted: notificationsMuted,
 		OwnerID:            userID,
+		WorkspaceID:        workspaceID,
 	}
 
 	// Start transaction
@@ -98,6 +107,16 @@ func (s *Service) Create(userID uuid.UUID, req CreateProjectRequest) (*Project, 
 	}
 
 	return &project, nil
+}
+
+type workspaceMember struct {
+	WorkspaceID uuid.UUID `gorm:"column:workspace_id"`
+	UserID      uuid.UUID `gorm:"column:user_id"`
+	Role        string    `gorm:"column:role"`
+}
+
+func (workspaceMember) TableName() string {
+	return "workspace_members"
 }
 
 // Get project by ID
@@ -206,6 +225,61 @@ func (s *Service) Update(projectID, userID uuid.UUID, req UpdateProjectRequest) 
 	// Save
 	if err := s.repo.Update(project); err != nil {
 		return nil, fmt.Errorf("failed to update project: %w", err)
+	}
+
+	return project, nil
+}
+
+func (s *Service) JoinProject(projectID, userID uuid.UUID) (*Project, error) {
+	project, err := s.repo.GetByID(projectID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrProjectNotFound
+		}
+		return nil, fmt.Errorf("failed to get project: %w", err)
+	}
+
+	isMember, err := s.repo.IsUserMember(projectID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check membership: %w", err)
+	}
+	if isMember {
+		return nil, ErrAlreadyMember
+	}
+
+	err = s.repo.db.Transaction(func(tx *gorm.DB) error {
+		if project.WorkspaceID != nil {
+			var count int64
+			if err := tx.Model(&workspaceMember{}).
+				Where("workspace_id = ? AND user_id = ?", *project.WorkspaceID, userID).
+				Count(&count).Error; err != nil {
+				return fmt.Errorf("failed to check workspace membership: %w", err)
+			}
+			if count == 0 {
+				member := workspaceMember{
+					WorkspaceID: *project.WorkspaceID,
+					UserID:      userID,
+					Role:        "member",
+				}
+				if err := tx.Create(&member).Error; err != nil {
+					return fmt.Errorf("failed to add workspace member: %w", err)
+				}
+			}
+		}
+
+		member := ProjectMember{
+			ProjectID: projectID,
+			UserID:    userID,
+			Role:      "member",
+		}
+		if err := tx.Create(&member).Error; err != nil {
+			return fmt.Errorf("failed to add project member: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return project, nil

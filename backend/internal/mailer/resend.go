@@ -30,3 +30,16 @@ func (m *ResendMailer) SendVerificationCode(to, code string) error {
 	})
 	return err
 }
+
+func (m *ResendMailer) SendPasswordResetCode(to, code string) error {
+	subject := "Password reset code"
+	text := fmt.Sprintf("Your password reset code is: %s\n\nIf you didn’t request this, you can ignore this email.", code)
+
+	_, err := m.client.Emails.Send(&resend.SendEmailRequest{
+		From:    m.from,
+		To:      []string{to},
+		Subject: subject,
+		Text:    text,
+	})
+	return err
+}
