@@ -1,8 +1,12 @@
 import { motion } from 'motion/react';
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, User, ArrowLeft, Eye, EyeOff, Github, Chrome } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { apiClient } from '../../../api/client';
+import { useAuthStore } from '../../../store/authStore';
+import type { AuthResponse } from '../../../shared/types';
 
 export function AuthPage() {
   const navigate = useNavigate();
@@ -10,17 +14,178 @@ export function AuthPage() {
   const [mode, setMode] = useState<'login' | 'register'>(
     (searchParams.get('mode') as 'login' | 'register') || 'login'
   );
+  const [registerStep, setRegisterStep] = useState<1 | 2>(1);
   const [showPassword, setShowPassword] = useState(false);
+  const [code, setCode] = useState('');
+  const [confirm, setConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const setAuth = useAuthStore((state) => state.setAuth);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
   });
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (resendCountdown <= 0) {
+      return undefined;
+    }
+
+    const timer = setInterval(() => {
+      setResendCountdown((prev) => Math.max(prev - 1, 0));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [resendCountdown]);
+
+  useEffect(() => {
+    setRegisterStep(1);
+    setCode('');
+    setConfirm(false);
+    setLoading(false);
+    setResendCountdown(0);
+  }, [mode]);
+
+  const validateRegisterStep = (step: 1 | 2) => {
+    if (step === 1) {
+      if (!formData.name.trim()) {
+        toast.error('Введите имя');
+        return false;
+      }
+
+      if (!formData.email.trim()) {
+        toast.error('Введите email');
+        return false;
+      }
+
+      if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
+        toast.error('Введите корректный email');
+        return false;
+      }
+
+      if (formData.password.length < 8) {
+        toast.error('Пароль должен быть не менее 8 символов');
+        return false;
+      }
+    }
+
+    if (step === 2) {
+      if (!code.trim()) {
+        toast.error('Введите код подтверждения');
+        return false;
+      }
+
+      if (!confirm) {
+        toast.error('Подтвердите согласие с условиями');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleSendCode = async () => {
+    if (!validateRegisterStep(1)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiClient.post<{ expires_at?: string }>('/auth/register', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
+      setRegisterStep(2);
+      setResendCountdown(60);
+      toast.success('Код подтверждения отправлен');
+      if (response.data.expires_at) {
+        const expiresAt = new Date(response.data.expires_at);
+        const remaining = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+        if (remaining > 0) {
+          setResendCountdown(Math.min(remaining, 60));
+        }
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Не удалось отправить код';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmRegister = async () => {
+    if (!validateRegisterStep(2)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiClient.post<AuthResponse>('/auth/register/confirm', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        code,
+      });
+      setAuth(response.data.user, response.data.token);
+      toast.success('Аккаунт создан!');
+      navigate('/workspace');
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Не удалось подтвердить регистрацию';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!formData.email.trim()) {
+      toast.error('Введите email');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await apiClient.post('/auth/register/resend', { email: formData.email });
+      setResendCountdown(60);
+      toast.success('Код отправлен повторно');
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Не удалось отправить код повторно';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Simulate authentication
-    navigate('/workspace');
+
+    if (mode === 'login') {
+      setLoading(true);
+      try {
+        const response = await apiClient.post<AuthResponse>('/auth/login', {
+          email: formData.email,
+          password: formData.password,
+        });
+        setAuth(response.data.user, response.data.token);
+        toast.success('Успешный вход!');
+        navigate('/workspace');
+      } catch (error: any) {
+        const message = error.response?.data?.error || 'Не удалось войти';
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (registerStep === 1) {
+      await handleSendCode();
+      return;
+    }
+
+    await handleConfirmRegister();
   };
 
   return (
@@ -149,7 +314,7 @@ export function AuthPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
-                {mode === 'register' && (
+                {mode === 'register' && registerStep === 1 && (
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Имя
@@ -179,6 +344,7 @@ export function AuthPage() {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="your@email.com"
+                      disabled={mode === 'register' && registerStep === 2}
                       className="w-full pl-12 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all"
                       required
                     />
@@ -196,6 +362,7 @@ export function AuthPage() {
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       placeholder="••••••••"
+                      disabled={mode === 'register' && registerStep === 2}
                       className="w-full pl-12 pr-12 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all"
                       required
                     />
@@ -208,6 +375,64 @@ export function AuthPage() {
                     </button>
                   </div>
                 </div>
+
+                {mode === 'register' && registerStep === 2 && (
+                  <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-sm text-slate-300">
+                      Мы отправили 6-значный код на {formData.email || 'вашу почту'}.
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Код подтверждения
+                      </label>
+                      <input
+                        type="text"
+                        value={code}
+                        onChange={(e) => setCode(e.target.value)}
+                        placeholder="Введите код"
+                        inputMode="numeric"
+                        maxLength={6}
+                        className="w-full px-4 py-3.5 bg-white/10 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm text-slate-400">
+                      <span>
+                        {resendCountdown > 0
+                          ? `Повторная отправка через ${resendCountdown}с`
+                          : 'Не получили код?'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleResendCode}
+                        disabled={resendCountdown > 0 || loading}
+                        className="text-blue-400 hover:text-blue-300 disabled:text-slate-500 disabled:cursor-not-allowed"
+                      >
+                        Отправить снова
+                      </button>
+                    </div>
+
+                    <label className="flex items-start gap-3 text-sm text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={confirm}
+                        onChange={(e) => setConfirm(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500/50"
+                      />
+                      <span>
+                        Я принимаю условия пользовательского соглашения.
+                      </span>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => setRegisterStep(1)}
+                      className="text-left text-sm text-slate-400 hover:text-white transition-colors"
+                    >
+                      Назад к данным
+                    </button>
+                  </div>
+                )}
 
                 {mode === 'login' && (
                   <div className="flex items-center justify-between text-sm">
@@ -226,8 +451,19 @@ export function AuthPage() {
                   whileHover={{ scale: 1.02, boxShadow: '0 0 40px rgba(59, 130, 246, 0.6)' }}
                   whileTap={{ scale: 0.98 }}
                   className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold text-lg hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/50"
+                  disabled={loading}
                 >
-                  {mode === 'login' ? 'Войти' : 'Создать аккаунт'}
+                  {mode === 'login'
+                    ? loading
+                      ? 'Входим...'
+                      : 'Войти'
+                    : registerStep === 1
+                    ? loading
+                      ? 'Отправляем код...'
+                      : 'Отправить код'
+                    : loading
+                    ? 'Подтверждаем...'
+                    : 'Подтвердить и войти'}
                 </motion.button>
               </form>
 
