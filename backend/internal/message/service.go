@@ -49,9 +49,7 @@ func NewService(
 	}
 }
 
-// Create message
-func (s *Service) Create(topicID, userID uuid.UUID, req CreateMessageRequest) (*MessageWithUser, error) {
-	// Get topic to check project access
+func (s *Service) checkTopicAccess(topicID, userID uuid.UUID) (*topic.Topic, error) {
 	topicObj, err := s.topicRepo.GetByID(topicID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -60,13 +58,22 @@ func (s *Service) Create(topicID, userID uuid.UUID, req CreateMessageRequest) (*
 		return nil, fmt.Errorf("failed to get topic: %w", err)
 	}
 
-	// Check if user is member
 	isMember, err := s.projectRepo.IsUserMember(topicObj.ProjectID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check membership: %w", err)
 	}
 	if !isMember {
 		return nil, ErrNotProjectMember
+	}
+
+	return topicObj, nil
+}
+
+// Create message
+func (s *Service) Create(topicID, userID uuid.UUID, req CreateMessageRequest) (*MessageWithUser, error) {
+	topicObj, err := s.checkTopicAccess(topicID, userID)
+	if err != nil {
+		return nil, err
 	}
 
 	if command, isCommand := ParseCommand(req.Content); isCommand {
@@ -230,21 +237,8 @@ func (s *Service) GetByID(messageID, currentUserID uuid.UUID) (*MessageWithUser,
 
 // Get messages by topic
 func (s *Service) GetByTopicID(topicID, userID uuid.UUID, limit, offset int, before *time.Time) ([]MessageWithUser, error) {
-	// Check access
-	topicObj, err := s.topicRepo.GetByID(topicID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("topic not found")
-		}
-		return nil, fmt.Errorf("failed to get topic: %w", err)
-	}
-
-	isMember, err := s.projectRepo.IsUserMember(topicObj.ProjectID, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check membership: %w", err)
-	}
-	if !isMember {
-		return nil, ErrNotProjectMember
+	if _, err := s.checkTopicAccess(topicID, userID); err != nil {
+		return nil, err
 	}
 
 	messages, err := s.repo.GetByTopicID(topicID, limit, offset, before)
@@ -266,21 +260,8 @@ func (s *Service) GetByTopicID(topicID, userID uuid.UUID, limit, offset int, bef
 
 // Search messages by topic
 func (s *Service) SearchByTopicID(topicID, userID uuid.UUID, query string, limit int) ([]MessageWithUser, error) {
-	// Check access
-	topicObj, err := s.topicRepo.GetByID(topicID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("topic not found")
-		}
-		return nil, fmt.Errorf("failed to get topic: %w", err)
-	}
-
-	isMember, err := s.projectRepo.IsUserMember(topicObj.ProjectID, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check membership: %w", err)
-	}
-	if !isMember {
-		return nil, ErrNotProjectMember
+	if _, err := s.checkTopicAccess(topicID, userID); err != nil {
+		return nil, err
 	}
 
 	messages, err := s.repo.Search(topicID, query, limit)
@@ -489,20 +470,8 @@ func (s *Service) UnpinMessage(messageID, userID uuid.UUID) error {
 
 // Get pinned messages by topic
 func (s *Service) GetPinnedByTopicID(topicID, userID uuid.UUID) ([]MessageWithUser, error) {
-	topicObj, err := s.topicRepo.GetByID(topicID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("topic not found")
-		}
-		return nil, fmt.Errorf("failed to get topic: %w", err)
-	}
-
-	isMember, err := s.projectRepo.IsUserMember(topicObj.ProjectID, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check membership: %w", err)
-	}
-	if !isMember {
-		return nil, ErrNotProjectMember
+	if _, err := s.checkTopicAccess(topicID, userID); err != nil {
+		return nil, err
 	}
 
 	messages, err := s.repo.GetPinnedByTopicID(topicID)
