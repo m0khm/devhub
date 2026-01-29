@@ -8,6 +8,7 @@ import type { AuthResponse } from '../../../shared/types';
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const refreshMe = useAuthStore((state) => state.refreshMe);
   
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
@@ -155,6 +156,7 @@ export const RegisterPage: React.FC = () => {
       });
 
       setAuth(response.data.user, response.data.token);
+      await refreshMe();
       toast.success('Account created successfully!');
       navigate('/app');
     } catch (error: any) {

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { User } from '../shared/types';
+import { apiClient } from '../api/client';
 import { safeStorage } from '../shared/utils/storage';
 
 interface AuthState {
@@ -9,11 +10,12 @@ interface AuthState {
   isHydrated: boolean;
   setAuth: (user: User, token: string) => void;
   updateUser: (user: User) => void;
+  refreshMe: () => Promise<void>;
   logout: () => void;
   loadFromStorage: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
   isAuthenticated: false,
@@ -33,6 +35,27 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: state.isAuthenticated,
       isHydrated: state.isHydrated,
     }));
+  },
+
+  refreshMe: async () => {
+    const token = safeStorage.get('auth_token');
+    if (!token) {
+      set({ user: null, token: null, isAuthenticated: false, isHydrated: true });
+      return;
+    }
+
+    try {
+      const response = await apiClient.get<User>('/auth/me');
+      const user = response.data;
+      safeStorage.set('auth_user', JSON.stringify(user));
+      set({ user, token, isAuthenticated: true, isHydrated: true });
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        get().logout();
+        return;
+      }
+      console.error('Failed to refresh user:', error);
+    }
   },
 
   logout: () => {
