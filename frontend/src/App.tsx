@@ -17,6 +17,8 @@ import { CreateProjectPage } from './features/new-ui/pages/CreateProjectPage';
 import { PlanningPage } from "./features/planning/PlanningPage";
 import { DeployPage } from './features/deploy/DeployPage';
 import { CodePage } from "./features/code/CodePage";
+import { TestsPage } from './features/tests/TestsPage';
+import { CustomPage } from './features/custom/CustomPage';
 import { DeployRedirect, LegacyDeployRedirect } from './features/deploy/DeployRedirect';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { TermsPage } from './features/legal/TermsPage';
@@ -70,6 +72,8 @@ function App() {
           <Route path="deploy/:projectId?" element={<DeployPage />} />
           <Route path="planning/:projectId?" element={<PlanningPage />} />
           <Route path="code/:projectId?" element={<CodePage />} />
+          <Route path="tests/:projectId?" element={<TestsPage />} />
+          <Route path="custom/:projectId?" element={<CustomPage />} />
           <Route path="calendar" element={<CalendarView />} />
           <Route path="files" element={<FilesView />} />
           <Route path="voice-rooms" element={<VoiceRoomsView />} />

@@ -75,7 +75,7 @@ export interface Topic {
   project_id: string;
   name: string;
   description?: string;
-  type: 'chat' | 'code' | 'deploy' | 'bugs' | 'planning' | 'custom' | 'direct';
+  type: 'chat' | 'code' | 'deploy' | 'bugs' | 'planning' | 'tests' | 'custom' | 'direct';
   icon?: string;
   access_level?: 'members' | 'admins' | 'public';
   visibility?: 'visible' | 'hidden' | 'archived';

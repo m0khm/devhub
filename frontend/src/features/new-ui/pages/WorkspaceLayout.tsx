@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -19,6 +20,8 @@ import {
   Crown,
   Gift,
   Sun,
+  MoreVertical,
+  CheckCircle2,
   LayoutDashboard,
   ClipboardList,
   Mic,
@@ -27,6 +30,17 @@ import {
 import { Toaster, toast } from 'sonner';
 import { apiClient } from '../../../api/client';
 import { useProjectStore } from '../../../store/projectStore';
+import type { DirectMessageThread, Project, Topic } from '../../../shared/types';
+
+type TopicTypeOption = 'chat' | 'planning' | 'tests' | 'deploy' | 'custom';
+
+export interface WorkspaceOutletContext {
+  currentProject: Project | null;
+  topics: Topic[];
+  currentTopic: Topic | null;
+  directThreads: DirectMessageThread[];
+  setSelectedTopicId: (topicId: string) => void;
+}
 import { useThemeStore } from '../../../store/themeStore';
 import type { Project, Topic } from '../../../shared/types';
 import { CommandPalette } from '../components/CommandPalette';
@@ -54,12 +68,23 @@ const topics = [
 export function WorkspaceLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentProject, setCurrentTopics } = useProjectStore();
   const { projects, currentProject, setProjects, setCurrentProject, setCurrentTopics, currentTopics, addProject } =
     useProjectStore();
   const theme = useThemeStore((state) => state.theme);
   const toggleTheme = useThemeStore((state) => state.toggleTheme);
   const [showProfile, setShowProfile] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [selectedTopicId, setSelectedTopicId] = useState('');
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [topicName, setTopicName] = useState('');
+  const [topicDescription, setTopicDescription] = useState('');
+  const [topicType, setTopicType] = useState<TopicTypeOption>('chat');
+  const [renameValue, setRenameValue] = useState('');
+  const [topicToRename, setTopicToRename] = useState<Topic | null>(null);
+  const [directThreads] = useState<DirectMessageThread[]>([]);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -353,6 +378,193 @@ export function WorkspaceLayout() {
     [currentProject, handleCreateProject, navigate, setShowInviteModal, setShowThemeModal]
   );
 
+  useEffect(() => {
+    const loadTopics = async () => {
+      if (!currentProject?.id) {
+        setTopics([]);
+        setCurrentTopics([]);
+        return;
+      }
+      try {
+        const response = await apiClient.get<Topic[]>(
+          `/projects/${currentProject.id}/topics`
+        );
+        const data = Array.isArray(response.data) ? response.data : [];
+        setTopics(data);
+        setCurrentTopics(data);
+        setSelectedTopicId((prev) => {
+          if (data.length === 0) {
+            return '';
+          }
+          if (data.some((topic) => topic.id === prev)) {
+            return prev;
+          }
+          return data[0].id;
+        });
+      } catch (error) {
+        toast.error('Не удалось загрузить темы проекта');
+      }
+    };
+
+    void loadTopics();
+  }, [currentProject?.id, setCurrentTopics]);
+
+  useEffect(() => {
+    if (!activeMenuId) {
+      return;
+    }
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('[data-topic-menu]')) {
+        return;
+      }
+      setActiveMenuId(null);
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [activeMenuId]);
+
+  const currentTopic = useMemo(
+    () => topics.find((topic) => topic.id === selectedTopicId) ?? null,
+    [selectedTopicId, topics]
+  );
+
+  const getTopicIcon = (type: Topic['type']) => {
+    switch (type) {
+      case 'planning':
+        return Calendar;
+      case 'deploy':
+        return Zap;
+      case 'code':
+        return Code;
+      case 'custom':
+        return Hash;
+      case 'tests':
+        return CheckCircle2;
+      default:
+        return MessageSquare;
+    }
+  };
+
+  const getTopicSubtitle = (topic: Topic) =>
+    topic.description ??
+    {
+      chat: 'Обсуждение',
+      planning: 'Планирование',
+      tests: 'Тестирование',
+      deploy: 'Деплой',
+      custom: 'Кастомный',
+      code: 'Код',
+      bugs: 'Баги',
+      direct: 'Личные',
+    }[topic.type] ??
+    'Тема';
+
+  const buildTopicPath = (topic: Topic) => {
+    const base = {
+      chat: '/workspace/chat',
+      planning: '/workspace/planning',
+      tests: '/workspace/tests',
+      deploy: '/workspace/deploy',
+      custom: '/workspace/custom',
+      code: '/workspace/code',
+      bugs: '/workspace/chat',
+      direct: '/workspace/chat',
+    }[topic.type] ?? '/workspace/chat';
+
+    return currentProject?.id ? `${base}/${currentProject.id}` : base;
+  };
+
+  const handleCreateTopic = async () => {
+    if (!currentProject?.id) {
+      toast.error('Сначала выберите проект');
+      return;
+    }
+    if (!topicName.trim()) {
+      toast.error('Введите название темы');
+      return;
+    }
+    try {
+      const response = await apiClient.post<Topic>(
+        `/projects/${currentProject.id}/topics`,
+        {
+          name: topicName.trim(),
+          description: topicDescription.trim() || undefined,
+          type: topicType,
+        }
+      );
+      const newTopic = response.data;
+      setTopics((prev) => {
+        const updated = [...prev, newTopic];
+        setCurrentTopics(updated);
+        return updated;
+      });
+      setSelectedTopicId(newTopic.id);
+      setShowCreateModal(false);
+      setTopicName('');
+      setTopicDescription('');
+      setTopicType('chat');
+      toast.success('Тема создана! 🎉');
+    } catch (error) {
+      toast.error('Не удалось создать тему');
+    }
+  };
+
+  const handleRenameTopic = async () => {
+    if (!topicToRename) {
+      return;
+    }
+    if (!renameValue.trim()) {
+      toast.error('Введите новое название');
+      return;
+    }
+    try {
+      const response = await apiClient.put<Topic>(
+        `/topics/${topicToRename.id}`,
+        { name: renameValue.trim() }
+      );
+      const updated = response.data;
+      setTopics((prev) => {
+        const updatedTopics = prev.map((topic) =>
+          topic.id === updated.id ? { ...topic, ...updated } : topic
+        );
+        setCurrentTopics(updatedTopics);
+        return updatedTopics;
+      });
+      setShowRenameModal(false);
+      setActiveMenuId(null);
+      toast.success('Тема обновлена');
+    } catch (error) {
+      toast.error('Не удалось переименовать тему');
+    }
+  };
+
+  const handleDeleteTopic = async (topic: Topic) => {
+    if (topic.name.trim().toLowerCase() === 'general') {
+      toast.error('Тему General нельзя удалить');
+      return;
+    }
+    const confirmed = window.confirm(`Удалить тему "${topic.name}"?`);
+    if (!confirmed) {
+      return;
+    }
+    try {
+      await apiClient.delete(`/topics/${topic.id}`);
+      setTopics((prev) => {
+        const updatedTopics = prev.filter((item) => item.id !== topic.id);
+        setCurrentTopics(updatedTopics);
+        return updatedTopics;
+      });
+      if (selectedTopicId === topic.id) {
+        setSelectedTopicId('');
+      }
+      setActiveMenuId(null);
+      toast.success('Тема удалена');
+    } catch (error) {
+      toast.error('Не удалось удалить тему');
+    }
+  };
+
   return (
     <div className="h-screen flex bg-[#0a0e1a] text-white overflow-hidden">
       <Toaster theme="dark" position="bottom-right" />
@@ -504,23 +716,97 @@ export function WorkspaceLayout() {
                 </motion.button>
               </div>
               <div className="space-y-1">
-                {topics.map((topic, index) => (
+                {topics.map((topic, index) => {
+                  const TopicIcon = getTopicIcon(topic.type);
+                  return (
                   <motion.button
                     key={topic.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
                     whileHover={{ x: 5 }}
+                    onClick={() => {
+                      setSelectedTopicId(topic.id);
+                      navigate(buildTopicPath(topic));
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-white/5 hover:text-white transition-all group relative"
                     onClick={() => navigate(topicPath)}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-white/5 hover:text-white transition-all group"
                   >
-                    <topic.icon className="w-5 h-5" />
+                    <TopicIcon className="w-5 h-5" />
                     <div className="text-left flex-1">
                       <div className="font-medium text-sm">{topic.name}</div>
-                      <div className="text-xs text-slate-500">{topic.subtitle}</div>
+                      <div className="text-xs text-slate-500">{getTopicSubtitle(topic)}</div>
                     </div>
+                    <button
+                      type="button"
+                      data-topic-menu
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setActiveMenuId(activeMenuId === topic.id ? null : topic.id);
+                      }}
+                      className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                    <AnimatePresence>
+                      {activeMenuId === topic.id && (
+                        <motion.div
+                          data-topic-menu
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 6 }}
+                          className="absolute right-3 top-full mt-2 w-40 rounded-lg border border-white/10 bg-slate-900 shadow-xl z-20 overflow-hidden"
+                        >
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setTopicToRename(topic);
+                              setRenameValue(topic.name);
+                              setShowRenameModal(true);
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm text-slate-200 hover:bg-white/5"
+                          >
+                            Переименовать
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleDeleteTopic(topic);
+                            }}
+                            disabled={topic.name.trim().toLowerCase() === 'general'}
+                            className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:text-slate-500"
+                          >
+                            Удалить
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setActiveMenuId(null);
+                              navigate(
+                                currentProject?.id
+                                  ? `/workspace/custom/${currentProject.id}`
+                                  : '/workspace/custom'
+                              );
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm text-slate-200 hover:bg-white/5"
+                          >
+                            Настройки
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </motion.button>
-                ))}
+                  );
+                })}
+                {topics.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-slate-500">
+                    Темы пока не созданы
+                  </div>
+                )}
               </div>
             </div>
 
@@ -767,6 +1053,7 @@ export function WorkspaceLayout() {
           <Outlet
             context={{
               currentProject,
+              topics,
               topics: currentTopics,
               currentTopic,
               directThreads,
@@ -797,21 +1084,33 @@ export function WorkspaceLayout() {
               <input
                 type="text"
                 placeholder="Название темы"
+                value={topicName}
+                onChange={(event) => setTopicName(event.target.value)}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-4"
               />
+              <select
+                value={topicType}
+                onChange={(event) => setTopicType(event.target.value as TopicTypeOption)}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-4"
+              >
+                <option value="chat">Чат</option>
+                <option value="planning">Planning</option>
+                <option value="tests">Tests</option>
+                <option value="deploy">Deploy</option>
+                <option value="custom">Custom</option>
+              </select>
               <textarea
                 placeholder="Описание (опционально)"
                 rows={3}
+                value={topicDescription}
+                onChange={(event) => setTopicDescription(event.target.value)}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-4 resize-none"
               ></textarea>
               <div className="flex gap-3">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    toast.success('Тема создана! 🎉');
-                  }}
+                  onClick={() => void handleCreateTopic()}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all"
                 >
                   Создать
