@@ -20,6 +20,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/database"
 	"github.com/m0khm/devhub/backend/internal/deploy"
 	"github.com/m0khm/devhub/backend/internal/dm"
+	"github.com/m0khm/devhub/backend/internal/favorite"
 	"github.com/m0khm/devhub/backend/internal/group"
 	"github.com/m0khm/devhub/backend/internal/kanban"
 	"github.com/m0khm/devhub/backend/internal/mailer"
@@ -99,6 +100,7 @@ func main() {
 	topicRepo := topic.NewRepository(db)
 	messageRepo := message.NewRepository(db)
 	notificationRepo := notification.NewRepository(db)
+	favoriteRepo := favorite.NewRepository(db)
 	dmRepo := dm.NewRepository(db)
 	userRepo := user.NewRepository(db)
 	kanbanRepo := kanban.NewRepository(db)
@@ -120,6 +122,7 @@ func main() {
 	communityService := community.NewService(db)
 	dmService := dm.NewService(dmRepo, projectRepo)
 	notificationService := notification.NewService(notificationRepo, projectRepo, topicRepo)
+	favoriteService := favorite.NewService(favoriteRepo, projectRepo)
 	invitationService := project.NewInvitationService(projectRepo, userRepo)
 	kanbanService := kanban.NewService(kanbanRepo, projectRepo)
 	calendarService := calendar.NewService(calendarRepo, projectRepo)
@@ -150,6 +153,7 @@ func main() {
 	groupHandler := group.NewHandler(groupService)
 	communityHandler := community.NewHandler(communityService)
 	notificationHandler := notification.NewHandler(notificationService)
+	favoriteHandler := favorite.NewHandler(favoriteService)
 
 	videoHandler := video.NewHandler() // NEW
 	deployHandler := deploy.NewHandler(deployService)
@@ -287,6 +291,7 @@ func main() {
 	projectRoutes.Post("/:projectId/topics", topicHandler.Create)
 	projectRoutes.Get("/:projectId/topics", topicHandler.GetByProjectID)
 	projectRoutes.Get("/:projectId/files", messageHandler.GetProjectFiles)
+	projectRoutes.Get("/:projectId/favorites", favoriteHandler.ListByProject)
 	projectRoutes.Get("/:projectId/kanban/columns", kanbanHandler.ListColumns)
 	projectRoutes.Post("/:projectId/kanban/columns", kanbanHandler.CreateColumn)
 	projectRoutes.Put("/:projectId/kanban/columns/:columnId", kanbanHandler.UpdateColumn)
