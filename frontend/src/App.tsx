@@ -25,6 +25,7 @@ import { ProfilePage } from './features/profile/ProfilePage';
 import { TermsPage } from './features/legal/TermsPage';
 import { PrivacyPage } from './features/legal/PrivacyPage';
 import { ContactPage } from './features/legal/ContactPage';
+import { AdminPage } from './features/admin/AdminPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -131,6 +132,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
