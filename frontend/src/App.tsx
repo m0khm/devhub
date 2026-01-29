@@ -9,6 +9,9 @@ import { WorkspaceLayout } from './features/new-ui/pages/WorkspaceLayout';
 import { FilesView } from './features/new-ui/components/workspace/FilesView';
 import { ChatView } from "./features/new-ui/components/workspace/ChatView";
 import { DashboardView } from './features/new-ui/components/workspace/DashboardView';
+import { CalendarView } from './features/new-ui/components/workspace/CalendarView';
+import { VoiceRoomsView } from './features/new-ui/components/workspace/VoiceRoomsView';
+import { IntegrationsView } from './features/new-ui/components/workspace/IntegrationsView';
 import { HubPage } from './features/new-ui/pages/HubPage';
 import { CreateProjectPage } from './features/new-ui/pages/CreateProjectPage';
 import { PlanningPage } from "./features/planning/PlanningPage";
@@ -34,13 +37,15 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 function App() {
   const loadFromStorage = useAuthStore((state) => state.loadFromStorage);
+  const refreshMe = useAuthStore((state) => state.refreshMe);
   const theme = useThemeStore((state) => state.theme);
   const loadThemeFromStorage = useThemeStore((state) => state.loadFromStorage);
 
   useEffect(() => {
     loadFromStorage();
+    void refreshMe();
     loadThemeFromStorage();
-  }, [loadFromStorage, loadThemeFromStorage]);
+  }, [loadFromStorage, loadThemeFromStorage, refreshMe]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -61,14 +66,18 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="chat" replace />} />
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardView />} />
           <Route path="chat/:projectId?" element={<ChatView />} />
           <Route path="deploy/:projectId?" element={<DeployPage />} />
           <Route path="planning/:projectId?" element={<PlanningPage />} />
           <Route path="code/:projectId?" element={<CodePage />} />
           <Route path="tests/:projectId?" element={<TestsPage />} />
           <Route path="custom/:projectId?" element={<CustomPage />} />
+          <Route path="calendar" element={<CalendarView />} />
           <Route path="files" element={<FilesView />} />
+          <Route path="voice-rooms" element={<VoiceRoomsView />} />
+          <Route path="integrations" element={<IntegrationsView />} />
           <Route path="hub" element={<HubPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>

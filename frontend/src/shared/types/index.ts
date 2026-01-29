@@ -22,6 +22,16 @@ export interface Project {
   visibility?: 'visible' | 'hidden' | 'archived';
   notifications_muted?: boolean;
   owner_id: string;
+  workspace_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  description?: string;
+  owner_id: string;
   created_at: string;
   updated_at: string;
 }

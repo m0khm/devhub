@@ -7,16 +7,17 @@ import (
 )
 
 type Project struct {
-	ID                 uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
-	Name               string    `json:"name" gorm:"not null"`
-	Description        *string   `json:"description"`
-	AvatarURL          *string   `json:"avatar_url"`
-	AccessLevel        string    `json:"access_level" gorm:"not null;default:'private'"`
-	Visibility         string    `json:"visibility" gorm:"not null;default:'visible'"`
-	NotificationsMuted bool      `json:"notifications_muted" gorm:"not null;default:false"`
-	OwnerID            uuid.UUID `json:"owner_id" gorm:"not null"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	ID                 uuid.UUID  `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
+	Name               string     `json:"name" gorm:"not null"`
+	Description        *string    `json:"description"`
+	AvatarURL          *string    `json:"avatar_url"`
+	AccessLevel        string     `json:"access_level" gorm:"not null;default:'private'"`
+	Visibility         string     `json:"visibility" gorm:"not null;default:'visible'"`
+	NotificationsMuted bool       `json:"notifications_muted" gorm:"not null;default:false"`
+	OwnerID            uuid.UUID  `json:"owner_id" gorm:"not null"`
+	WorkspaceID        *uuid.UUID `json:"workspace_id,omitempty" gorm:"type:uuid"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
 }
 
 type ProjectMember struct {
@@ -48,6 +49,10 @@ type UpdateProjectRequest struct {
 type AddProjectMemberRequest struct {
 	UserID uuid.UUID `json:"user_id" validate:"required,uuid"`
 	Role   string    `json:"role" validate:"omitempty,oneof=admin member"`
+}
+
+type JoinProjectRequest struct {
+	ProjectID uuid.UUID `json:"project_id" validate:"required,uuid"`
 }
 
 type UpdateProjectMemberRoleRequest struct {
