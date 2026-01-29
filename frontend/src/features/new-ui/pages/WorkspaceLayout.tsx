@@ -26,6 +26,7 @@ import { apiClient } from '../../../api/client';
 import { useProjectStore } from '../../../store/projectStore';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import type { Project, Workspace } from '../../../shared/types';
+import { useAuthStore } from '../../../store/authStore';
 
 const topics = [
   { id: 1, name: 'General', subtitle: 'Обсуждение', icon: MessageSquare },
@@ -47,6 +48,10 @@ export function WorkspaceLayout() {
     setWorkspaces,
     setCurrentWorkspace,
   } = useWorkspaceStore();
+  const user = useAuthStore((state) => state.user);
+  const userName = user?.name?.trim() || 'Пользователь';
+  const userInitial = (user?.name || user?.email || '?').trim().charAt(0).toUpperCase();
+  const userAvatarUrl = user?.avatar_url;
 
   const projectPathSuffix = currentProject ? `/${currentProject.id}` : '';
 
@@ -182,6 +187,30 @@ export function WorkspaceLayout() {
                     <div className="text-xs text-slate-400">
                       {currentWorkspace?.description || 'Командное пространство'}
                     </div>
+            <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all group">
+              <div className="flex items-center gap-3">
+                <motion.div 
+                  whileHover={{ rotate: 360 }}
+                  transition={{ duration: 0.6 }}
+                  className="relative"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg blur-md opacity-70"></div>
+                  <div className="relative w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold shadow-lg">
+                    {userAvatarUrl ? (
+                      <img
+                        src={userAvatarUrl}
+                        alt={userName}
+                        className="h-full w-full rounded-lg object-cover"
+                      />
+                    ) : (
+                      userInitial
+                    )}
+                  </div>
+                </motion.div>
+                <div className="text-left">
+                  <div className="font-semibold text-white flex items-center gap-2">
+                    My Workspace
+                    <Crown className="w-3 h-3 text-yellow-400" />
                   </div>
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
@@ -366,13 +395,21 @@ export function WorkspaceLayout() {
                     transition={{ duration: 2, repeat: Infinity }}
                     className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full blur-md opacity-50"
                   ></motion.div>
-                  <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold">
-                    М
+                  <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold overflow-hidden">
+                    {userAvatarUrl ? (
+                      <img
+                        src={userAvatarUrl}
+                        alt={userName}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      userInitial
+                    )}
                   </div>
                   <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></div>
                 </div>
                 <div className="text-left flex-1">
-                  <div className="font-semibold text-white">Максим</div>
+                  <div className="font-semibold text-white">{userName}</div>
                   <div className="text-xs text-green-400">● В сети</div>
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-400" />

@@ -32,13 +32,15 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 function App() {
   const loadFromStorage = useAuthStore((state) => state.loadFromStorage);
+  const refreshMe = useAuthStore((state) => state.refreshMe);
   const theme = useThemeStore((state) => state.theme);
   const loadThemeFromStorage = useThemeStore((state) => state.loadFromStorage);
 
   useEffect(() => {
     loadFromStorage();
+    void refreshMe();
     loadThemeFromStorage();
-  }, [loadFromStorage, loadThemeFromStorage]);
+  }, [loadFromStorage, loadThemeFromStorage, refreshMe]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
