@@ -1,6 +1,7 @@
 package message
 
 import (
+	"errors"
 	"log"
 
 	"github.com/gofiber/websocket/v2"
@@ -41,8 +42,20 @@ func (h *WSHandler) HandleWebSocket(c *websocket.Conn) {
 		return
 	}
 
-	// TODO: Check if user has access to topic
-	// For now, we'll skip this check
+	if _, err := h.service.checkTopicAccess(topicID, userID); err != nil {
+		closeCode := websocket.CloseInternalServerErr
+		closeReason := "access check failed"
+		if errors.Is(err, ErrNotProjectMember) {
+			closeCode = websocket.ClosePolicyViolation
+			closeReason = "forbidden"
+			log.Printf("WebSocket access denied for user %s on topic %s", userID, topicID)
+		} else {
+			log.Printf("WebSocket access check failed for user %s on topic %s: %v", userID, topicID, err)
+		}
+		_ = c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(closeCode, closeReason))
+		c.Close()
+		return
+	}
 
 	// Create client
 	client := &Client{
