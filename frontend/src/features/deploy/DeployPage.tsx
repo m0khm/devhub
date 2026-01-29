@@ -17,6 +17,23 @@ interface DeployServer {
   updated_at: string;
 }
 
+interface DeploySettings {
+  strategy: string;
+  build_command: string;
+}
+
+interface DeployEnvVar {
+  id: string;
+  key: string;
+  value: string;
+}
+
+interface EnvVarDraft {
+  id: string;
+  key: string;
+  value: string;
+}
+
 export const DeployPage: React.FC = () => {
   const { projectId } = useParams();
   const [servers, setServers] = useState<DeployServer[]>([]);
@@ -26,6 +43,27 @@ export const DeployPage: React.FC = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [activePanel, setActivePanel] = useState<'deploy' | 'env' | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const [settings, setSettings] = useState<DeploySettings>({
+    strategy: '',
+    build_command: '',
+  });
+  const [settingsStatus, setSettingsStatus] = useState({
+    loading: false,
+    saving: false,
+    error: '',
+    success: '',
+  });
+  const [settingsErrors, setSettingsErrors] = useState<{ strategy?: string; build_command?: string }>(
+    {}
+  );
+  const [envVars, setEnvVars] = useState<EnvVarDraft[]>([]);
+  const [envStatus, setEnvStatus] = useState({
+    loading: false,
+    saving: false,
+    error: '',
+    success: '',
+  });
+  const [envErrors, setEnvErrors] = useState<Record<string, { key?: string; value?: string }>>({});
 
   const [formState, setFormState] = useState({
     name: '',
@@ -42,12 +80,52 @@ export const DeployPage: React.FC = () => {
     [servers, selectedServerId]
   );
 
+  const createEnvRow = () => ({
+    id: Math.random().toString(36).slice(2),
+    key: '',
+    value: '',
+  });
+
   useEffect(() => {
     if (!projectId) return;
     apiClient
       .get<DeployServer[]>(`/projects/${projectId}/deploy/servers`)
       .then((response) => setServers(Array.isArray(response.data) ? response.data : []))
       .catch(() => toast.error('Failed to load servers'));
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    setSettingsStatus((prev) => ({ ...prev, loading: true, error: '', success: '' }));
+    apiClient
+      .get<DeploySettings>(`/projects/${projectId}/deploy/settings`)
+      .then((response) =>
+        setSettings({
+          strategy: response.data?.strategy ?? '',
+          build_command: response.data?.build_command ?? '',
+        })
+      )
+      .catch(() => setSettingsStatus((prev) => ({ ...prev, error: 'Failed to load settings' })))
+      .finally(() => setSettingsStatus((prev) => ({ ...prev, loading: false })));
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    setEnvStatus((prev) => ({ ...prev, loading: true, error: '', success: '' }));
+    apiClient
+      .get<DeployEnvVar[]>(`/projects/${projectId}/deploy/env`)
+      .then((response) => {
+        const vars = Array.isArray(response.data) ? response.data : [];
+        setEnvVars(
+          vars.map((envVar) => ({
+            id: envVar.id,
+            key: envVar.key,
+            value: envVar.value,
+          }))
+        );
+      })
+      .catch(() => setEnvStatus((prev) => ({ ...prev, error: 'Failed to load env variables' })))
+      .finally(() => setEnvStatus((prev) => ({ ...prev, loading: false })));
   }, [projectId]);
 
   useEffect(() => {
@@ -123,6 +201,136 @@ export const DeployPage: React.FC = () => {
     }
     wsRef.current.send(`${terminalInput}\n`);
     setTerminalInput('');
+  };
+
+  const validateSettings = () => {
+    const nextErrors: { strategy?: string; build_command?: string } = {};
+    if (!settings.strategy.trim()) {
+      nextErrors.strategy = 'Strategy is required';
+    }
+    if (!settings.build_command.trim()) {
+      nextErrors.build_command = 'Build command is required';
+    }
+    setSettingsErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSaveSettings = async () => {
+    if (!projectId) return;
+    if (!validateSettings()) {
+      setSettingsStatus((prev) => ({ ...prev, error: 'Please fix validation errors.' }));
+      return;
+    }
+    setSettingsStatus({ loading: false, saving: true, error: '', success: '' });
+    try {
+      const response = await apiClient.put<DeploySettings>(
+        `/projects/${projectId}/deploy/settings`,
+        {
+          strategy: settings.strategy.trim(),
+          build_command: settings.build_command.trim(),
+        }
+      );
+      setSettings({
+        strategy: response.data?.strategy ?? '',
+        build_command: response.data?.build_command ?? '',
+      });
+      setSettingsStatus({
+        loading: false,
+        saving: false,
+        error: '',
+        success: 'Settings saved.',
+      });
+      toast.success('Deployment settings updated');
+    } catch (error: any) {
+      setSettingsStatus({
+        loading: false,
+        saving: false,
+        error: error.response?.data?.error || 'Failed to save settings',
+        success: '',
+      });
+      toast.error(error.response?.data?.error || 'Failed to save settings');
+    }
+  };
+
+  const handleEnvChange = (id: string, field: 'key' | 'value', value: string) => {
+    setEnvVars((prev) => prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
+  };
+
+  const handleEnvRemove = (id: string) => {
+    setEnvVars((prev) => prev.filter((item) => item.id !== id));
+    setEnvErrors((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
+  const validateEnvVars = () => {
+    const nextErrors: Record<string, { key?: string; value?: string }> = {};
+    const keys = new Map<string, string>();
+    envVars.forEach((envVar) => {
+      const trimmedKey = envVar.key.trim();
+      const trimmedValue = envVar.value.trim();
+      if (!trimmedKey && !trimmedValue) {
+        return;
+      }
+      if (!trimmedKey) {
+        nextErrors[envVar.id] = { ...nextErrors[envVar.id], key: 'Key is required' };
+      }
+      if (!trimmedValue) {
+        nextErrors[envVar.id] = { ...nextErrors[envVar.id], value: 'Value is required' };
+      }
+      if (trimmedKey) {
+        const duplicateId = keys.get(trimmedKey);
+        if (duplicateId && duplicateId !== envVar.id) {
+          nextErrors[envVar.id] = { ...nextErrors[envVar.id], key: 'Key must be unique' };
+          nextErrors[duplicateId] = { ...nextErrors[duplicateId], key: 'Key must be unique' };
+        }
+        keys.set(trimmedKey, envVar.id);
+      }
+    });
+    setEnvErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSaveEnvVars = async () => {
+    if (!projectId) return;
+    if (!validateEnvVars()) {
+      setEnvStatus((prev) => ({ ...prev, error: 'Please fix validation errors.' }));
+      return;
+    }
+    const payload = envVars
+      .map((envVar) => ({
+        key: envVar.key.trim(),
+        value: envVar.value.trim(),
+        id: envVar.id,
+      }))
+      .filter((envVar) => envVar.key !== '' || envVar.value !== '');
+
+    setEnvStatus({ loading: false, saving: true, error: '', success: '' });
+    try {
+      const response = await apiClient.put<DeployEnvVar[]>(`/projects/${projectId}/deploy/env`, {
+        vars: payload.map(({ key, value }) => ({ key, value })),
+      });
+      const vars = Array.isArray(response.data) ? response.data : [];
+      setEnvVars(
+        vars.map((envVar) => ({
+          id: envVar.id,
+          key: envVar.key,
+          value: envVar.value,
+        }))
+      );
+      setEnvStatus({ loading: false, saving: false, error: '', success: 'Variables saved.' });
+      toast.success('Environment variables updated');
+    } catch (error: any) {
+      setEnvStatus({
+        loading: false,
+        saving: false,
+        error: error.response?.data?.error || 'Failed to save env variables',
+        success: '',
+      });
+      toast.error(error.response?.data?.error || 'Failed to save env variables');
+    }
   };
 
   return (
@@ -296,50 +504,140 @@ export const DeployPage: React.FC = () => {
                         Deploy strategy
                       </label>
                       <input
-                        disabled
+                        value={settings.strategy}
+                        onChange={(event) =>
+                          setSettings((prev) => ({ ...prev, strategy: event.target.value }))
+                        }
                         placeholder="Rolling / Blue-green / Canary"
                         className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
                       />
+                      {settingsErrors.strategy && (
+                        <p className="mt-1 text-xs text-rose-300">{settingsErrors.strategy}</p>
+                      )}
                     </div>
                     <div>
                       <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
                         Build command
                       </label>
                       <input
-                        disabled
+                        value={settings.build_command}
+                        onChange={(event) =>
+                          setSettings((prev) => ({ ...prev, build_command: event.target.value }))
+                        }
                         placeholder="npm run build"
                         className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
                       />
+                      {settingsErrors.build_command && (
+                        <p className="mt-1 text-xs text-rose-300">
+                          {settingsErrors.build_command}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={handleSaveSettings}
+                        disabled={settingsStatus.loading || settingsStatus.saving}
+                      >
+                        {settingsStatus.saving ? 'Saving...' : 'Save settings'}
+                      </Button>
+                      {settingsStatus.loading && (
+                        <span className="text-xs text-slate-400">Loading settings...</span>
+                      )}
+                      {settingsStatus.success && (
+                        <span className="text-xs text-emerald-300">{settingsStatus.success}</span>
+                      )}
+                      {settingsStatus.error && (
+                        <span className="text-xs text-rose-300">{settingsStatus.error}</span>
+                      )}
                     </div>
                   </>
                 ) : (
                   <>
-                    <div>
-                      <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
-                        Key
-                      </label>
-                      <input
-                        disabled
-                        placeholder="DATABASE_URL"
-                        className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
-                        Value
-                      </label>
-                      <input
-                        disabled
-                        placeholder="••••••••"
-                        className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
-                      />
+                    <div className="space-y-3">
+                      {envVars.length === 0 && !envStatus.loading ? (
+                        <p className="text-xs text-slate-400">No environment variables yet.</p>
+                      ) : null}
+                      {envVars.map((envVar) => (
+                        <div key={envVar.id} className="space-y-2 rounded-lg border border-white/5 p-3">
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1">
+                              <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+                                Key
+                              </label>
+                              <input
+                                value={envVar.key}
+                                onChange={(event) =>
+                                  handleEnvChange(envVar.id, 'key', event.target.value)
+                                }
+                                placeholder="DATABASE_URL"
+                                className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
+                              />
+                              {envErrors[envVar.id]?.key && (
+                                <p className="mt-1 text-xs text-rose-300">
+                                  {envErrors[envVar.id]?.key}
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEnvRemove(envVar.id)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+                              Value
+                            </label>
+                            <input
+                              value={envVar.value}
+                              onChange={(event) =>
+                                handleEnvChange(envVar.id, 'value', event.target.value)
+                              }
+                              placeholder="••••••••"
+                              className="w-full rounded-md border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100"
+                            />
+                            {envErrors[envVar.id]?.value && (
+                              <p className="mt-1 text-xs text-rose-300">
+                                {envErrors[envVar.id]?.value}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setEnvVars((prev) => [...prev, createEnvRow()])}
+                        >
+                          Add variable
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="primary"
+                          onClick={handleSaveEnvVars}
+                          disabled={envStatus.loading || envStatus.saving}
+                        >
+                          {envStatus.saving ? 'Saving...' : 'Save variables'}
+                        </Button>
+                        {envStatus.loading && (
+                          <span className="text-xs text-slate-400">Loading variables...</span>
+                        )}
+                        {envStatus.success && (
+                          <span className="text-xs text-emerald-300">{envStatus.success}</span>
+                        )}
+                        {envStatus.error && (
+                          <span className="text-xs text-rose-300">{envStatus.error}</span>
+                        )}
+                      </div>
                     </div>
                   </>
                 )}
-                <p className="text-xs text-slate-500">
-                  These forms are placeholders. We can enable editing once the deploy pipeline is
-                  wired in.
-                </p>
               </PanelBody>
             </Panel>
           )}
