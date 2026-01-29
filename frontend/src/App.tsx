@@ -9,6 +9,7 @@ import { WorkspaceLayout } from './features/new-ui/pages/WorkspaceLayout';
 import { FilesView } from './features/new-ui/components/workspace/FilesView';
 import { ChatView } from "./features/new-ui/components/workspace/ChatView";
 import { DashboardView } from './features/new-ui/components/workspace/DashboardView';
+import { KanbanView } from './features/new-ui/components/workspace/KanbanView';
 import { CalendarView } from './features/new-ui/components/workspace/CalendarView';
 import { VoiceRoomsView } from './features/new-ui/components/workspace/VoiceRoomsView';
 import { IntegrationsView } from './features/new-ui/components/workspace/IntegrationsView';
@@ -70,6 +71,7 @@ function App() {
           <Route path="dashboard" element={<DashboardView />} />
           <Route path="chat/:projectId?" element={<ChatView />} />
           <Route path="deploy/:projectId?" element={<DeployPage />} />
+          <Route path="kanban/:projectId?" element={<KanbanView />} />
           <Route path="planning/:projectId?" element={<PlanningPage />} />
           <Route path="code/:projectId?" element={<CodePage />} />
           <Route path="tests/:projectId?" element={<TestsPage />} />

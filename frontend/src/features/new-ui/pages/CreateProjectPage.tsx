@@ -156,7 +156,6 @@ export function CreateProjectPage() {
       const nextProjects = [...projects, project];
       setProjects(nextProjects);
       setCurrentProject(project);
-      saveKanbanColumns(project.id, getDefaultKanbanColumns());
       toast.success('Проект создан');
       navigate(`/workspace/chat/${project.id}`);
     } catch (error: any) {
