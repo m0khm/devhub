@@ -32,6 +32,23 @@ type DeployAuditEvent struct {
 	CreatedAt time.Time      `json:"created_at"`
 }
 
+type DeploySettings struct {
+	ProjectID    uuid.UUID `json:"project_id" gorm:"primary_key"`
+	Strategy     string    `json:"strategy" gorm:"not null"`
+	BuildCommand string    `json:"build_command" gorm:"not null"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type DeployEnvVar struct {
+	ID             uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
+	ProjectID      uuid.UUID `json:"project_id" gorm:"not null;index"`
+	Key            string    `json:"key" gorm:"not null"`
+	EncryptedValue string    `json:"-" gorm:"column:encrypted_value"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
 type CreateDeployServerRequest struct {
 	Name       string  `json:"name" validate:"required,min=2,max=100"`
 	Host       string  `json:"host" validate:"required"`
@@ -40,6 +57,16 @@ type CreateDeployServerRequest struct {
 	AuthType   string  `json:"auth_type" validate:"required,oneof=password key"`
 	Password   *string `json:"password"`
 	PrivateKey *string `json:"private_key"`
+}
+
+type DeploySettingsRequest struct {
+	Strategy     string `json:"strategy" validate:"required,min=2,max=50"`
+	BuildCommand string `json:"build_command" validate:"required,min=2,max=200"`
+}
+
+type DeployEnvVarInput struct {
+	Key   string `json:"key" validate:"required"`
+	Value string `json:"value" validate:"required"`
 }
 
 type DeployServerResponse struct {
@@ -54,12 +81,34 @@ type DeployServerResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type DeploySettingsResponse struct {
+	ProjectID    uuid.UUID `json:"project_id"`
+	Strategy     string    `json:"strategy"`
+	BuildCommand string    `json:"build_command"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type DeployEnvVarResponse struct {
+	ID        uuid.UUID `json:"id"`
+	Key       string    `json:"key"`
+	Value     string    `json:"value"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 func (DeployServer) TableName() string {
 	return "deploy_servers"
 }
 
 func (DeployAuditEvent) TableName() string {
 	return "deploy_audit_events"
+}
+
+func (DeploySettings) TableName() string {
+	return "deploy_settings"
+}
+
+func (DeployEnvVar) TableName() string {
+	return "deploy_env_vars"
 }
 
 func (server DeployServer) ToResponse() DeployServerResponse {
@@ -73,5 +122,14 @@ func (server DeployServer) ToResponse() DeployServerResponse {
 		AuthType:  server.AuthType,
 		CreatedAt: server.CreatedAt,
 		UpdatedAt: server.UpdatedAt,
+	}
+}
+
+func (settings DeploySettings) ToResponse() DeploySettingsResponse {
+	return DeploySettingsResponse{
+		ProjectID:    settings.ProjectID,
+		Strategy:     settings.Strategy,
+		BuildCommand: settings.BuildCommand,
+		UpdatedAt:    settings.UpdatedAt,
 	}
 }

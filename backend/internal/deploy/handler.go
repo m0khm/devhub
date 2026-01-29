@@ -107,3 +107,127 @@ func (h *Handler) GetServer(c *fiber.Ctx) error {
 
 	return c.JSON(server.ToResponse())
 }
+
+// GET /api/projects/:projectId/deploy/settings
+func (h *Handler) GetSettings(c *fiber.Ctx) error {
+	userID, err := uuid.Parse(c.Locals("userID").(string))
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+	projectID, err := uuid.Parse(c.Params("projectId"))
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	settings, err := h.service.GetSettings(projectID, userID)
+	if err != nil {
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not a project member"})
+		}
+		if errors.Is(err, ErrSettingsNotFound) {
+			return c.JSON(DeploySettingsResponse{
+				ProjectID:    projectID,
+				Strategy:     "",
+				BuildCommand: "",
+			})
+		}
+		return fiber.ErrInternalServerError
+	}
+
+	return c.JSON(settings.ToResponse())
+}
+
+// PUT /api/projects/:projectId/deploy/settings
+func (h *Handler) UpdateSettings(c *fiber.Ctx) error {
+	userID, err := uuid.Parse(c.Locals("userID").(string))
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+	projectID, err := uuid.Parse(c.Params("projectId"))
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	var req DeploySettingsRequest
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.ErrBadRequest
+	}
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"errors": errs})
+	}
+
+	settings, err := h.service.UpdateSettings(projectID, userID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrNotProjectMember):
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not a project member"})
+		case errors.Is(err, ErrNotProjectAdmin):
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Insufficient permissions"})
+		default:
+			return fiber.ErrInternalServerError
+		}
+	}
+
+	return c.JSON(settings.ToResponse())
+}
+
+// GET /api/projects/:projectId/deploy/env
+func (h *Handler) ListEnvVars(c *fiber.Ctx) error {
+	userID, err := uuid.Parse(c.Locals("userID").(string))
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+	projectID, err := uuid.Parse(c.Params("projectId"))
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	vars, err := h.service.ListEnvVars(projectID, userID)
+	if err != nil {
+		if errors.Is(err, ErrNotProjectMember) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not a project member"})
+		}
+		return fiber.ErrInternalServerError
+	}
+
+	return c.JSON(vars)
+}
+
+// PUT /api/projects/:projectId/deploy/env
+func (h *Handler) ReplaceEnvVars(c *fiber.Ctx) error {
+	userID, err := uuid.Parse(c.Locals("userID").(string))
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+	projectID, err := uuid.Parse(c.Params("projectId"))
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	var req struct {
+		Vars []DeployEnvVarInput `json:"vars"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	for _, envVar := range req.Vars {
+		if errs := validator.Validate(envVar); len(errs) > 0 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"errors": errs})
+		}
+	}
+
+	vars, err := h.service.ReplaceEnvVars(projectID, userID, req.Vars)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrNotProjectMember):
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Not a project member"})
+		case errors.Is(err, ErrNotProjectAdmin):
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Insufficient permissions"})
+		default:
+			return fiber.ErrBadRequest
+		}
+	}
+
+	return c.JSON(vars)
+}
