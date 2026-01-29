@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient } from '../../api/client';
 
@@ -42,45 +43,28 @@ export const CodePage: React.FC = () => {
 
   const selectedRepo = repos.find((repo) => repo.id === selectedRepoId) ?? repos[0];
   const selectedFile = selectedRepo?.files.find((file) => file.path === selectedFilePath);
-  const storageKey = projectId ? `code_repos_${projectId}` : 'code_repos';
-
   useEffect(() => {
     if (!projectId) {
       return;
-    }
-
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as Repo[];
-        if (Array.isArray(parsed)) {
-          setRepos(parsed);
-        }
-      } catch {
-        localStorage.removeItem(storageKey);
-      }
     }
 
     const loadRepos = async () => {
       try {
         const response = await apiClient.get<Repo[]>(`/projects/${projectId}/repos`);
         setRepos(Array.isArray(response.data) ? response.data : []);
-      } catch {
-        // fallback to localStorage data
+      } catch (error) {
+        const message =
+          (error as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+          'Failed to load repositories';
+        toast.error(message);
+        setRepos([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     loadRepos();
-  }, [projectId, storageKey]);
-
-  useEffect(() => {
-    if (!projectId) {
-      return;
-    }
-    localStorage.setItem(storageKey, JSON.stringify(repos));
-  }, [projectId, repos, storageKey]);
+  }, [projectId]);
 
   useEffect(() => {
     if (!repos.length) {
@@ -145,16 +129,7 @@ export const CodePage: React.FC = () => {
       setSelectedFilePath(createdFile.path);
       setNewFilePath('');
     } catch {
-      const fallbackFile: CodeFile = { id: `${Date.now()}`, path: trimmedPath, content: '' };
-      setRepos((prev) =>
-        prev.map((repo) =>
-          repo.id === selectedRepo.id
-            ? { ...repo, files: [...repo.files, fallbackFile] }
-            : repo
-        )
-      );
-      setSelectedFilePath(fallbackFile.path);
-      setNewFilePath('');
+      toast.error('Failed to create file');
     }
   };
 
@@ -178,18 +153,7 @@ export const CodePage: React.FC = () => {
       setNewRepoName('');
       setNewRepoDescription('');
     } catch {
-      const fallbackRepo: Repo = {
-        id: `${newRepoName.trim()}-${Date.now()}`,
-        name: newRepoName.trim(),
-        description: newRepoDescription.trim() || undefined,
-        updatedAt: new Date().toISOString(),
-        files: [],
-      };
-      setRepos((prev) => [fallbackRepo, ...prev]);
-      setSelectedRepoId(fallbackRepo.id);
-      setSelectedFilePath('');
-      setNewRepoName('');
-      setNewRepoDescription('');
+      toast.error('Failed to create repository');
     }
   };
 
@@ -229,7 +193,7 @@ export const CodePage: React.FC = () => {
           }
         );
       } catch {
-        // keep local edits if API fails
+        toast.error('Failed to save file changes');
       }
     }, 700);
   };
