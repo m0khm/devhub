@@ -28,10 +28,28 @@ interface DeployEnvVar {
   value: string;
 }
 
+interface DeployTestLog {
+  timestamp: string;
+  level: 'info' | 'error' | 'warn';
+  message: string;
+}
+
+interface DeployTestResponse {
+  success: boolean;
+  logs: DeployTestLog[];
+}
+
 interface EnvVarDraft {
   id: string;
   key: string;
   value: string;
+}
+
+type DeployTestStatus = 'idle' | 'testing' | 'success' | 'error';
+
+interface DeployTestState {
+  status: DeployTestStatus;
+  logs: DeployTestLog[];
 }
 
 export const DeployPage: React.FC = () => {
@@ -64,6 +82,7 @@ export const DeployPage: React.FC = () => {
     success: '',
   });
   const [envErrors, setEnvErrors] = useState<Record<string, { key?: string; value?: string }>>({});
+  const [testResults, setTestResults] = useState<Record<string, DeployTestState>>({});
 
   const [formState, setFormState] = useState({
     name: '',
@@ -164,6 +183,87 @@ export const DeployPage: React.FC = () => {
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to create server');
     }
+  };
+
+  const handleDeleteServer = async (serverId: string) => {
+    if (!projectId) return;
+    const server = servers.find((item) => item.id === serverId);
+    if (!server) return;
+    const confirmed = window.confirm(`Delete ${server.name}? This cannot be undone.`);
+    if (!confirmed) return;
+    try {
+      await apiClient.delete(`/projects/${projectId}/deploy/servers/${serverId}`);
+      setServers((prev) => prev.filter((item) => item.id !== serverId));
+      setTestResults((prev) => {
+        const next = { ...prev };
+        delete next[serverId];
+        return next;
+      });
+      if (selectedServerId === serverId) {
+        setSelectedServerId(null);
+      }
+      toast.success('Server deleted');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to delete server');
+    }
+  };
+
+  const handleTestServer = async (serverId: string) => {
+    if (!projectId) return;
+    setTestResults((prev) => ({
+      ...prev,
+      [serverId]: {
+        status: 'testing',
+        logs: prev[serverId]?.logs ?? [],
+      },
+    }));
+    try {
+      const response = await apiClient.post<DeployTestResponse>(
+        `/projects/${projectId}/deploy/servers/${serverId}/test`
+      );
+      const logs = Array.isArray(response.data?.logs) ? response.data.logs : [];
+      const success = Boolean(response.data?.success);
+      setTestResults((prev) => ({
+        ...prev,
+        [serverId]: {
+          status: success ? 'success' : 'error',
+          logs,
+        },
+      }));
+      if (success) {
+        toast.success('Connection test succeeded');
+      } else {
+        toast.error('Connection test failed');
+      }
+    } catch (error: any) {
+      setTestResults((prev) => ({
+        ...prev,
+        [serverId]: {
+          status: 'error',
+          logs: prev[serverId]?.logs ?? [],
+        },
+      }));
+      toast.error(error.response?.data?.error || 'Failed to test connection');
+    }
+  };
+
+  const getTestSummary = (testState?: DeployTestState) => {
+    if (!testState || testState.status === 'idle') return null;
+    if (testState.status === 'testing') {
+      return { text: 'Testing connection...', tone: 'text-slate-400' };
+    }
+    const lastError = [...testState.logs].reverse().find((log) => log.level === 'error');
+    const lastMessage = lastError?.message || testState.logs[testState.logs.length - 1]?.message;
+    if (testState.status === 'success') {
+      return {
+        text: lastMessage ? `Connection ok · ${lastMessage}` : 'Connection ok',
+        tone: 'text-emerald-300',
+      };
+    }
+    return {
+      text: lastMessage ? `Connection failed · ${lastMessage}` : 'Connection failed',
+      tone: 'text-rose-300',
+    };
   };
 
   const handleConnect = () => {
@@ -457,20 +557,58 @@ export const DeployPage: React.FC = () => {
                   <div className="px-1 py-6 text-sm text-slate-400">No servers yet.</div>
                 ) : (
                   servers.map((server) => (
-                    <button
+                    <div
                       key={server.id}
-                      type="button"
-                      onClick={() => setSelectedServerId(server.id)}
-                      className={`w-full border-b border-white/5 px-2 py-3 text-left transition hover:bg-slate-800/60 ${
+                      className={`border-b border-white/5 transition hover:bg-slate-800/60 ${
                         server.id === selectedServerId ? 'bg-slate-800/70' : ''
                       }`}
                     >
-                      <p className="text-sm font-semibold text-slate-100">{server.name}</p>
-                      <p className="text-xs text-slate-400">
-                        {server.username}@{server.host}:{server.port}
-                      </p>
-                      <p className="mt-1 text-[11px] text-slate-500">Auth: {server.auth_type}</p>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedServerId(server.id)}
+                        className="w-full px-2 py-3 text-left"
+                      >
+                        <p className="text-sm font-semibold text-slate-100">{server.name}</p>
+                        <p className="text-xs text-slate-400">
+                          {server.username}@{server.host}:{server.port}
+                        </p>
+                        <p className="mt-1 text-[11px] text-slate-500">Auth: {server.auth_type}</p>
+                      </button>
+                      <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-3">
+                        {(() => {
+                          const summary = getTestSummary(testResults[server.id]);
+                          if (!summary) {
+                            return <span className="text-[11px] text-slate-500">No test yet.</span>;
+                          }
+                          return <span className={`text-[11px] ${summary.tone}`}>{summary.text}</span>;
+                        })()}
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleTestServer(server.id);
+                            }}
+                            disabled={testResults[server.id]?.status === 'testing'}
+                          >
+                            {testResults[server.id]?.status === 'testing' ? 'Testing...' : 'Test'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDeleteServer(server.id);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   ))
                 )}
               </div>

@@ -95,6 +95,17 @@ type DeployEnvVarResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type DeployConnectionLog struct {
+	Timestamp time.Time `json:"timestamp"`
+	Level     string    `json:"level"`
+	Message   string    `json:"message"`
+}
+
+type DeployConnectionTestResponse struct {
+	Success bool                  `json:"success"`
+	Logs    []DeployConnectionLog `json:"logs"`
+}
+
 func (DeployServer) TableName() string {
 	return "deploy_servers"
 }
