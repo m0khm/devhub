@@ -21,6 +21,7 @@ export function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
   const setAuth = useAuthStore((state) => state.setAuth);
+  const refreshMe = useAuthStore((state) => state.refreshMe);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -129,6 +130,7 @@ export function AuthPage() {
         code,
       });
       setAuth(response.data.user, response.data.token);
+      await refreshMe();
       toast.success('Аккаунт создан!');
       navigate('/workspace');
     } catch (error: any) {
@@ -169,6 +171,7 @@ export function AuthPage() {
           password: formData.password,
         });
         setAuth(response.data.user, response.data.token);
+        await refreshMe();
         toast.success('Успешный вход!');
         navigate('/workspace');
       } catch (error: any) {
