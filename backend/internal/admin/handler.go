@@ -40,8 +40,12 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 }
 
 func (h *Handler) Dashboard(c *fiber.Ctx) error {
-	return c.JSON(fiber.Map{
-		"status": "ok",
-		"panel":  "admin",
-	})
+	response, err := h.service.GetDashboard()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to load admin dashboard",
+		})
+	}
+
+	return c.JSON(response)
 }
