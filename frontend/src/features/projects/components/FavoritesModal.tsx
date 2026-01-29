@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ChatBubbleLeftRightIcon,
   StarIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { apiClient } from '../../../api/client';
 import { useProjectStore } from '../../../store/projectStore';
 
 interface FavoritesModalProps {
@@ -16,57 +17,45 @@ interface FavoriteTopicItem {
   id: string;
   title: string;
   subtitle?: string;
-  sample?: boolean;
 }
 
 interface FavoriteMessageItem {
   id: string;
   title: string;
   subtitle?: string;
-  sample?: boolean;
 }
 
-interface StoredFavorites {
-  topics?: FavoriteTopicItem[];
-  messages?: FavoriteMessageItem[];
+interface FavoriteTopicResponse {
+  id: string;
+  name: string;
+  project_id: string;
+  favorited_at: string;
 }
 
-const SAMPLE_TOPICS: FavoriteTopicItem[] = [
-  {
-    id: 'sample-topic-1',
-    title: 'Мокап: Роадмап продукта',
-    subtitle: 'Добавьте реальные избранные темы для быстрого доступа.',
-    sample: true,
-  },
-  {
-    id: 'sample-topic-2',
-    title: 'Мокап: План релиза',
-    subtitle: 'Сохраните важные обсуждения одним кликом.',
-    sample: true,
-  },
-];
+interface FavoriteMessageResponse {
+  id: string;
+  content: string;
+  topic_id: string;
+  topic_name: string;
+  favorited_at: string;
+}
 
-const SAMPLE_MESSAGES: FavoriteMessageItem[] = [
-  {
-    id: 'sample-message-1',
-    title: 'Ключевое решение по срокам релиза',
-    subtitle: 'Сохраните важные сообщения для команды.',
-    sample: true,
-  },
-  {
-    id: 'sample-message-2',
-    title: 'Сводка статуса инфраструктуры',
-    subtitle: 'Быстрый доступ к заметкам для всех участников.',
-    sample: true,
-  },
-];
+interface FavoritesResponse {
+  topics: FavoriteTopicResponse[];
+  messages: FavoriteMessageResponse[];
+}
 
 export const FavoritesModal: React.FC<FavoritesModalProps> = ({
   open,
   onClose,
 }) => {
   const prevOverflow = useRef<string>('');
-  const { currentProject, currentTopics } = useProjectStore();
+  const { currentProject } = useProjectStore();
+  const [favorites, setFavorites] = useState<FavoritesResponse>({
+    topics: [],
+    messages: [],
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -85,40 +74,59 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({
     };
   }, [open, onClose]);
 
-  const storedFavorites = useMemo<StoredFavorites | null>(() => {
-    if (!open) return null;
-    const raw = localStorage.getItem('devhub-favorites');
-    if (!raw) return null;
-    try {
-      const parsed = JSON.parse(raw) as StoredFavorites;
-      return parsed ?? null;
-    } catch {
-      return null;
-    }
-  }, [open]);
+  useEffect(() => {
+    if (!open || !currentProject) return;
+    let isActive = true;
+    setIsLoading(true);
 
-  const favoriteTopics = useMemo(() => {
-    if (storedFavorites?.topics?.length) {
-      return storedFavorites.topics;
-    }
-    if (currentTopics.length > 0) {
-      return currentTopics.slice(0, 4).map((topic) => ({
+    apiClient
+      .get<FavoritesResponse>(`/projects/${currentProject.id}/favorites`)
+      .then((response) => {
+        if (!isActive) return;
+        setFavorites({
+          topics: response.data?.topics ?? [],
+          messages: response.data?.messages ?? [],
+        });
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setFavorites({ topics: [], messages: [] });
+      })
+      .finally(() => {
+        if (!isActive) return;
+        setIsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [open, currentProject]);
+
+  const favoriteTopics = useMemo<FavoriteTopicItem[]>(() => {
+    if (favorites.topics.length > 0) {
+      return favorites.topics.map((topic) => ({
         id: topic.id,
-        title: topic.title,
+        title: topic.name,
         subtitle: currentProject
           ? `Проект: ${currentProject.name}`
           : 'Обсуждение команды',
       }));
     }
-    return SAMPLE_TOPICS;
-  }, [storedFavorites, currentTopics, currentProject]);
+    return [];
+  }, [favorites.topics, currentProject]);
 
-  const favoriteMessages = useMemo(() => {
-    if (storedFavorites?.messages?.length) {
-      return storedFavorites.messages;
+  const favoriteMessages = useMemo<FavoriteMessageItem[]>(() => {
+    if (favorites.messages.length > 0) {
+      return favorites.messages.map((message) => ({
+        id: message.id,
+        title: message.content,
+        subtitle: message.topic_name
+          ? `Тема: ${message.topic_name}`
+          : 'Сообщение команды',
+      }));
     }
-    return SAMPLE_MESSAGES;
-  }, [storedFavorites]);
+    return [];
+  }, [favorites.messages]);
 
   if (!open) return null;
 
@@ -197,30 +205,35 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({
                 Избранные темы
               </div>
               <ul className="space-y-3">
-                {favoriteTopics.map((topic) => (
-                  <li
-                    key={topic.id}
-                    className="rounded-2xl border border-slate-800/80 bg-slate-900/70 px-4 py-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-semibold text-white">
-                          {topic.title}
-                        </div>
-                        {topic.subtitle && (
-                          <div className="mt-1 text-xs text-slate-400">
-                            {topic.subtitle}
-                          </div>
-                        )}
-                      </div>
-                      {topic.sample && (
-                        <span className="rounded-full border border-dashed border-slate-600 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-400">
-                          MVP
-                        </span>
-                      )}
-                    </div>
+                {isLoading ? (
+                  <li className="rounded-2xl border border-dashed border-slate-800/80 bg-slate-900/40 px-4 py-3 text-sm text-slate-400">
+                    Загрузка избранного...
                   </li>
-                ))}
+                ) : favoriteTopics.length > 0 ? (
+                  favoriteTopics.map((topic) => (
+                    <li
+                      key={topic.id}
+                      className="rounded-2xl border border-slate-800/80 bg-slate-900/70 px-4 py-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold text-white">
+                            {topic.title}
+                          </div>
+                          {topic.subtitle && (
+                            <div className="mt-1 text-xs text-slate-400">
+                              {topic.subtitle}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))
+                ) : (
+                  <li className="rounded-2xl border border-dashed border-slate-800/80 bg-slate-900/40 px-4 py-3 text-sm text-slate-400">
+                    Нет избранного
+                  </li>
+                )}
               </ul>
             </section>
 
@@ -230,30 +243,35 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({
                 Избранные сообщения
               </div>
               <ul className="space-y-3">
-                {favoriteMessages.map((message) => (
-                  <li
-                    key={message.id}
-                    className="rounded-2xl border border-slate-800/80 bg-slate-900/70 px-4 py-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-semibold text-white">
-                          {message.title}
-                        </div>
-                        {message.subtitle && (
-                          <div className="mt-1 text-xs text-slate-400">
-                            {message.subtitle}
-                          </div>
-                        )}
-                      </div>
-                      {message.sample && (
-                        <span className="rounded-full border border-dashed border-slate-600 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-400">
-                          MVP
-                        </span>
-                      )}
-                    </div>
+                {isLoading ? (
+                  <li className="rounded-2xl border border-dashed border-slate-800/80 bg-slate-900/40 px-4 py-3 text-sm text-slate-400">
+                    Загрузка избранного...
                   </li>
-                ))}
+                ) : favoriteMessages.length > 0 ? (
+                  favoriteMessages.map((message) => (
+                    <li
+                      key={message.id}
+                      className="rounded-2xl border border-slate-800/80 bg-slate-900/70 px-4 py-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold text-white">
+                            {message.title}
+                          </div>
+                          {message.subtitle && (
+                            <div className="mt-1 text-xs text-slate-400">
+                              {message.subtitle}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))
+                ) : (
+                  <li className="rounded-2xl border border-dashed border-slate-800/80 bg-slate-900/40 px-4 py-3 text-sm text-slate-400">
+                    Нет избранного
+                  </li>
+                )}
               </ul>
             </section>
           </div>
