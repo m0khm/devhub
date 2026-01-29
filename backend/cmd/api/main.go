@@ -291,6 +291,8 @@ func main() {
 	projectRoutes.Post("/:projectId/deploy/servers", deployHandler.CreateServer)
 	projectRoutes.Get("/:projectId/deploy/servers", deployHandler.ListServers)
 	projectRoutes.Get("/:projectId/deploy/servers/:serverId", deployHandler.GetServer)
+	projectRoutes.Delete("/:projectId/deploy/servers/:serverId", deployHandler.DeleteServer)
+	projectRoutes.Post("/:projectId/deploy/servers/:serverId/test", deployHandler.TestServerConnection)
 	projectRoutes.Get("/:projectId/deploy/settings", deployHandler.GetSettings)
 	projectRoutes.Put("/:projectId/deploy/settings", deployHandler.UpdateSettings)
 	projectRoutes.Get("/:projectId/deploy/env", deployHandler.ListEnvVars)
