@@ -213,7 +213,7 @@ export const CodePage: React.FC = () => {
     let isMounted = true;
 
     const applyFallback = () => {
-      const fallback = fallbackActivity[selectedRepoId] ?? defaultActivity;
+      const fallback = defaultActivity;
       if (!isMounted) {
         return;
       }

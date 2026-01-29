@@ -29,7 +29,7 @@ const buildDefaultDraft = (date: string): Omit<CalendarEvent, 'id'> => ({
 });
 
 export function CalendarView() {
-  const { currentProject } = useOutletContext<WorkspaceOutletContext>();
+  const { currentProject } = (useOutletContext<WorkspaceOutletContext>() ?? ({} as any));
   const [monthOffset, setMonthOffset] = useState(0);
   const [eventList, setEventList] = useState<CalendarEvent[]>([]);
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);

@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion } from 'framer-motion'; // ← поправил импорт (было 'motion/react' — скорее всего опечатка)
 import { useCallback, useEffect, useState } from 'react';
 import { Plus, MoreHorizontal, Calendar, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -54,8 +54,9 @@ const columnColorPalette = [
 ];
 
 export function KanbanView() {
-  const { currentProject } = useOutletContext<WorkspaceOutletContext>();
+  const { currentProject } = useOutletContext<WorkspaceOutletContext>() ?? ({} as any);
   const { projectId } = useParams();
+
   const [draggedTask, setDraggedTask] = useState<{
     task: KanbanTask;
     sourceColumnId: string;
@@ -142,7 +143,7 @@ export function KanbanView() {
       setIsSaving(true);
       try {
         if (editingTask) {
-          await apiClient.put(`/projects/${activeProjectId}/kanban/tasks/${editingTask.id}`, {
+          await apiClient.put(`/projects/\( {activeProjectId}/kanban/tasks/ \){editingTask.id}`, {
             title: taskDraft.title.trim(),
             description: taskDraft.description.trim() || undefined,
             assignee: taskDraft.assignee.trim() || undefined,
@@ -151,7 +152,7 @@ export function KanbanView() {
           toast.success('Задача обновлена');
         } else {
           await apiClient.post(
-            `/projects/${activeProjectId}/kanban/columns/${activeColumnId}/tasks`,
+            `/projects/\( {activeProjectId}/kanban/columns/ \){activeColumnId}/tasks`,
             {
               title: taskDraft.title.trim(),
               description: taskDraft.description.trim() || undefined,
@@ -178,7 +179,7 @@ export function KanbanView() {
     const deleteTask = async () => {
       setIsSaving(true);
       try {
-        await apiClient.delete(`/projects/${activeProjectId}/kanban/tasks/${editingTask.id}`);
+        await apiClient.delete(`/projects/\( {activeProjectId}/kanban/tasks/ \){editingTask.id}`);
         toast.success('Задача удалена');
         await loadColumns();
         closeTaskModal();
@@ -220,9 +221,10 @@ export function KanbanView() {
     });
     setColumns(optimistic);
     setDraggedTask(null);
+
     const moveTask = async () => {
       try {
-        await apiClient.put(`/projects/${activeProjectId}/kanban/tasks/${task.id}`, {
+        await apiClient.put(`/projects/\( {activeProjectId}/kanban/tasks/ \){task.id}`, {
           column_id: targetColumnId,
         });
         await loadColumns();
@@ -238,10 +240,10 @@ export function KanbanView() {
   const getPriorityColor = (priority?: string | null) => {
     switch (priority) {
       case 'urgent': return 'bg-red-500';
-      case 'high': return 'bg-orange-500';
+      case 'high':   return 'bg-orange-500';
       case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-green-500';
-      default: return 'bg-slate-500';
+      case 'low':    return 'bg-green-500';
+      default:       return 'bg-slate-500';
     }
   };
 
@@ -297,7 +299,7 @@ export function KanbanView() {
                 {column.tasks.length === 0 ? (
                   <div className="text-xs text-slate-500">Нет задач в этой колонке</div>
                 ) : (
-                  column.tasks.map((task: KanbanTask, taskIndex: number) => (
+                  column.tasks.map((task, taskIndex) => (
                     <motion.div
                       key={task.id}
                       initial={{ opacity: 0, y: 10 }}
@@ -361,7 +363,7 @@ export function KanbanView() {
               initial={{ scale: 0.96, y: 10 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.96, y: 10 }}
-              onClick={(event) => event.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               className="w-full max-w-lg rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl"
             >
               <div className="flex items-center justify-between">
@@ -379,53 +381,53 @@ export function KanbanView() {
                   </button>
                 )}
               </div>
+
               <div className="mt-4 space-y-4">
                 <label className="block text-sm text-slate-300">
                   Название
                   <input
                     value={taskDraft.title}
-                    onChange={(event) => setTaskDraft((prev) => ({ ...prev, title: event.target.value }))}
+                    onChange={(e) => setTaskDraft((prev) => ({ ...prev, title: e.target.value }))}
                     className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   />
                 </label>
+
                 <label className="block text-sm text-slate-300">
                   Описание
                   <textarea
                     value={taskDraft.description}
-                    onChange={(event) =>
-                      setTaskDraft((prev) => ({ ...prev, description: event.target.value }))
-                    }
+                    onChange={(e) => setTaskDraft((prev) => ({ ...prev, description: e.target.value }))}
                     rows={3}
                     className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   />
                 </label>
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block text-sm text-slate-300">
                     Ответственный
                     <input
                       value={taskDraft.assignee}
-                      onChange={(event) =>
-                        setTaskDraft((prev) => ({ ...prev, assignee: event.target.value }))
-                      }
+                      onChange={(e) => setTaskDraft((prev) => ({ ...prev, assignee: e.target.value }))}
                       className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     />
                   </label>
+
                   <label className="block text-sm text-slate-300">
                     Приоритет
                     <select
                       value={taskDraft.priority}
-                      onChange={(event) =>
-                        setTaskDraft((prev) => ({ ...prev, priority: event.target.value }))
-                      }
+                      onChange={(e) => setTaskDraft((prev) => ({ ...prev, priority: e.target.value }))}
                       className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     >
                       <option value="low">Низкий</option>
                       <option value="medium">Средний</option>
                       <option value="high">Высокий</option>
+                      {/* можно добавить urgent, если бэкенд его поддерживает */}
                     </select>
                   </label>
                 </div>
               </div>
+
               <div className="mt-6 flex gap-3">
                 <button
                   type="button"

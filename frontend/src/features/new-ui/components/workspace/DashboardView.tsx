@@ -29,7 +29,7 @@ const formatTimeAgo = (value?: string) => {
 };
 
 export function DashboardView() {
-  const { currentProject, directThreads } = useOutletContext<WorkspaceOutletContext>();
+  const { currentProject, directThreads = [] } = (useOutletContext<WorkspaceOutletContext>() ?? ({} as any));
   const [topics, setTopics] = useState<TopicWithStats[]>([]);
   const [members, setMembers] = useState<ProjectMemberWithUser[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
