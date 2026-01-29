@@ -37,10 +37,12 @@ export const PlanningPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [menuOpen]);
 
+  const kanbanPath = projectId ? `/workspace/kanban/${projectId}` : '/workspace/kanban';
+
   const handleActionClick = (id: string) => {
     setMenuOpen(false);
     if (id === 'kanban') {
-      navigate('/workspace/kanban');
+      navigate(kanbanPath);
       return;
     }
     if (id === 'calendar') {
@@ -116,7 +118,7 @@ export const PlanningPage: React.FC = () => {
             </p>
             <div className="mt-5 flex gap-3">
               <Link
-                to="/workspace/kanban"
+                to={kanbanPath}
                 className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-indigo-500"
               >
                 Перейти в Kanban

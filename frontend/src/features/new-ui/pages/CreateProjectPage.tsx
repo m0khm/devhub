@@ -6,7 +6,6 @@ import { Rocket } from 'lucide-react';
 import { apiClient } from '../../../api/client';
 import { useProjectStore } from '../../../store/projectStore';
 import type { Project } from '../../../shared/types';
-import { getDefaultKanbanColumns, saveKanbanColumns } from '../utils/kanbanStorage';
 
 const TEMPLATE_PROJECT_NAME = 'Новый проект';
 
@@ -50,7 +49,6 @@ export function CreateProjectPage() {
       const project = response.data;
       setProjects([...projects, project]);
       setCurrentProject(project);
-      saveKanbanColumns(project.id, getDefaultKanbanColumns());
       toast.success('Проект создан');
       navigate('/workspace');
     } catch (error: any) {

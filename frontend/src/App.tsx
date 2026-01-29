@@ -9,6 +9,7 @@ import { WorkspaceLayout } from './features/new-ui/pages/WorkspaceLayout';
 import { FilesView } from './features/new-ui/components/workspace/FilesView';
 import { ChatView } from "./features/new-ui/components/workspace/ChatView";
 import { DashboardView } from './features/new-ui/components/workspace/DashboardView';
+import { KanbanView } from './features/new-ui/components/workspace/KanbanView';
 import { HubPage } from './features/new-ui/pages/HubPage';
 import { CreateProjectPage } from './features/new-ui/pages/CreateProjectPage';
 import { PlanningPage } from "./features/planning/PlanningPage";
@@ -62,6 +63,7 @@ function App() {
           <Route index element={<Navigate to="chat" replace />} />
           <Route path="chat/:projectId?" element={<ChatView />} />
           <Route path="deploy/:projectId?" element={<DeployPage />} />
+          <Route path="kanban/:projectId?" element={<KanbanView />} />
           <Route path="planning/:projectId?" element={<PlanningPage />} />
           <Route path="code/:projectId?" element={<CodePage />} />
           <Route path="files" element={<FilesView />} />
