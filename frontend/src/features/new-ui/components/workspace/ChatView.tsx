@@ -1,5 +1,20 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { Send, Smile, Paperclip, Hash, ThumbsUp, Heart, Laugh, Zap } from 'lucide-react';
+import { toast } from 'sonner';
+import type { Message } from '../../../../shared/types';
+import { apiClient } from '../../../../api/client';
+import { wsClient } from '../../../../api/websocket';
+import { useAuthStore } from '../../../../store/authStore';
+
+export function ChatView() {
+  const { projectId: topicId } = useParams();
+  const { token, user: currentUser } = useAuthStore();
+  const [message, setMessage] = useState('');
+  const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
 import { Send, Smile, Paperclip, Hash, ThumbsUp, Heart, Laugh, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../../../store/authStore';
@@ -52,6 +67,102 @@ export function ChatView() {
     { icon: Zap, emoji: '⚡' },
   ];
 
+  const messageMap = useMemo(
+    () => new Map(messages.map((item) => [item.id, item])),
+    [messages]
+  );
+
+  const formatTime = (timestamp: string) =>
+    new Date(timestamp).toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const mergeMessage = (item: Message) => {
+    setMessages((prev) => {
+      const existing = prev.find((msg) => msg.id === item.id);
+      if (existing) {
+        return prev.map((msg) => (msg.id === item.id ? { ...msg, ...item } : msg));
+      }
+      return [...prev, item];
+    });
+  };
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!topicId) {
+        setMessages([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await apiClient.get<Message[]>(
+          `/topics/${topicId}/messages?limit=50`
+        );
+        const list = Array.isArray(response.data) ? response.data : [];
+        setMessages(list.reverse());
+      } catch (error) {
+        toast.error('Не удалось загрузить сообщения');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMessages();
+
+    if (topicId && token) {
+      wsClient.connect(topicId, token, {
+        onNewMessage: (payload) => {
+          if (payload?.message) {
+            mergeMessage(payload.message);
+          }
+        },
+        onMessageUpdated: (payload) => {
+          if (payload?.message) {
+            mergeMessage(payload.message);
+          }
+        },
+        onMessageDeleted: (payload) => {
+          if (!payload?.message_id) return;
+          setMessages((prev) => prev.filter((msg) => msg.id !== payload.message_id));
+        },
+        onReactionUpdated: (payload) => {
+          if (!payload?.message_id) return;
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === payload.message_id ? { ...msg, reactions: payload.reactions } : msg
+            )
+          );
+        },
+      });
+    }
+
+    return () => {
+      wsClient.disconnect();
+    };
+  }, [topicId, token]);
+
+  const handleSend = async () => {
+    if (!topicId || !message.trim()) {
+      return;
+    }
+
+    try {
+      await apiClient.post(`/topics/${topicId}/messages`, {
+        content: message,
+        type: 'text',
+      });
   const handleSend = () => {
     if (message.trim()) {
       const newMessage = {
@@ -64,30 +175,20 @@ export function ChatView() {
       };
       setLocalMessages([...localMessages, newMessage]);
       setMessage('');
-      toast.success('Сообщение отправлено!');
+    } catch (error) {
+      toast.error('Не удалось отправить сообщение');
     }
   };
 
-  const addReaction = (messageId: number, emoji: string) => {
-    setLocalMessages(prev => prev.map(msg => {
-      if (msg.id === messageId) {
-        const existingReaction = msg.reactions.find(r => r.emoji === emoji);
-        if (existingReaction) {
-          return {
-            ...msg,
-            reactions: msg.reactions.map(r =>
-              r.emoji === emoji ? { ...r, count: r.count + 1 } : r
-            ),
-          };
-        }
-        return {
-          ...msg,
-          reactions: [...msg.reactions, { emoji, count: 1 }],
-        };
-      }
-      return msg;
-    }));
-    toast.success(`Реакция ${emoji} добавлена!`);
+  const addReaction = async (messageId: string, emoji: string) => {
+    const targetMessage = messageMap.get(messageId);
+    if (!targetMessage) return;
+
+    try {
+      await apiClient.post(`/messages/${messageId}/reactions`, { emoji });
+    } catch (error) {
+      toast.error('Не удалось добавить реакцию');
+    }
   };
 
   return (
@@ -113,13 +214,23 @@ export function ChatView() {
       <div className="flex-1 overflow-y-auto p-6">
         <div className="space-y-6 max-w-4xl">
           <AnimatePresence>
-            {localMessages.map((msg, index) => (
+            {loading ? (
+              <div className="text-slate-400">Загрузка сообщений...</div>
+            ) : (
+              messages.map((msg, index) => {
+                const displayName =
+                  msg.user?.name || msg.user?.handle || msg.user?.email || 'Unknown';
+                const initials = getInitials(displayName);
+                const isCurrentUser = msg.user_id === currentUser?.id;
+                return (
               <motion.div
                 key={msg.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="flex gap-4 group relative"
+                className={`flex gap-4 group relative ${
+                  isCurrentUser ? 'flex-row-reverse text-right' : ''
+                }`}
                 onMouseEnter={() => setHoveredMessage(msg.id)}
                 onMouseLeave={() => setHoveredMessage(null)}
               >
@@ -127,18 +238,28 @@ export function ChatView() {
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-semibold text-sm flex-shrink-0 shadow-lg"
                 >
-                  {msg.avatar}
+                  {initials}
                 </motion.div>
-                <div className="flex-1">
-                  <div className="flex items-baseline gap-3 mb-1">
-                    <span className="font-semibold text-white">{msg.user}</span>
-                    <span className="text-xs text-slate-500">{msg.time}</span>
+                <div className={`flex-1 flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                  <div
+                    className={`flex items-baseline gap-3 mb-1 ${
+                      isCurrentUser ? 'flex-row-reverse' : ''
+                    }`}
+                  >
+                    <span className="font-semibold text-white">{displayName}</span>
+                    {msg.created_at && (
+                      <span className="text-xs text-slate-500">
+                        {formatTime(msg.created_at)}
+                      </span>
+                    )}
                   </div>
-                  <p className="text-slate-300 leading-relaxed mb-2">{msg.text}</p>
+                  <p className="text-slate-300 leading-relaxed mb-2 max-w-xl">
+                    {msg.content}
+                  </p>
                   
                   {/* Reactions */}
-                  {msg.reactions.length > 0 && (
-                    <div className="flex gap-2 mb-2">
+                  {msg.reactions && msg.reactions.length > 0 && (
+                    <div className={`flex gap-2 mb-2 ${isCurrentUser ? 'justify-end' : ''}`}>
                       {msg.reactions.map((reaction, idx) => (
                         <motion.button
                           key={idx}
@@ -161,7 +282,7 @@ export function ChatView() {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="flex gap-1 mt-2"
+                        className={`flex gap-1 mt-2 ${isCurrentUser ? 'justify-end' : ''}`}
                       >
                         {reactions.map((reaction, idx) => (
                           <motion.button
@@ -179,7 +300,9 @@ export function ChatView() {
                   </AnimatePresence>
                 </div>
               </motion.div>
-            ))}
+            );
+              })
+            )}
           </AnimatePresence>
         </div>
       </div>
