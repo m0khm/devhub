@@ -21,9 +21,9 @@ interface KanbanColumn {
 }
 
 const formatTimeAgo = (value?: string) => {
-  if (!value) return 'только что';
+  if (!value) return "только что";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'только что';
+  if (Number.isNaN(date.getTime())) return "только что";
   const diffMs = Date.now() - date.getTime();
   const minutes = Math.floor(diffMs / 60000);
   if (minutes < 60) return `${minutes} мин назад`;
@@ -51,9 +51,24 @@ export function DashboardView() {
     const loadDashboard = async () => {
       setLoading(true);
       try {
-        const [topicsRes, membersRes, notificationsRes, serversRes, columnsRes] = await Promise.all([
-          apiClient.get<TopicWithStats[]>(`/projects/${currentProject.id}/topics`, {
-            params: { withStats: true },
+        const [
+          topicsRes,
+          membersRes,
+          notificationsRes,
+          serversRes,
+          columnsRes,
+        ] = await Promise.all([
+          apiClient.get<TopicWithStats[]>(
+            `/projects/${currentProject.id}/topics`,
+            {
+              params: { withStats: true },
+            },
+          ),
+          apiClient.get<ProjectMemberWithUser[]>(
+            `/projects/${currentProject.id}/members`,
+          ),
+          apiClient.get<Notification[]>("/notifications", {
+            params: { limit: 8 },
           }),
           apiClient.get<ProjectMemberWithUser[]>(`/projects/${currentProject.id}/members`),
           apiClient.get<Notification[]>('/notifications', { params: { limit: 8 } }),
@@ -62,11 +77,13 @@ export function DashboardView() {
         ]);
         setTopics(Array.isArray(topicsRes.data) ? topicsRes.data : []);
         setMembers(Array.isArray(membersRes.data) ? membersRes.data : []);
-        setNotifications(Array.isArray(notificationsRes.data) ? notificationsRes.data : []);
+        setNotifications(
+          Array.isArray(notificationsRes.data) ? notificationsRes.data : [],
+        );
         setDeployServers(Array.isArray(serversRes.data) ? serversRes.data : []);
         setKanbanColumns(Array.isArray(columnsRes.data) ? columnsRes.data : []);
       } catch (error) {
-        console.error('Failed to load dashboard data', error);
+        console.error("Failed to load dashboard data", error);
       } finally {
         setLoading(false);
       }
@@ -76,38 +93,42 @@ export function DashboardView() {
   }, [currentProject?.id]);
 
   const totalTasks = useMemo(
-    () => kanbanColumns.reduce((sum, column) => sum + (column.tasks?.length ?? 0), 0),
-    [kanbanColumns]
+    () =>
+      kanbanColumns.reduce(
+        (sum, column) => sum + (column.tasks?.length ?? 0),
+        0,
+      ),
+    [kanbanColumns],
   );
 
   const stats = [
     {
-      label: 'Задач в работе',
+      label: "Задач в работе",
       value: totalTasks.toString(),
-      change: totalTasks > 0 ? 'на доске' : 'нет',
+      change: totalTasks > 0 ? "на доске" : "нет",
       icon: CheckCircle,
-      color: 'from-blue-500 to-cyan-500',
+      color: "from-blue-500 to-cyan-500",
     },
     {
-      label: 'Участников',
+      label: "Участников",
       value: members.length.toString(),
-      change: members.length > 0 ? `${members.length} в команде` : 'нет',
+      change: members.length > 0 ? `${members.length} в команде` : "нет",
       icon: Users,
-      color: 'from-purple-500 to-pink-500',
+      color: "from-purple-500 to-pink-500",
     },
     {
-      label: 'Активность',
+      label: "Активность",
       value: notifications.length.toString(),
-      change: notifications.length > 0 ? 'новые события' : 'тишина',
+      change: notifications.length > 0 ? "новые события" : "тишина",
       icon: Zap,
-      color: 'from-orange-500 to-red-500',
+      color: "from-orange-500 to-red-500",
     },
     {
-      label: 'Активных тем',
+      label: "Активных тем",
       value: topics.length.toString(),
       change: directThreads.length > 0 ? `+${directThreads.length} DM` : '--',
       icon: Target,
-      color: 'from-green-500 to-emerald-500',
+      color: "from-green-500 to-emerald-500",
     },
   ];
 
@@ -126,7 +147,9 @@ export function DashboardView() {
         className="max-w-7xl mx-auto"
       >
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white mb-2">Дашборд команды</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">
+            Дашборд команды
+          </h2>
           <p className="text-slate-400">Обзор активности и метрик проекта</p>
         </div>
 

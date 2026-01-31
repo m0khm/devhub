@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import type { Message } from '../../../shared/types';
-import { MessageItem } from './MessageItem';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { Message } from "../../../shared/types";
+import { MessageItem } from "./MessageItem";
 
 interface MessageListProps {
   messages?: Message[] | null;
@@ -25,10 +25,21 @@ export const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const [pinnedHighlightId, setPinnedHighlightId] = useState<string | null>(null);
+  const [pinnedHighlightId, setPinnedHighlightId] = useState<string | null>(
+    null,
+  );
   const normalizedPinnedMessages = pinnedMessages ?? [];
   const normalizedMessages = messages ?? [];
-  const messageMap = React.useMemo(() => new Map([...normalizedPinnedMessages, ...normalizedMessages].map((m) => [m.id, m])), [normalizedPinnedMessages, normalizedMessages]);
+  const messageMap = React.useMemo(
+    () =>
+      new Map(
+        [...normalizedPinnedMessages, ...normalizedMessages].map((m) => [
+          m.id,
+          m,
+        ]),
+      ),
+    [normalizedPinnedMessages, normalizedMessages],
+  );
   const [currentPinnedIndex, setCurrentPinnedIndex] = useState(0);
   const visibleMessages = normalizedMessages;
 
@@ -41,7 +52,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   useEffect(() => {
     if (!highlightedMessageId) return;
     const node = messageRefs.current.get(highlightedMessageId);
-    node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    node?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [highlightedMessageId, normalizedMessages]);
 
   useEffect(() => {
@@ -67,18 +78,18 @@ export const MessageList: React.FC<MessageListProps> = ({
   }, [highlightedMessageId, normalizedPinnedMessages]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const focusMessage = (messageId: string) => {
     onHighlightMessage?.(messageId);
     const node = messageRefs.current.get(messageId);
-    node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    node?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  const handlePinnedNavigation = (direction: 'prev' | 'next') => {
+  const handlePinnedNavigation = (direction: "prev" | "next") => {
     if (normalizedPinnedMessages.length === 0) return;
-    const delta = direction === 'prev' ? -1 : 1;
+    const delta = direction === "prev" ? -1 : 1;
     const nextIndex = Math.min(
       normalizedPinnedMessages.length - 1,
       Math.max(0, currentPinnedIndex + delta),
@@ -114,10 +125,10 @@ export const MessageList: React.FC<MessageListProps> = ({
     event: React.MouseEvent<HTMLDivElement>,
   ) => {
     const target = event.target as HTMLElement | null;
-    if (target?.closest('button, a')) return;
+    if (target?.closest("button, a")) return;
     setPinnedHighlightId(message.id);
     const node = messageRefs.current.get(message.id);
-    node?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    node?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   if (loading) {
@@ -128,12 +139,17 @@ export const MessageList: React.FC<MessageListProps> = ({
     );
   }
 
-  if (normalizedMessages.length === 0 && normalizedPinnedMessages.length === 0) {
+  if (
+    normalizedMessages.length === 0 &&
+    normalizedPinnedMessages.length === 0
+  ) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <p className="text-slate-300 mb-2">No messages yet</p>
-          <p className="text-sm text-slate-500">Be the first to send a message!</p>
+          <p className="text-sm text-slate-500">
+            Be the first to send a message!
+          </p>
         </div>
       </div>
     );
@@ -152,7 +168,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => handlePinnedNavigation('prev')}
+                  onClick={() => handlePinnedNavigation("prev")}
                   disabled={currentPinnedIndex === 0}
                   className="rounded-md border border-slate-700/60 px-2 py-1 text-slate-200 transition hover:bg-slate-800/80 disabled:cursor-not-allowed disabled:opacity-40"
                   aria-label="Предыдущий закреп"
@@ -161,7 +177,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handlePinnedNavigation('next')}
+                  onClick={() => handlePinnedNavigation("next")}
                   disabled={
                     currentPinnedIndex >= normalizedPinnedMessages.length - 1
                   }

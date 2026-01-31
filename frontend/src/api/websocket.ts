@@ -21,7 +21,7 @@ export class WebSocketClient {
   private topicId: string | null = null;
   private token: string | null = null;
 
-  connect(topicId: string, token: string, handlers: WSHandlers) {
+  connect(topicId: string, token: string, handlers: WSHandlers = {}) {
     if (this.ws) {
       this.ws.onclose = null;
       this.ws.onerror = null;
@@ -32,7 +32,7 @@ export class WebSocketClient {
     }
     this.topicId = topicId;
     this.token = token;
-    this.handlers = handlers;
+    this.handlers = handlers ?? {};
 
     // Берём API базу (например: https://dvhub.tech/api)
     // Если env нет — используем текущий origin + /api
@@ -48,13 +48,13 @@ export class WebSocketClient {
     apiUrl.searchParams.set("token", token);
 
     const wsUrl = apiUrl.toString();
-    console.log('[WS] connecting:', wsUrl);
+    console.log("[WS] connecting:", wsUrl);
 
     try {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log('✅ WebSocket connected');
+        console.log("✅ WebSocket connected");
         this.reconnectAttempts = 0;
         this.handlers.onConnect?.();
       };
@@ -64,56 +64,56 @@ export class WebSocketClient {
           const data = JSON.parse(event.data);
           this.handleMessage(data);
         } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
+          console.error("Failed to parse WebSocket message:", error);
         }
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error("WebSocket error:", error);
         this.handlers.onError?.(error);
       };
 
       this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
+        console.log("WebSocket disconnected");
         this.handlers.onDisconnect?.();
         this.attemptReconnect();
       };
     } catch (error) {
-      console.error('Failed to create WebSocket:', error);
+      console.error("Failed to create WebSocket:", error);
       this.attemptReconnect();
     }
   }
 
   private handleMessage(data: any) {
     switch (data.type) {
-      case 'new_message':
+      case "new_message":
         this.handlers.onNewMessage?.(data.payload);
         break;
-      case 'message_updated':
+      case "message_updated":
         this.handlers.onMessageUpdated?.(data.payload);
         break;
-      case 'message_deleted':
+      case "message_deleted":
         this.handlers.onMessageDeleted?.(data.payload);
         break;
-      case 'typing':
+      case "typing":
         this.handlers.onTyping?.(data.payload);
         break;
-      case 'reaction_updated':
+      case "reaction_updated":
         this.handlers.onReactionUpdated?.(data.payload);
         break;
-      case 'notification_created':
+      case "notification_created":
         this.handlers.onNotificationCreated?.(data.payload);
         break;
-      case 'pong':
+      case "pong":
         break;
       default:
-        console.log('Unknown WebSocket message type:', data.type);
+        console.log("Unknown WebSocket message type:", data.type);
     }
   }
 
   private attemptReconnect() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached');
+      console.error("Max reconnection attempts reached");
       return;
     }
 
@@ -121,7 +121,7 @@ export class WebSocketClient {
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
 
     console.log(
-      `Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
+      `Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
     );
 
     setTimeout(() => {
@@ -135,12 +135,12 @@ export class WebSocketClient {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type, payload }));
     } else {
-      console.error('WebSocket is not connected');
+      console.error("WebSocket is not connected");
     }
   }
 
   sendTyping(isTyping: boolean) {
-    this.send('typing', { is_typing: isTyping });
+    this.send("typing", { is_typing: isTyping });
   }
 
   disconnect() {

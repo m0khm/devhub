@@ -199,7 +199,7 @@ func main() {
 	authRoutes.Post("/login", authHandler.Login)
 	authRoutes.Post("/forgot-password", authHandler.ForgotPassword)
 	authRoutes.Post("/reset-password", authHandler.ResetPassword)
-	authRoutes.Get("/me", middleware.Auth(jwtManager), authHandler.GetMe)
+	authRoutes.Get("/me", middleware.Auth(jwtManager, db), authHandler.GetMe)
 
 	// Admin routes (public login + protected dashboard)
 	adminRoutes := api.Group("/admin")

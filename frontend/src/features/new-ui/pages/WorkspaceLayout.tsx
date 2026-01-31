@@ -85,10 +85,10 @@ export function WorkspaceLayout() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [showRenameModal, setShowRenameModal] = useState(false);
-  const [topicName, setTopicName] = useState('');
-  const [topicDescription, setTopicDescription] = useState('');
-  const [topicType, setTopicType] = useState<TopicTypeOption>('chat');
-  const [renameValue, setRenameValue] = useState('');
+  const [topicName, setTopicName] = useState("");
+  const [topicDescription, setTopicDescription] = useState("");
+  const [topicType, setTopicType] = useState<TopicTypeOption>("chat");
+  const [renameValue, setRenameValue] = useState("");
   const [topicToRename, setTopicToRename] = useState<Topic | null>(null);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
@@ -115,13 +115,13 @@ export function WorkspaceLayout() {
       { icon: Plug, label: 'Интеграции', path: '/workspace/integrations' },
       { icon: Users, label: 'Hub', path: '/workspace/hub' },
     ],
-    [projectPathSuffix]
+    [projectPathSuffix],
   );
 
   // --- Data loading ---
 
   const loadWorkspaces = useCallback(async () => {
-    const response = await apiClient.get<Workspace[]>('/workspaces');
+    const response = await apiClient.get<Workspace[]>("/workspaces");
     const fetched = Array.isArray(response.data) ? response.data : [];
     setWorkspaces(fetched);
     return fetched;
@@ -134,7 +134,7 @@ export function WorkspaceLayout() {
       setProjects(fetched);
       return fetched;
     },
-    [setProjects]
+    [setProjects],
   );
 
   const handleWorkspaceChange = useCallback(
@@ -146,7 +146,7 @@ export function WorkspaceLayout() {
         navigate(`/workspace/chat/${fetched[0].id}`);
       } else {
         setCurrentProject(null);
-        navigate('/onboarding');
+        navigate("/onboarding");
       }
     },
     [loadProjectsForWorkspace, navigate, setCurrentProject, setCurrentWorkspace]
@@ -163,7 +163,7 @@ export function WorkspaceLayout() {
       const normalizedSection = sectionNeedId.includes(section) ? section : 'chat';
       navigate(`/workspace/${normalizedSection}/${nextProject.id}`);
     },
-    [location.pathname, navigate, projects, setCurrentProject]
+    [location.pathname, navigate, projects, setCurrentProject],
   );
 
   const handleCreateProject = useCallback(async () => {
@@ -191,7 +191,7 @@ export function WorkspaceLayout() {
       try {
         const fetchedWorkspaces = await loadWorkspaces();
         if (fetchedWorkspaces.length === 0) {
-          navigate('/onboarding');
+          navigate("/onboarding");
           return;
         }
         const nextWorkspace =
@@ -264,13 +264,13 @@ export function WorkspaceLayout() {
       if (target?.closest('[data-topic-menu]')) return;
       setActiveMenuId(null);
     };
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
   }, [activeMenuId]);
 
   // --- Topic helpers ---
 
-  const getTopicIcon = (type: Topic['type']) => {
+  const getTopicIcon = (type: Topic["type"]) => {
     switch (type) {
       case 'planning': return Calendar;
       case 'deploy': return Zap;
@@ -312,11 +312,11 @@ export function WorkspaceLayout() {
 
   const handleCreateTopic = async () => {
     if (!currentProject?.id) {
-      toast.error('Сначала выберите проект');
+      toast.error("Сначала выберите проект");
       return;
     }
     if (!topicName.trim()) {
-      toast.error('Введите название темы');
+      toast.error("Введите название темы");
       return;
     }
     try {
@@ -345,7 +345,7 @@ export function WorkspaceLayout() {
   const handleRenameTopic = async () => {
     if (!topicToRename) return;
     if (!renameValue.trim()) {
-      toast.error('Введите новое название');
+      toast.error("Введите новое название");
       return;
     }
     try {
@@ -367,8 +367,8 @@ export function WorkspaceLayout() {
   };
 
   const handleDeleteTopic = async (topic: Topic) => {
-    if (topic.name.trim().toLowerCase() === 'general') {
-      toast.error('Тему General нельзя удалить');
+    if (topic.name.trim().toLowerCase() === "general") {
+      toast.error("Тему General нельзя удалить");
       return;
     }
     const confirmed = window.confirm(`Удалить тему "${topic.name}"?`);
@@ -532,8 +532,8 @@ export function WorkspaceLayout() {
                     whileTap={{ scale: 0.98 }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group relative overflow-hidden ${
                       isActive
-                        ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border border-blue-500/30'
-                        : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                        ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border border-blue-500/30"
+                        : "text-slate-300 hover:bg-white/5 hover:text-white"
                     }`}
                   >
                     <item.icon className="w-5 h-5 relative z-10" />
@@ -679,24 +679,22 @@ export function WorkspaceLayout() {
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/20"
               >
                 <Plus className="w-5 h-5" />
-                <span className="font-medium">{creatingProject ? 'Создаем...' : 'Создать проект'}</span>
+                <span className="font-medium">
+                  {creatingProject ? "Создаем..." : "Создать проект"}
+                </span>
               </motion.button>
             </div>
           </div>
 
           {/* Bottom actions */}
           <div className="p-4 border-t border-white/5 space-y-2">
-            <motion.button
-              whileHover={{ x: 5 }}
-              onClick={() => navigate(topicPath)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 text-slate-300 hover:text-white transition-all"
-            >
+            <motion.button whileHover={{ x: 5 }}>
               <MessageSquare className="w-5 h-5" />
               <span className="font-medium">Сообщения</span>
             </motion.button>
             <motion.button
               whileHover={{ x: 5 }}
-              onClick={() => navigate('/workspace/profile')}
+              onClick={() => navigate("/workspace/profile")}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 text-slate-300 hover:text-white transition-all"
             >
               <Settings className="w-5 h-5" />
@@ -751,7 +749,11 @@ export function WorkspaceLayout() {
                       }}
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all text-left"
                     >
-                      {darkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                      {darkMode ? (
+                        <Moon className="w-4 h-4" />
+                      ) : (
+                        <Sun className="w-4 h-4" />
+                      )}
                       <span>Переключить тему</span>
                     </button>
                     <button
@@ -776,7 +778,7 @@ export function WorkspaceLayout() {
                     </button>
                     <button
                       onClick={() => {
-                        navigate('/workspace/profile');
+                        navigate("/workspace/profile");
                         setShowProfile(false);
                       }}
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all text-left"
@@ -820,7 +822,7 @@ export function WorkspaceLayout() {
                 Проект
               </span>
               <select
-                value={currentProject?.id ?? ''}
+                value={currentProject?.id ?? ""}
                 onChange={(event) => handleProjectChange(event.target.value)}
                 className="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2 text-sm text-white"
               >
@@ -893,7 +895,9 @@ export function WorkspaceLayout() {
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
             >
-              <h3 className="text-2xl font-bold text-white mb-4">Создать новую тему</h3>
+              <h3 className="text-2xl font-bold text-white mb-4">
+                Создать новую тему
+              </h3>
               <input
                 type="text"
                 placeholder="Название темы"
@@ -995,7 +999,10 @@ export function WorkspaceLayout() {
         onClose={() => setShowCommandPalette(false)}
         actions={commandActions}
       />
-      <ThemeModal open={showThemeModal} onClose={() => setShowThemeModal(false)} />
+      <ThemeModal
+        open={showThemeModal}
+        onClose={() => setShowThemeModal(false)}
+      />
       {currentProject && (
         <InviteFriendModal
           open={showInviteModal}

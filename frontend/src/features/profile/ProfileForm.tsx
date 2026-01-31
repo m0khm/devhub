@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
-import toast from 'react-hot-toast';
-import { apiClient } from '../../api/client';
-import { useAuthStore } from '../../store/authStore';
-import type { User } from '../../shared/types';
+import React, { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
+import { apiClient } from "../../api/client";
+import { useAuthStore } from "../../store/authStore";
+import type { User } from "../../shared/types";
 
 interface ProfileFormProps {
   user: User;
@@ -15,19 +15,22 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const logout = useAuthStore((state) => state.logout);
 
   const normalizeAvatarUrl = (url: string) =>
-    url.replace("http://minio:9000/devhub/uploads/", "/uploads/");
+    (url = url.replace("http://minio:9000/devhub/uploads/", "/uploads/"));
+  url = url.replace("https://minio:9000/devhub/uploads/", "/uploads/");
 
-  const [name, setName] = useState(user?.name ?? '');
-  const [handle, setHandle] = useState(user?.handle ?? '');
-  const [avatarUrl, setAvatarUrl] = useState(normalizeAvatarUrl(user?.avatar_url ?? ''));
+  const [name, setName] = useState(user?.name ?? "");
+  const [handle, setHandle] = useState(user?.handle ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(
+    normalizeAvatarUrl(user?.avatar_url ?? ""),
+  );
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const [bio, setBio] = useState(user?.bio ?? '');
-  const [company, setCompany] = useState(user?.company ?? '');
-  const [location, setLocation] = useState(user?.location ?? '');
-  const [phone, setPhone] = useState(user?.phone ?? '');
-  const [newEmail, setNewEmail] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [emailCode, setEmailCode] = useState('');
+  const [bio, setBio] = useState(user?.bio ?? "");
+  const [company, setCompany] = useState(user?.company ?? "");
+  const [location, setLocation] = useState(user?.location ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
+  const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [emailCode, setEmailCode] = useState("");
   const [emailCodeSent, setEmailCodeSent] = useState(false);
   const [profileVisible, setProfileVisible] = useState(true);
   const [shareContactInfo, setShareContactInfo] = useState(false);
@@ -40,7 +43,13 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const [emailConfirmLoading, setEmailConfirmLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  type OpenSection = "basic" | "email" | "privacy" | "notifications" | "danger" | null;
+  type OpenSection =
+    | "basic"
+    | "email"
+    | "privacy"
+    | "notifications"
+    | "danger"
+    | null;
   const [openSection, setOpenSection] = useState<OpenSection>("basic");
 
   const handleSectionToggle = (section: Exclude<OpenSection, null>) => {
@@ -51,12 +60,12 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   useEffect(() => {
     if (user) {
       setName(user.name);
-      setHandle(user.handle ?? '');
-      setAvatarUrl(normalizeAvatarUrl(user.avatar_url ?? ''));
-      setBio(user.bio ?? '');
-      setCompany(user.company ?? '');
-      setLocation(user.location ?? '');
-      setPhone(user.phone ?? '');
+      setHandle(user.handle ?? "");
+      setAvatarUrl(normalizeAvatarUrl(user.avatar_url ?? ""));
+      setBio(user.bio ?? "");
+      setCompany(user.company ?? "");
+      setLocation(user.location ?? "");
+      setPhone(user.phone ?? "");
     }
   }, [user]);
 
@@ -64,24 +73,26 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     setAvatarUploading(true);
     try {
-      const response = await apiClient.post<User>('/users/me/avatar', formData);
-      const normalizedUser = { ...response.data, avatar_url: normalizeAvatarUrl(response.data.avatar_url ?? '') };
+      const response = await apiClient.post<User>("/users/me/avatar", formData);
+      const normalizedUser = {
+        ...response.data,
+        avatar_url: normalizeAvatarUrl(response.data.avatar_url ?? ""),
+      };
       updateUser(normalizedUser);
-      setAvatarUrl(normalizedUser.avatar_url ?? '');
-      toast.success('Avatar updated');
+      setAvatarUrl(normalizedUser.avatar_url ?? "");
+      toast.success("Avatar updated");
       onSaved?.();
     } catch (error: any) {
-      const message =
-        error.response?.data?.error || 'Failed to upload avatar';
+      const message = error.response?.data?.error || "Failed to upload avatar";
       toast.error(message);
     } finally {
       setAvatarUploading(false);
       if (avatarInputRef.current) {
-        avatarInputRef.current.value = '';
+        avatarInputRef.current.value = "";
       }
     }
   };
@@ -89,32 +100,32 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const handleSendEmailCode = async () => {
     const trimmedEmail = newEmail.trim();
     if (!trimmedEmail) {
-      toast.error('Enter a new email');
+      toast.error("Enter a new email");
       return;
     }
 
     if (trimmedEmail === user.email) {
-      toast.error('New email must be different');
+      toast.error("New email must be different");
       return;
     }
 
     if (!currentPassword) {
-      toast.error('Enter your current password');
+      toast.error("Enter your current password");
       return;
     }
 
     setEmailChangeLoading(true);
     try {
-      await apiClient.post('/users/me/email', {
+      await apiClient.post("/users/me/email", {
         new_email: trimmedEmail,
         password: currentPassword,
       });
       setEmailCodeSent(true);
-      setEmailCode('');
-      toast.success('Verification code sent');
+      setEmailCode("");
+      toast.success("Verification code sent");
     } catch (error: any) {
       const message =
-        error.response?.data?.error || 'Failed to send verification code';
+        error.response?.data?.error || "Failed to send verification code";
       toast.error(message);
     } finally {
       setEmailChangeLoading(false);
@@ -124,34 +135,34 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const handleConfirmEmail = async () => {
     const trimmedEmail = newEmail.trim();
     if (!trimmedEmail) {
-      toast.error('Enter a new email');
+      toast.error("Enter a new email");
       return;
     }
 
     if (!emailCode.trim()) {
-      toast.error('Enter the verification code');
+      toast.error("Enter the verification code");
       return;
     }
 
     setEmailConfirmLoading(true);
     try {
       const response = await apiClient.post<{ token: string; user: User }>(
-        '/users/me/email/confirm',
+        "/users/me/email/confirm",
         {
           new_email: trimmedEmail,
           code: emailCode.trim(),
-        }
+        },
       );
       setAuth(response.data.user, response.data.token);
-      setNewEmail('');
-      setCurrentPassword('');
-      setEmailCode('');
+      setNewEmail("");
+      setCurrentPassword("");
+      setEmailCode("");
       setEmailCodeSent(false);
-      toast.success('Email updated');
+      toast.success("Email updated");
       onSaved?.();
     } catch (error: any) {
       const message =
-        error.response?.data?.error || 'Failed to confirm email change';
+        error.response?.data?.error || "Failed to confirm email change";
       toast.error(message);
     } finally {
       setEmailConfirmLoading(false);
@@ -175,44 +186,47 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
       payload.name = name.trim();
     }
 
-    if (handle.trim() !== (user.handle ?? '')) {
+    if (handle.trim() !== (user.handle ?? "")) {
       payload.handle = handle.trim();
     }
 
-    if (avatarUrl.trim() && avatarUrl.trim() !== (user.avatar_url ?? '')) {
+    if (avatarUrl.trim() && avatarUrl.trim() !== (user.avatar_url ?? "")) {
       payload.avatar_url = avatarUrl.trim();
     }
 
-    if (bio.trim() && bio.trim() !== (user.bio ?? '')) {
+    if (bio.trim() && bio.trim() !== (user.bio ?? "")) {
       payload.bio = bio.trim();
     }
 
-    if (company.trim() && company.trim() !== (user.company ?? '')) {
+    if (company.trim() && company.trim() !== (user.company ?? "")) {
       payload.company = company.trim();
     }
 
-    if (location.trim() && location.trim() !== (user.location ?? '')) {
+    if (location.trim() && location.trim() !== (user.location ?? "")) {
       payload.location = location.trim();
     }
 
-    if (phone.trim() && phone.trim() !== (user.phone ?? '')) {
+    if (phone.trim() && phone.trim() !== (user.phone ?? "")) {
       payload.phone = phone.trim();
     }
 
     if (Object.keys(payload).length === 0) {
-      toast('No changes to save');
+      toast("No changes to save");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await apiClient.patch<User>('/users/me', payload);
-      const normalizedUser = { ...response.data, avatar_url: normalizeAvatarUrl(response.data.avatar_url ?? '') };
-        updateUser(normalizedUser);
-      toast.success('Profile updated');
+      const response = await apiClient.patch<User>("/users/me", payload);
+      const normalizedUser = {
+        ...response.data,
+        avatar_url: normalizeAvatarUrl(response.data.avatar_url ?? ""),
+      };
+      updateUser(normalizedUser);
+      toast.success("Profile updated");
       onSaved?.();
     } catch (error: any) {
-      const message = error.response?.data?.error || 'Failed to update profile';
+      const message = error.response?.data?.error || "Failed to update profile";
       toast.error(message);
     } finally {
       setLoading(false);
@@ -221,18 +235,18 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
 
   const handleDeleteAccount = async () => {
     const confirmed = window.confirm(
-      'Delete your account? This will disable your profile and sign you out.'
+      "Delete your account? This will disable your profile and sign you out.",
     );
     if (!confirmed) return;
 
     setDeleteLoading(true);
     try {
-      await apiClient.delete('/users/me');
-      toast.success('Account deleted');
+      await apiClient.delete("/users/me");
+      toast.success("Account deleted");
       logout();
       onSaved?.();
     } catch (error: any) {
-      const message = error.response?.data?.error || 'Failed to delete account';
+      const message = error.response?.data?.error || "Failed to delete account";
       toast.error(message);
     } finally {
       setDeleteLoading(false);
@@ -240,10 +254,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   };
 
   const getSectionButtonLabel = (isOpen: boolean) =>
-    isOpen ? 'Скрыть' : 'Открыть';
+    isOpen ? "Скрыть" : "Открыть";
 
   const sectionContainerClass =
-    'rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6';
+    "rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6";
 
   return (
     <>
@@ -259,23 +273,23 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
         <dl className="grid grid-cols-1 gap-4 text-sm text-gray-700 sm:grid-cols-2">
           <div>
             <dt className="font-medium text-gray-500">Handle</dt>
-            <dd>{user.handle ?? 'Not provided'}</dd>
+            <dd>{user.handle ?? "Not provided"}</dd>
           </div>
           <div>
             <dt className="font-medium text-gray-500">Company</dt>
-            <dd>{user.company ?? 'Not provided'}</dd>
+            <dd>{user.company ?? "Not provided"}</dd>
           </div>
           <div>
             <dt className="font-medium text-gray-500">Location</dt>
-            <dd>{user.location ?? 'Not provided'}</dd>
+            <dd>{user.location ?? "Not provided"}</dd>
           </div>
           <div>
             <dt className="font-medium text-gray-500">Phone</dt>
-            <dd>{user.phone ?? 'Not provided'}</dd>
+            <dd>{user.phone ?? "Not provided"}</dd>
           </div>
           <div className="sm:col-span-2">
             <dt className="font-medium text-gray-500">Bio</dt>
-            <dd>{user.bio ?? 'Not provided'}</dd>
+            <dd>{user.bio ?? "Not provided"}</dd>
           </div>
         </dl>
       </div>
@@ -284,8 +298,8 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
         <section className={sectionContainerClass}>
           <button
             type="button"
-            onClick={() => handleSectionToggle('basic')}
-            aria-expanded={openSection === 'basic'}
+            onClick={() => handleSectionToggle("basic")}
+            aria-expanded={openSection === "basic"}
             aria-controls="profile-basic-section"
             className="flex w-full items-start justify-between gap-4 text-left"
           >
@@ -296,10 +310,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
               </p>
             </div>
             <span className="text-sm font-medium text-blue-600">
-              {getSectionButtonLabel(openSection === 'basic')}
+              {getSectionButtonLabel(openSection === "basic")}
             </span>
           </button>
-          {openSection === 'basic' && (
+          {openSection === "basic" && (
             <div id="profile-basic-section" className="mt-5 space-y-4">
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -330,28 +344,28 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
-                Upload avatar
-              </label>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/*"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) {
-                    handleAvatarUpload(file);
-                  }
-                }}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3"
-                disabled={avatarUploading}
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                PNG, JPG, GIF до 5MB. Загрузка обновит аватар в профиле.
-              </p>
-              {avatarUploading && (
-                <p className="mt-2 text-xs text-blue-600">Uploading...</p>
-              )}
-            </div>
+                  Upload avatar
+                </label>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      handleAvatarUpload(file);
+                    }
+                  }}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3"
+                  disabled={avatarUploading}
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  PNG, JPG, GIF до 5MB. Загрузка обновит аватар в профиле.
+                </p>
+                {avatarUploading && (
+                  <p className="mt-2 text-xs text-blue-600">Uploading...</p>
+                )}
+              </div>
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -398,8 +412,8 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
         <section className={sectionContainerClass}>
           <button
             type="button"
-            onClick={() => handleSectionToggle('email')}
-            aria-expanded={openSection === 'email'}
+            onClick={() => handleSectionToggle("email")}
+            aria-expanded={openSection === "email"}
             aria-controls="profile-email-section"
             className="flex w-full items-start justify-between gap-4 text-left"
           >
@@ -410,10 +424,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
               </p>
             </div>
             <span className="text-sm font-medium text-blue-600">
-              {getSectionButtonLabel(openSection === 'email')}
+              {getSectionButtonLabel(openSection === "email")}
             </span>
           </button>
-          {openSection === 'email' && (
+          {openSection === "email" && (
             <div id="profile-email-section" className="mt-5 space-y-4">
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -461,7 +475,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
                 disabled={emailChangeLoading}
                 className="inline-flex w-full items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {emailChangeLoading ? 'Sending...' : 'Send code'}
+                {emailChangeLoading ? "Sending..." : "Send code"}
               </button>
 
               {emailCodeSent && (
@@ -484,7 +498,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
                     disabled={emailConfirmLoading}
                     className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {emailConfirmLoading ? 'Confirming...' : 'Confirm email'}
+                    {emailConfirmLoading ? "Confirming..." : "Confirm email"}
                   </button>
                 </div>
               )}
@@ -495,22 +509,24 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
         <section className={sectionContainerClass}>
           <button
             type="button"
-            onClick={() => handleSectionToggle('privacy')}
-            aria-expanded={openSection === 'privacy'}
+            onClick={() => handleSectionToggle("privacy")}
+            aria-expanded={openSection === "privacy"}
             aria-controls="profile-privacy-section"
             className="flex w-full items-start justify-between gap-4 text-left"
           >
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Приватность</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Приватность
+              </h2>
               <p className="text-sm text-gray-500">
                 Управляйте видимостью и тем, какие данные доступны коллегам.
               </p>
             </div>
             <span className="text-sm font-medium text-blue-600">
-              {getSectionButtonLabel(openSection === 'privacy')}
+              {getSectionButtonLabel(openSection === "privacy")}
             </span>
           </button>
-          {openSection === 'privacy' && (
+          {openSection === "privacy" && (
             <div
               id="profile-privacy-section"
               className="mt-5 space-y-4 text-sm text-gray-700"
@@ -530,7 +546,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
                   type="checkbox"
                   className="h-4 w-4 accent-blue-600"
                   checked={shareContactInfo}
-                  onChange={(event) => setShareContactInfo(event.target.checked)}
+                  onChange={(event) =>
+                    setShareContactInfo(event.target.checked)
+                  }
                 />
               </label>
               <label className="flex items-center justify-between gap-4">
@@ -549,8 +567,8 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
         <section className={sectionContainerClass}>
           <button
             type="button"
-            onClick={() => handleSectionToggle('notifications')}
-            aria-expanded={openSection === 'notifications'}
+            onClick={() => handleSectionToggle("notifications")}
+            aria-expanded={openSection === "notifications"}
             aria-controls="profile-notifications-section"
             className="flex w-full items-start justify-between gap-4 text-left"
           >
@@ -563,10 +581,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
               </p>
             </div>
             <span className="text-sm font-medium text-blue-600">
-              {getSectionButtonLabel(openSection === 'notifications')}
+              {getSectionButtonLabel(openSection === "notifications")}
             </span>
           </button>
-          {openSection === 'notifications' && (
+          {openSection === "notifications" && (
             <div
               id="profile-notifications-section"
               className="mt-5 space-y-4 text-sm text-gray-700"
@@ -609,15 +627,15 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
           disabled={loading}
           className="w-full rounded-lg bg-blue-600 py-3 font-medium text-white transition hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? 'Saving...' : 'Save changes'}
+          {loading ? "Saving..." : "Save changes"}
         </button>
       </form>
 
       <section className="mt-8 rounded-2xl border border-red-100 bg-red-50/40 p-4 shadow-sm sm:p-6">
         <button
           type="button"
-          onClick={() => handleSectionToggle('danger')}
-          aria-expanded={openSection === 'danger'}
+          onClick={() => handleSectionToggle("danger")}
+          aria-expanded={openSection === "danger"}
           aria-controls="profile-danger-section"
           className="flex w-full items-start justify-between gap-4 text-left"
         >
@@ -629,10 +647,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
             </p>
           </div>
           <span className="text-sm font-semibold text-red-600">
-            {getSectionButtonLabel(openSection === 'danger')}
+            {getSectionButtonLabel(openSection === "danger")}
           </span>
         </button>
-        {openSection === 'danger' && (
+        {openSection === "danger" && (
           <div id="profile-danger-section" className="mt-5">
             <button
               type="button"
@@ -640,7 +658,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
               disabled={deleteLoading}
               className="inline-flex w-full items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {deleteLoading ? 'Deleting...' : 'Delete account'}
+              {deleteLoading ? "Deleting..." : "Delete account"}
             </button>
           </div>
         )}
