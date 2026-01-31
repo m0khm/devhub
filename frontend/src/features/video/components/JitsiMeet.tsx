@@ -189,14 +189,24 @@ setIsLoading(false);
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black relative">
-      <div ref={containerRef} className="w-full h-full" />
+    <div className="fixed inset-0 z-[9999] bg-black flex flex-col">
+      {/* Close bar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-slate-900/90 border-b border-white/10 shrink-0">
+        <span className="text-sm text-white/70 font-medium">DevHub Video Call</span>
+        <button
+          onClick={onClose}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/30 transition-all"
+        >
+          Завершить звонок
+        </button>
+      </div>
+      <div ref={containerRef} className="flex-1 w-full" />
       {(isLoading || loadError) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80 text-white">
           {isLoading && (
             <>
               <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white" />
-              <p className="text-sm text-white/80">Loading video call…</p>
+              <p className="text-sm text-white/80">Подключение к звонку...</p>
             </>
           )}
           {loadError && (
@@ -206,7 +216,7 @@ setIsLoading(false);
                 onClick={onClose}
                 className="rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20"
               >
-                Close
+                Закрыть
               </button>
             </>
           )}

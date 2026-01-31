@@ -32,6 +32,7 @@ import (
 	"github.com/m0khm/devhub/backend/internal/storage"
 	"github.com/m0khm/devhub/backend/internal/topic"
 	"github.com/m0khm/devhub/backend/internal/user"
+	"github.com/m0khm/devhub/backend/internal/integration"
 	"github.com/m0khm/devhub/backend/internal/video" // NEW
 	"github.com/m0khm/devhub/backend/internal/workspace"
 )
@@ -161,6 +162,7 @@ func main() {
 	favoriteHandler := favorite.NewHandler(favoriteService)
 
 	videoHandler := video.NewHandler() // NEW
+	integrationHandler := integration.NewHandler(db)
 	deployHandler := deploy.NewHandler(deployService)
 	deployWSHandler := deploy.NewWSHandler(deployService)
 
@@ -199,6 +201,7 @@ func main() {
 	authRoutes.Post("/login", authHandler.Login)
 	authRoutes.Post("/forgot-password", authHandler.ForgotPassword)
 	authRoutes.Post("/reset-password", authHandler.ResetPassword)
+	authRoutes.Post("/keycloak/exchange", authHandler.KeycloakExchange)
 	authRoutes.Get("/me", middleware.Auth(jwtManager, db), authHandler.GetMe)
 
 	// Admin routes (public login + protected dashboard)
@@ -313,6 +316,11 @@ func main() {
 	projectRoutes.Post("/:projectId/calendar/events", calendarHandler.CreateEvent)
 	projectRoutes.Put("/:projectId/calendar/events/:eventId", calendarHandler.UpdateEvent)
 	projectRoutes.Delete("/:projectId/calendar/events/:eventId", calendarHandler.DeleteEvent)
+
+	// Integration routes
+	projectRoutes.Post("/:projectId/integrations/github/connect", integrationHandler.ConnectGitHub)
+	projectRoutes.Get("/:projectId/integrations/github/status", integrationHandler.GitHubStatus)
+	projectRoutes.Delete("/:projectId/integrations/github", integrationHandler.DisconnectGitHub)
 
 	// Workspace routes
 	workspaceRoutes := protected.Group("/workspaces")

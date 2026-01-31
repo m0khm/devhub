@@ -14,6 +14,7 @@ import { CalendarView } from './features/new-ui/components/workspace/CalendarVie
 import { VoiceRoomsView } from './features/new-ui/components/workspace/VoiceRoomsView';
 import { IntegrationsView } from './features/new-ui/components/workspace/IntegrationsView';
 import { HubPage } from './features/new-ui/pages/HubPage';
+import { DirectMessagesView } from './features/new-ui/components/workspace/DirectMessagesView';
 import { CreateProjectPage } from './features/new-ui/pages/CreateProjectPage';
 import { PlanningPage } from "./features/planning/PlanningPage";
 import { DeployPage } from './features/deploy/DeployPage';
@@ -81,6 +82,7 @@ function App() {
           <Route path="files" element={<FilesView />} />
           <Route path="voice-rooms" element={<VoiceRoomsView />} />
           <Route path="integrations" element={<IntegrationsView />} />
+          <Route path="dm" element={<DirectMessagesView />} />
           <Route path="hub" element={<HubPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>

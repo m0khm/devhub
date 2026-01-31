@@ -35,6 +35,11 @@ type LoginResponse struct {
 	User  User   `json:"user"`
 }
 
+type KeycloakExchangeRequest struct {
+	KeycloakToken        string `json:"keycloak_token"`
+	KeycloakRefreshToken string `json:"keycloak_refresh_token,omitempty"`
+}
+
 func NormalizeHandle(handle *string) *string {
 	if handle == nil {
 		return nil

@@ -3,6 +3,24 @@ import toast from "react-hot-toast";
 import { apiClient } from "../../api/client";
 import { useAuthStore } from "../../store/authStore";
 import type { User } from "../../shared/types";
+import {
+  User as UserIcon,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Shield,
+  Bell,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  Upload,
+  MapPin,
+  Phone,
+  Building,
+  AtSign,
+  FileText,
+} from "lucide-react";
 
 interface ProfileFormProps {
   user: User;
@@ -85,10 +103,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
       };
       updateUser(normalizedUser);
       setAvatarUrl(normalizedUser.avatar_url ?? "");
-      toast.success("Avatar updated");
+      toast.success("Аватар обновлен");
       onSaved?.();
     } catch (error: any) {
-      const message = error.response?.data?.error || "Failed to upload avatar";
+      const message = error.response?.data?.error || "Не удалось загрузить аватар";
       toast.error(message);
     } finally {
       setAvatarUploading(false);
@@ -101,17 +119,17 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const handleSendEmailCode = async () => {
     const trimmedEmail = newEmail.trim();
     if (!trimmedEmail) {
-      toast.error("Enter a new email");
+      toast.error("Введите новый email");
       return;
     }
 
     if (trimmedEmail === user.email) {
-      toast.error("New email must be different");
+      toast.error("Новый email должен отличаться");
       return;
     }
 
     if (!currentPassword) {
-      toast.error("Enter your current password");
+      toast.error("Введите текущий пароль");
       return;
     }
 
@@ -123,10 +141,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
       });
       setEmailCodeSent(true);
       setEmailCode("");
-      toast.success("Verification code sent");
+      toast.success("Код подтверждения отправлен");
     } catch (error: any) {
       const message =
-        error.response?.data?.error || "Failed to send verification code";
+        error.response?.data?.error || "Не удалось отправить код";
       toast.error(message);
     } finally {
       setEmailChangeLoading(false);
@@ -136,12 +154,12 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const handleConfirmEmail = async () => {
     const trimmedEmail = newEmail.trim();
     if (!trimmedEmail) {
-      toast.error("Enter a new email");
+      toast.error("Введите новый email");
       return;
     }
 
     if (!emailCode.trim()) {
-      toast.error("Enter the verification code");
+      toast.error("Введите код подтверждения");
       return;
     }
 
@@ -159,11 +177,11 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
       setCurrentPassword("");
       setEmailCode("");
       setEmailCodeSent(false);
-      toast.success("Email updated");
+      toast.success("Email обновлен");
       onSaved?.();
     } catch (error: any) {
       const message =
-        error.response?.data?.error || "Failed to confirm email change";
+        error.response?.data?.error || "Не удалось подтвердить смену email";
       toast.error(message);
     } finally {
       setEmailConfirmLoading(false);
@@ -212,7 +230,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
     }
 
     if (Object.keys(payload).length === 0) {
-      toast("No changes to save");
+      toast("Нет изменений для сохранения");
       return;
     }
 
@@ -224,10 +242,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
         avatar_url: normalizeAvatarUrl(response.data.avatar_url ?? ""),
       };
       updateUser(normalizedUser);
-      toast.success("Profile updated");
+      toast.success("Профиль обновлен");
       onSaved?.();
     } catch (error: any) {
-      const message = error.response?.data?.error || "Failed to update profile";
+      const message = error.response?.data?.error || "Не удалось обновить профиль";
       toast.error(message);
     } finally {
       setLoading(false);
@@ -236,117 +254,212 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
 
   const handleDeleteAccount = async () => {
     const confirmed = window.confirm(
-      "Delete your account? This will disable your profile and sign you out.",
+      "Удалить аккаунт? Это действие нельзя отменить.",
     );
     if (!confirmed) return;
 
     setDeleteLoading(true);
     try {
       await apiClient.delete("/users/me");
-      toast.success("Account deleted");
+      toast.success("Аккаунт удален");
       logout();
       onSaved?.();
     } catch (error: any) {
-      const message = error.response?.data?.error || "Failed to delete account";
+      const message = error.response?.data?.error || "Не удалось удалить аккаунт";
       toast.error(message);
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  const getSectionButtonLabel = (isOpen: boolean) =>
-    isOpen ? "Скрыть" : "Открыть";
+  const inputClass =
+    "w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all";
 
-  const sectionContainerClass =
-    "rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6";
+  const sectionClass =
+    "rounded-2xl border border-white/10 bg-slate-900/60 p-4 sm:p-6";
+
+  const toggleClass =
+    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50";
+
+  const SectionHeader = ({
+    icon: Icon,
+    title,
+    description,
+    section,
+    variant = "default",
+  }: {
+    icon: React.ElementType;
+    title: string;
+    description: string;
+    section: Exclude<OpenSection, null>;
+    variant?: "default" | "danger";
+  }) => (
+    <button
+      type="button"
+      onClick={() => handleSectionToggle(section)}
+      className="flex w-full items-start justify-between gap-4 text-left"
+    >
+      <div className="flex items-start gap-3">
+        <div className={`mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center ${
+          variant === "danger"
+            ? "bg-red-500/10 text-red-400"
+            : "bg-white/5 text-slate-400"
+        }`}>
+          <Icon className="w-4 h-4" />
+        </div>
+        <div>
+          <h2 className={`text-base font-semibold ${
+            variant === "danger" ? "text-red-400" : "text-white"
+          }`}>
+            {title}
+          </h2>
+          <p className={`text-sm ${
+            variant === "danger" ? "text-red-400/60" : "text-slate-500"
+          }`}>
+            {description}
+          </p>
+        </div>
+      </div>
+      {openSection === section ? (
+        <ChevronUp className="w-5 h-5 text-slate-500 flex-shrink-0 mt-1" />
+      ) : (
+        <ChevronDown className="w-5 h-5 text-slate-500 flex-shrink-0 mt-1" />
+      )}
+    </button>
+  );
+
+  const Toggle = ({
+    checked,
+    onChange,
+    label,
+  }: {
+    checked: boolean;
+    onChange: (val: boolean) => void;
+    label: string;
+  }) => (
+    <label className="flex items-center justify-between gap-4 py-2">
+      <span className="text-sm text-slate-300">{label}</span>
+      <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        className={`${toggleClass} ${
+          checked ? "bg-blue-500" : "bg-white/10"
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+            checked ? "translate-x-6" : "translate-x-1"
+          }`}
+        />
+      </button>
+    </label>
+  );
 
   return (
     <>
       <div className="mb-8 text-center">
-        <h1 className="mb-2 text-3xl font-bold text-gray-900">Profile</h1>
-        <p className="text-gray-600">Update your personal information</p>
+        <h1 className="mb-2 text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          Настройки
+        </h1>
+        <p className="text-slate-400">Управление профилем и аккаунтом</p>
       </div>
 
-      <div className="mb-8 rounded-xl border border-gray-100 bg-gray-50 p-6">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">
-          Profile details
-        </h2>
-        <dl className="grid grid-cols-1 gap-4 text-sm text-gray-700 sm:grid-cols-2">
+      {/* Profile summary card */}
+      <div className="mb-8 rounded-2xl border border-white/10 bg-slate-900/60 p-6">
+        <div className="flex items-center gap-4 mb-4">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt="Avatar"
+              className="w-16 h-16 rounded-xl object-cover border border-white/10"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
+              {(user.name || "?").charAt(0).toUpperCase()}
+            </div>
+          )}
           <div>
-            <dt className="font-medium text-gray-500">Handle</dt>
-            <dd>{user.handle ?? "Not provided"}</dd>
+            <h2 className="text-lg font-semibold text-white">{user.name}</h2>
+            <p className="text-sm text-slate-400">{user.email}</p>
+            {user.handle && (
+              <p className="text-xs text-slate-500">@{user.handle}</p>
+            )}
+          </div>
+        </div>
+        <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-slate-500 text-xs">Компания</dt>
+            <dd className="text-slate-300">{user.company || "Не указано"}</dd>
           </div>
           <div>
-            <dt className="font-medium text-gray-500">Company</dt>
-            <dd>{user.company ?? "Not provided"}</dd>
+            <dt className="text-slate-500 text-xs">Локация</dt>
+            <dd className="text-slate-300">{user.location || "Не указано"}</dd>
           </div>
           <div>
-            <dt className="font-medium text-gray-500">Location</dt>
-            <dd>{user.location ?? "Not provided"}</dd>
+            <dt className="text-slate-500 text-xs">Телефон</dt>
+            <dd className="text-slate-300">{user.phone || "Не указано"}</dd>
           </div>
           <div>
-            <dt className="font-medium text-gray-500">Phone</dt>
-            <dd>{user.phone ?? "Not provided"}</dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="font-medium text-gray-500">Bio</dt>
-            <dd>{user.bio ?? "Not provided"}</dd>
+            <dt className="text-slate-500 text-xs">Био</dt>
+            <dd className="text-slate-300">{user.bio || "Не указано"}</dd>
           </div>
         </dl>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <section className={sectionContainerClass}>
-          <button
-            type="button"
-            onClick={() => handleSectionToggle("basic")}
-            aria-expanded={openSection === "basic"}
-            aria-controls="profile-basic-section"
-            className="flex w-full items-start justify-between gap-4 text-left"
-          >
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Основные</h2>
-              <p className="text-sm text-gray-500">
-                Обновите публичные данные профиля и контакты.
-              </p>
-            </div>
-            <span className="text-sm font-medium text-blue-600">
-              {getSectionButtonLabel(openSection === "basic")}
-            </span>
-          </button>
+        {/* Basic info */}
+        <section className={sectionClass}>
+          <SectionHeader
+            icon={UserIcon}
+            title="Основные"
+            description="Публичные данные профиля и контакты"
+            section="basic"
+          />
           {openSection === "basic" && (
-            <div id="profile-basic-section" className="mt-5 space-y-4">
+            <div className="mt-5 space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Name
+                <label className="mb-2 block text-sm font-medium text-slate-300">
+                  Имя
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  placeholder="Your name"
+                  className={inputClass}
+                  placeholder="Ваше имя"
                   required
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
+                <label className="mb-2 block text-sm font-medium text-slate-300">
                   Handle
                 </label>
-                <input
-                  type="text"
-                  value={handle}
-                  onChange={(event) => setHandle(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  placeholder="@devhub"
-                />
+                <div className="relative">
+                  <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="text"
+                    value={handle}
+                    onChange={(event) => setHandle(event.target.value)}
+                    className={`${inputClass} pl-10`}
+                    placeholder="username"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Upload avatar
+                <label className="mb-2 block text-sm font-medium text-slate-300">
+                  Аватар
                 </label>
+                <div
+                  className="flex items-center gap-3 p-3 rounded-xl border border-dashed border-white/10 bg-white/5 cursor-pointer hover:border-blue-500/30 transition-all"
+                  onClick={() => avatarInputRef.current?.click()}
+                >
+                  <Upload className="w-5 h-5 text-slate-400" />
+                  <span className="text-sm text-slate-400">
+                    {avatarUploading ? "Загрузка..." : "PNG, JPG, GIF до 5MB"}
+                  </span>
+                </div>
                 <input
                   ref={avatarInputRef}
                   type="file"
@@ -357,94 +470,86 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
                       handleAvatarUpload(file);
                     }
                   }}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3"
+                  className="hidden"
                   disabled={avatarUploading}
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  PNG, JPG, GIF до 5MB. Загрузка обновит аватар в профиле.
-                </p>
-                {avatarUploading && (
-                  <p className="mt-2 text-xs text-blue-600">Uploading...</p>
-                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">
+                    Локация
+                  </label>
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(event) => setLocation(event.target.value)}
+                      className={`${inputClass} pl-10`}
+                      placeholder="Город, Страна"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-300">
+                    Телефон
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(event) => setPhone(event.target.value)}
+                      className={`${inputClass} pl-10`}
+                      placeholder="+7 123 456 78 90"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Location
-                </label>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  placeholder="City, Country"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  placeholder="+7 123 456 78 90"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Bio
+                <label className="mb-2 block text-sm font-medium text-slate-300">
+                  Био
                 </label>
                 <textarea
                   value={bio}
                   onChange={(event) => setBio(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                  placeholder="Tell us a little about yourself"
-                  rows={4}
+                  className={inputClass}
+                  placeholder="Расскажите о себе"
+                  rows={3}
                 />
               </div>
             </div>
           )}
         </section>
 
-        <section className={sectionContainerClass}>
-          <button
-            type="button"
-            onClick={() => handleSectionToggle("email")}
-            aria-expanded={openSection === "email"}
-            aria-controls="profile-email-section"
-            className="flex w-full items-start justify-between gap-4 text-left"
-          >
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Email</h2>
-              <p className="text-sm text-gray-500">
-                Измените адрес электронной почты и подтвердите его.
-              </p>
-            </div>
-            <span className="text-sm font-medium text-blue-600">
-              {getSectionButtonLabel(openSection === "email")}
-            </span>
-          </button>
+        {/* Email */}
+        <section className={sectionClass}>
+          <SectionHeader
+            icon={Mail}
+            title="Email"
+            description="Измените адрес электронной почты"
+            section="email"
+          />
           {openSection === "email" && (
-            <div id="profile-email-section" className="mt-5 space-y-4">
+            <div className="mt-5 space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Current email
+                <label className="mb-2 block text-sm font-medium text-slate-300">
+                  Текущий email
                 </label>
                 <input
                   type="email"
                   value={user.email}
                   readOnly
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500"
+                  className="w-full px-4 py-3 bg-white/3 border border-white/5 rounded-xl text-slate-500 cursor-not-allowed"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  New email
+                <label className="mb-2 block text-sm font-medium text-slate-300">
+                  Новый email
                 </label>
                 <input
                   type="email"
@@ -453,20 +558,20 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
                     setNewEmail(event.target.value);
                     setEmailCodeSent(false);
                   }}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  className={inputClass}
                   placeholder="name@example.com"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Current password
+                <label className="mb-2 block text-sm font-medium text-slate-300">
+                  Текущий пароль
                 </label>
                 <input
                   type="password"
                   value={currentPassword}
                   onChange={(event) => setCurrentPassword(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  className={inputClass}
                   placeholder="••••••••"
                 />
               </div>
@@ -474,32 +579,32 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
                 type="button"
                 onClick={handleSendEmailCode}
                 disabled={emailChangeLoading}
-                className="inline-flex w-full items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-blue-400 hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {emailChangeLoading ? "Sending..." : "Send code"}
+                {emailChangeLoading ? "Отправляем..." : "Отправить код"}
               </button>
 
               {emailCodeSent && (
-                <div className="space-y-4 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                <div className="space-y-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">
-                      Verification code
+                    <label className="mb-2 block text-sm font-medium text-slate-300">
+                      Код подтверждения
                     </label>
                     <input
                       type="text"
                       value={emailCode}
                       onChange={(event) => setEmailCode(event.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-4 py-3 transition focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                      placeholder="6-digit code"
+                      className={inputClass}
+                      placeholder="6-значный код"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={handleConfirmEmail}
                     disabled={emailConfirmLoading}
-                    className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-sm font-semibold text-white hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-50"
                   >
-                    {emailConfirmLoading ? "Confirming..." : "Confirm email"}
+                    {emailConfirmLoading ? "Подтверждаем..." : "Подтвердить email"}
                   </button>
                 </div>
               )}
@@ -507,118 +612,60 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
           )}
         </section>
 
-        <section className={sectionContainerClass}>
-          <button
-            type="button"
-            onClick={() => handleSectionToggle("privacy")}
-            aria-expanded={openSection === "privacy"}
-            aria-controls="profile-privacy-section"
-            className="flex w-full items-start justify-between gap-4 text-left"
-          >
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Приватность
-              </h2>
-              <p className="text-sm text-gray-500">
-                Управляйте видимостью и тем, какие данные доступны коллегам.
-              </p>
-            </div>
-            <span className="text-sm font-medium text-blue-600">
-              {getSectionButtonLabel(openSection === "privacy")}
-            </span>
-          </button>
+        {/* Privacy */}
+        <section className={sectionClass}>
+          <SectionHeader
+            icon={Shield}
+            title="Приватность"
+            description="Видимость профиля и данных"
+            section="privacy"
+          />
           {openSection === "privacy" && (
-            <div
-              id="profile-privacy-section"
-              className="mt-5 space-y-4 text-sm text-gray-700"
-            >
-              <label className="flex items-center justify-between gap-4">
-                <span>Показывать профиль в команде</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-blue-600"
-                  checked={profileVisible}
-                  onChange={(event) => setProfileVisible(event.target.checked)}
-                />
-              </label>
-              <label className="flex items-center justify-between gap-4">
-                <span>Делиться контактной информацией</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-blue-600"
-                  checked={shareContactInfo}
-                  onChange={(event) =>
-                    setShareContactInfo(event.target.checked)
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between gap-4">
-                <span>Разрешить упоминания в темах</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-blue-600"
-                  checked={allowMentions}
-                  onChange={(event) => setAllowMentions(event.target.checked)}
-                />
-              </label>
+            <div className="mt-5 space-y-1">
+              <Toggle
+                label="Показывать профиль в команде"
+                checked={profileVisible}
+                onChange={setProfileVisible}
+              />
+              <Toggle
+                label="Делиться контактной информацией"
+                checked={shareContactInfo}
+                onChange={setShareContactInfo}
+              />
+              <Toggle
+                label="Разрешить упоминания в темах"
+                checked={allowMentions}
+                onChange={setAllowMentions}
+              />
             </div>
           )}
         </section>
 
-        <section className={sectionContainerClass}>
-          <button
-            type="button"
-            onClick={() => handleSectionToggle("notifications")}
-            aria-expanded={openSection === "notifications"}
-            aria-controls="profile-notifications-section"
-            className="flex w-full items-start justify-between gap-4 text-left"
-          >
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Уведомления
-              </h2>
-              <p className="text-sm text-gray-500">
-                Настройте, как часто и куда отправлять уведомления.
-              </p>
-            </div>
-            <span className="text-sm font-medium text-blue-600">
-              {getSectionButtonLabel(openSection === "notifications")}
-            </span>
-          </button>
+        {/* Notifications */}
+        <section className={sectionClass}>
+          <SectionHeader
+            icon={Bell}
+            title="Уведомления"
+            description="Настройте каналы и частоту уведомлений"
+            section="notifications"
+          />
           {openSection === "notifications" && (
-            <div
-              id="profile-notifications-section"
-              className="mt-5 space-y-4 text-sm text-gray-700"
-            >
-              <label className="flex items-center justify-between gap-4">
-                <span>Email-уведомления о сообщениях</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-blue-600"
-                  checked={emailNotifications}
-                  onChange={(event) =>
-                    setEmailNotifications(event.target.checked)
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between gap-4">
-                <span>Обновления продукта</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-blue-600"
-                  checked={productUpdates}
-                  onChange={(event) => setProductUpdates(event.target.checked)}
-                />
-              </label>
-              <label className="flex items-center justify-between gap-4">
-                <span>Еженедельный дайджест</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-blue-600"
-                  checked={weeklyDigest}
-                  onChange={(event) => setWeeklyDigest(event.target.checked)}
-                />
-              </label>
+            <div className="mt-5 space-y-1">
+              <Toggle
+                label="Email-уведомления о сообщениях"
+                checked={emailNotifications}
+                onChange={setEmailNotifications}
+              />
+              <Toggle
+                label="Обновления продукта"
+                checked={productUpdates}
+                onChange={setProductUpdates}
+              />
+              <Toggle
+                label="Еженедельный дайджест"
+                checked={weeklyDigest}
+                onChange={setWeeklyDigest}
+              />
             </div>
           )}
         </section>
@@ -626,40 +673,30 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-blue-600 py-3 font-medium text-white transition hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Saving..." : "Save changes"}
+          {loading ? "Сохраняем..." : "Сохранить изменения"}
         </button>
       </form>
 
-      <section className="mt-8 rounded-2xl border border-red-100 bg-red-50/40 p-4 shadow-sm sm:p-6">
-        <button
-          type="button"
-          onClick={() => handleSectionToggle("danger")}
-          aria-expanded={openSection === "danger"}
-          aria-controls="profile-danger-section"
-          className="flex w-full items-start justify-between gap-4 text-left"
-        >
-          <div>
-            <h2 className="text-lg font-semibold text-red-700">Danger zone</h2>
-            <p className="text-sm text-red-600">
-              Deleting your account will remove your access. You can&apos;t undo
-              this action.
-            </p>
-          </div>
-          <span className="text-sm font-semibold text-red-600">
-            {getSectionButtonLabel(openSection === "danger")}
-          </span>
-        </button>
+      {/* Danger zone */}
+      <section className="mt-8 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 sm:p-6">
+        <SectionHeader
+          icon={Trash2}
+          title="Опасная зона"
+          description="Удаление аккаунта необратимо"
+          section="danger"
+          variant="danger"
+        />
         {openSection === "danger" && (
-          <div id="profile-danger-section" className="mt-5">
+          <div className="mt-5">
             <button
               type="button"
               onClick={handleDeleteAccount}
               disabled={deleteLoading}
-              className="inline-flex w-full items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-sm font-semibold text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {deleteLoading ? "Deleting..." : "Delete account"}
+              {deleteLoading ? "Удаляем..." : "Удалить аккаунт"}
             </button>
           </div>
         )}
