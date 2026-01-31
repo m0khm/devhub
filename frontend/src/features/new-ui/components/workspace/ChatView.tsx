@@ -7,10 +7,18 @@ import {
   Heart,
   Laugh,
   Zap,
+  ClipboardList,
+  Code2,
+  Rocket,
+  Bug,
+  CheckCircle2,
+  Hash,
+  ChevronRight,
+  PanelTopOpen,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 
 import type { Message } from "../../../../shared/types";
 import { apiClient } from "../../../../api/client";
@@ -22,8 +30,18 @@ type ReactionButton = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
+const topicRelatedConfig: Record<string, { icon: React.ElementType; label: string; path: string }> = {
+  planning: { icon: ClipboardList, label: 'Планирование', path: '/workspace/kanban' },
+  code: { icon: Code2, label: 'Код', path: '/workspace/code' },
+  deploy: { icon: Rocket, label: 'Деплой', path: '/workspace/deploy' },
+  bugs: { icon: Bug, label: 'Баг-трекер', path: '/workspace/tests' },
+  tests: { icon: CheckCircle2, label: 'Тесты', path: '/workspace/tests' },
+  custom: { icon: Hash, label: 'Подробнее', path: '' },
+};
+
 export function ChatView() {
-  const { currentTopic } =
+  const navigate = useNavigate();
+  const { currentTopic, currentProject } =
     useOutletContext<WorkspaceOutletContext>() ?? ({} as any);
   const topicId = currentTopic?.id ? String(currentTopic.id) : undefined;
   const { token, user: currentUser } = useAuthStore();
@@ -32,6 +50,10 @@ export function ChatView() {
   const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showRelated, setShowRelated] = useState(false);
+
+  const relatedConfig = currentTopic?.type ? topicRelatedConfig[currentTopic.type] : null;
+  const projectSuffix = currentProject?.id ? `/${currentProject.id}` : '';
 
   const reactions = [
     { icon: ThumbsUp, emoji: '👍' },
@@ -152,6 +174,32 @@ export function ChatView() {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Topic header with related content button */}
+      {currentTopic && (
+        <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-slate-900/30 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-white">{currentTopic.name}</span>
+            {currentTopic.description && (
+              <span className="text-xs text-slate-500 hidden sm:inline">
+                {currentTopic.description}
+              </span>
+            )}
+          </div>
+          {relatedConfig && relatedConfig.path && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate(`${relatedConfig.path}${projectSuffix}`)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white transition-all"
+            >
+              <relatedConfig.icon className="w-3.5 h-3.5" />
+              {relatedConfig.label}
+              <ChevronRight className="w-3 h-3" />
+            </motion.button>
+          )}
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto p-6">
         {loading ? (
           <div className="text-slate-400">Загрузка...</div>

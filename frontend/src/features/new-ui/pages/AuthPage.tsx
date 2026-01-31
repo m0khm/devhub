@@ -1,16 +1,20 @@
 import { motion } from 'motion/react';
 import type { FormEvent } from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Mail, Lock, User, ArrowLeft, Eye, EyeOff, Github, Chrome } from 'lucide-react';
+import { Mail, Lock, User, ArrowLeft, Eye, EyeOff, Github, Chrome, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiClient } from '../../../api/client';
 import { useAuthStore } from '../../../store/authStore';
 import type { AuthResponse } from '../../../shared/types';
+import { isKeycloakEnabled, keycloakLogin, keycloakRegister, getKeycloak, exchangeKeycloakToken } from '../../../lib/keycloak';
 
 export function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [keycloakLoading, setKeycloakLoading] = useState(false);
+  const keycloakEnabled = isKeycloakEnabled();
+
   const [mode, setMode] = useState<'login' | 'register' | 'reset'>(
     (searchParams.get('mode') as 'login' | 'register' | 'reset') || 'login'
   );
@@ -58,6 +62,65 @@ export function AuthPage() {
       setResetData((prev) => ({ ...prev, email: formData.email || prev.email }));
     }
   }, [mode]);
+
+  // Handle Keycloak callback - exchange KC token for DevHub token
+  const handleKeycloakCallback = useCallback(async () => {
+    if (!keycloakEnabled) return;
+    const callbackMode = searchParams.get('mode');
+    if (callbackMode !== 'keycloak-callback') return;
+
+    setKeycloakLoading(true);
+    try {
+      const kc = getKeycloak();
+      const authenticated = await kc.init({
+        onLoad: 'check-sso',
+        checkLoginIframe: false,
+      });
+
+      if (authenticated && kc.token) {
+        const result = await exchangeKeycloakToken(apiClient);
+        if (result) {
+          setAuth(result.user, result.token);
+          await refreshMe();
+          toast.success('Вход через SSO выполнен!');
+          navigate('/workspace');
+          return;
+        }
+      }
+      toast.error('Не удалось выполнить вход через SSO');
+      setMode('login');
+    } catch (error: any) {
+      console.error('[keycloak] Callback error:', error);
+      toast.error('Ошибка SSO авторизации');
+      setMode('login');
+    } finally {
+      setKeycloakLoading(false);
+    }
+  }, [keycloakEnabled, searchParams, navigate, setAuth, refreshMe]);
+
+  useEffect(() => {
+    void handleKeycloakCallback();
+  }, [handleKeycloakCallback]);
+
+  const handleKeycloakLogin = async () => {
+    setKeycloakLoading(true);
+    try {
+      await keycloakLogin();
+    } catch (error: any) {
+      toast.error('Не удалось подключиться к SSO');
+      setKeycloakLoading(false);
+    }
+  };
+
+  const handleKeycloakRegister = async () => {
+    setKeycloakLoading(true);
+    try {
+      await keycloakRegister();
+    } catch (error: any) {
+      toast.error('Не удалось подключиться к SSO');
+      setKeycloakLoading(false);
+    }
+  };
 
   const validateRegisterStep = (step: 1 | 2) => {
     if (step === 1) {
@@ -381,8 +444,9 @@ export function AuthPage() {
               </div>
 
               {/* Social auth buttons */}
-              <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className={`grid ${keycloakEnabled ? 'grid-cols-3' : 'grid-cols-2'} gap-4 mb-8`}>
                 <motion.button
+                  type="button"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-all"
@@ -391,6 +455,7 @@ export function AuthPage() {
                   <span className="font-medium">GitHub</span>
                 </motion.button>
                 <motion.button
+                  type="button"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-all"
@@ -398,6 +463,19 @@ export function AuthPage() {
                   <Chrome className="w-5 h-5" />
                   <span className="font-medium">Google</span>
                 </motion.button>
+                {keycloakEnabled && (
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => mode === 'register' ? handleKeycloakRegister() : handleKeycloakLogin()}
+                    disabled={keycloakLoading}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-xl text-white hover:from-blue-500/20 hover:to-cyan-500/20 transition-all"
+                  >
+                    <Shield className="w-5 h-5 text-blue-400" />
+                    <span className="font-medium">{keycloakLoading ? 'SSO...' : 'SSO'}</span>
+                  </motion.button>
+                )}
               </div>
 
               <div className="relative mb-8">

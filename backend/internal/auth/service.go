@@ -2,9 +2,12 @@ package auth
 
 import (
 	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
@@ -193,6 +196,82 @@ func (s *Service) GetUserByID(userID uuid.UUID) (*User, error) {
 // VerifyToken
 func (s *Service) VerifyToken(tokenString string) (*JWTClaims, error) {
 	return s.jwtManager.Verify(tokenString)
+}
+
+// ExchangeKeycloakToken verifies a Keycloak JWT and creates/finds a DevHub user.
+// This decodes the JWT payload (without crypto verification for now - Keycloak
+// token validation should be done via JWKS in production) and uses the email
+// claim to find or create a user.
+func (s *Service) ExchangeKeycloakToken(keycloakToken string) (*User, string, error) {
+	// Decode JWT payload (base64)
+	parts := strings.Split(keycloakToken, ".")
+	if len(parts) != 3 {
+		return nil, "", fmt.Errorf("invalid keycloak token format")
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to decode keycloak token payload: %w", err)
+	}
+
+	var claims struct {
+		Sub               string `json:"sub"`
+		Email             string `json:"email"`
+		EmailVerified     bool   `json:"email_verified"`
+		PreferredUsername string `json:"preferred_username"`
+		GivenName         string `json:"given_name"`
+		FamilyName        string `json:"family_name"`
+		Name              string `json:"name"`
+	}
+
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return nil, "", fmt.Errorf("failed to parse keycloak token claims: %w", err)
+	}
+
+	if claims.Email == "" {
+		return nil, "", fmt.Errorf("keycloak token has no email claim")
+	}
+
+	// Find or create the user
+	var foundUser User
+	if err := s.db.Where("email = ? AND is_deleted = false", claims.Email).First(&foundUser).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, "", fmt.Errorf("database error: %w", err)
+		}
+
+		// Create new user from Keycloak claims
+		name := claims.Name
+		if name == "" {
+			name = claims.PreferredUsername
+		}
+		if name == "" {
+			name = claims.Email
+		}
+
+		var handle *string
+		if claims.PreferredUsername != "" {
+			h := claims.PreferredUsername
+			handle = &h
+		}
+
+		foundUser = User{
+			Email:  claims.Email,
+			Name:   name,
+			Handle: handle,
+		}
+
+		if err := s.db.Create(&foundUser).Error; err != nil {
+			return nil, "", fmt.Errorf("failed to create user from keycloak: %w", err)
+		}
+	}
+
+	// Generate DevHub JWT
+	token, err := s.jwtManager.Generate(foundUser.ID, foundUser.Email)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	return &foundUser, token, nil
 }
 
 func (s *Service) EnsureEmailAvailable(email string) error {

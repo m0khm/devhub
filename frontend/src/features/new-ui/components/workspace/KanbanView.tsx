@@ -254,8 +254,8 @@ export function KanbanView() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6"
       >
-        <h2 className="text-2xl font-bold text-white mb-2">Канбан Доска</h2>
-        <p className="text-slate-400">Управляйте задачами с помощью drag & drop</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Планирование</h2>
+        <p className="text-slate-400">Управляйте задачами, спринтами и приоритетами</p>
       </motion.div>
 
       {isLoading && (

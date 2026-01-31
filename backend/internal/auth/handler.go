@@ -212,6 +212,35 @@ func (h *Handler) GetMe(c *fiber.Ctx) error {
 	return c.JSON(foundUser)
 }
 
+// KeycloakExchange handler - exchanges a Keycloak token for a DevHub JWT
+// POST /api/auth/keycloak/exchange
+func (h *Handler) KeycloakExchange(c *fiber.Ctx) error {
+	var req KeycloakExchangeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	if req.KeycloakToken == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "keycloak_token is required",
+		})
+	}
+
+	foundUser, token, err := h.service.ExchangeKeycloakToken(req.KeycloakToken)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Failed to verify Keycloak token",
+		})
+	}
+
+	return c.JSON(LoginResponse{
+		Token: token,
+		User:  *foundUser,
+	})
+}
+
 // ForgotPassword handler
 // POST /api/auth/forgot-password
 func (h *Handler) ForgotPassword(c *fiber.Ctx) error {

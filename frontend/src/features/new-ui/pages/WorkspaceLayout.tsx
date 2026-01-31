@@ -108,7 +108,7 @@ export function WorkspaceLayout() {
     () => [
       { icon: MessageSquare, label: 'Чаты', path: `/workspace/chat${projectPathSuffix}`, badge: 3 },
       { icon: LayoutDashboard, label: 'Дашборд', path: '/workspace/dashboard' },
-      { icon: ClipboardList, label: 'Канбан', path: `/workspace/kanban${projectPathSuffix}` },
+      { icon: ClipboardList, label: 'Планирование', path: `/workspace/kanban${projectPathSuffix}` },
       { icon: Calendar, label: 'Календарь', path: '/workspace/calendar' },
       { icon: FolderOpen, label: 'Файлы', path: '/workspace/files' },
       { icon: Mic, label: 'Voice Rooms', path: '/workspace/voice-rooms', isNew: true },
@@ -393,7 +393,7 @@ export function WorkspaceLayout() {
   const commandActions = useMemo(
     () => [
       { id: 'dashboard', label: 'Дашборд', description: 'Открыть обзор проекта', onSelect: () => navigate('/workspace/dashboard'), icon: LayoutDashboard, shortcut: '1' },
-      { id: 'kanban', label: 'Канбан', description: 'Перейти к доске задач', onSelect: () => navigate(`/workspace/kanban${projectPathSuffix}`), icon: ClipboardList, shortcut: '2' },
+      { id: 'kanban', label: 'Планирование', description: 'Перейти к доске задач', onSelect: () => navigate(`/workspace/kanban${projectPathSuffix}`), icon: ClipboardList, shortcut: '2' },
       { id: 'calendar', label: 'Календарь', description: 'Открыть календарь команды', onSelect: () => navigate('/workspace/calendar'), icon: Calendar, shortcut: '3' },
       { id: 'files', label: 'Файлы', description: 'Посмотреть файлы проекта', onSelect: () => navigate('/workspace/files'), icon: FolderOpen, shortcut: '4' },
       { id: 'voice-rooms', label: 'Voice Rooms', description: 'Голосовые комнаты', onSelect: () => navigate('/workspace/voice-rooms'), icon: Mic },
@@ -688,7 +688,11 @@ export function WorkspaceLayout() {
 
           {/* Bottom actions */}
           <div className="p-4 border-t border-white/5 space-y-2">
-            <motion.button whileHover={{ x: 5 }}>
+            <motion.button
+              whileHover={{ x: 5 }}
+              onClick={() => navigate("/workspace/dm")}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 text-slate-300 hover:text-white transition-all"
+            >
               <MessageSquare className="w-5 h-5" />
               <span className="font-medium">Сообщения</span>
             </motion.button>
