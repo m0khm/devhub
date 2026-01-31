@@ -15,50 +15,6 @@ export function ChatView() {
   const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
-import { Send, Smile, Paperclip, Hash, ThumbsUp, Heart, Laugh, Zap } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuthStore } from '../../../../store/authStore';
-
-export function ChatView() {
-  const user = useAuthStore((state) => state.user);
-  const userName = user?.name?.trim() || 'Пользователь';
-  const userInitial = (user?.name || user?.email || '?').trim().charAt(0).toUpperCase();
-  const [message, setMessage] = useState('');
-  const [hoveredMessage, setHoveredMessage] = useState<number | null>(null);
-  const initialMessages = useMemo(
-    () => [
-      {
-        id: 1,
-        user: userName,
-        avatar: userInitial,
-        time: '14:23',
-        text: 'Привет! Кто-нибудь проверял последний коммит?',
-        reactions: [{ emoji: '👍', count: 2 }],
-      },
-      {
-        id: 2,
-        user: userName,
-        avatar: userInitial,
-        time: '14:25',
-        text: 'Да, я посмотрела. Всё работает отлично! 🚀',
-        reactions: [{ emoji: '❤️', count: 3 }, { emoji: '🔥', count: 1 }],
-      },
-      {
-        id: 3,
-        user: userName,
-        avatar: userInitial,
-        time: '14:27',
-        text: 'Отлично! Можем двигаться дальше с новым спринтом.',
-        reactions: [{ emoji: '⚡', count: 1 }],
-      },
-    ],
-    [userInitial, userName]
-  );
-  const [localMessages, setLocalMessages] = useState(initialMessages);
-
-  useEffect(() => {
-    setLocalMessages(initialMessages);
-  }, [initialMessages]);
 
   const reactions = [
     { icon: ThumbsUp, emoji: '👍' },
@@ -112,14 +68,14 @@ export function ChatView() {
         );
         const list = Array.isArray(response.data) ? response.data : [];
         setMessages(list.reverse());
-      } catch (error) {
+      } catch {
         toast.error('Не удалось загрузить сообщения');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMessages();
+    void fetchMessages();
 
     if (topicId && token) {
       wsClient.connect(topicId, token, {
@@ -151,6 +107,7 @@ export function ChatView() {
     return () => {
       wsClient.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicId, token]);
 
   const handleSend = async () => {
@@ -163,19 +120,8 @@ export function ChatView() {
         content: message,
         type: 'text',
       });
-  const handleSend = () => {
-    if (message.trim()) {
-      const newMessage = {
-        id: localMessages.length + 1,
-        user: userName,
-        avatar: userInitial,
-        time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-        text: message,
-        reactions: [],
-      };
-      setLocalMessages([...localMessages, newMessage]);
       setMessage('');
-    } catch (error) {
+    } catch {
       toast.error('Не удалось отправить сообщение');
     }
   };
@@ -186,7 +132,7 @@ export function ChatView() {
 
     try {
       await apiClient.post(`/messages/${messageId}/reactions`, { emoji });
-    } catch (error) {
+    } catch {
       toast.error('Не удалось добавить реакцию');
     }
   };
@@ -204,8 +150,10 @@ export function ChatView() {
             <Hash className="w-5 h-5 text-white" />
           </motion.div>
           <div>
-            <div className="font-semibold text-white text-lg">custom</div>
-            <div className="text-sm text-slate-400">Кастомный топик • 3 участника онлайн</div>
+            <div className="font-semibold text-white text-lg">Чат</div>
+            <div className="text-sm text-slate-400">
+              {topicId ? 'Обсуждение' : 'Выберите тему для общения'}
+            </div>
           </div>
         </div>
       </div>
@@ -216,6 +164,10 @@ export function ChatView() {
           <AnimatePresence>
             {loading ? (
               <div className="text-slate-400">Загрузка сообщений...</div>
+            ) : messages.length === 0 ? (
+              <div className="text-center text-slate-500 py-10">
+                Нет сообщений. Начните общение!
+              </div>
             ) : (
               messages.map((msg, index) => {
                 const displayName =
@@ -223,84 +175,88 @@ export function ChatView() {
                 const initials = getInitials(displayName);
                 const isCurrentUser = msg.user_id === currentUser?.id;
                 return (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className={`flex gap-4 group relative ${
-                  isCurrentUser ? 'flex-row-reverse text-right' : ''
-                }`}
-                onMouseEnter={() => setHoveredMessage(msg.id)}
-                onMouseLeave={() => setHoveredMessage(null)}
-              >
-                <motion.div
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-semibold text-sm flex-shrink-0 shadow-lg"
-                >
-                  {initials}
-                </motion.div>
-                <div className={`flex-1 flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                  <div
-                    className={`flex items-baseline gap-3 mb-1 ${
-                      isCurrentUser ? 'flex-row-reverse' : ''
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`flex gap-4 group relative ${
+                      isCurrentUser ? 'flex-row-reverse text-right' : ''
                     }`}
+                    onMouseEnter={() => setHoveredMessage(msg.id)}
+                    onMouseLeave={() => setHoveredMessage(null)}
                   >
-                    <span className="font-semibold text-white">{displayName}</span>
-                    {msg.created_at && (
-                      <span className="text-xs text-slate-500">
-                        {formatTime(msg.created_at)}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-slate-300 leading-relaxed mb-2 max-w-xl">
-                    {msg.content}
-                  </p>
-                  
-                  {/* Reactions */}
-                  {msg.reactions && msg.reactions.length > 0 && (
-                    <div className={`flex gap-2 mb-2 ${isCurrentUser ? 'justify-end' : ''}`}>
-                      {msg.reactions.map((reaction, idx) => (
-                        <motion.button
-                          key={idx}
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => addReaction(msg.id, reaction.emoji)}
-                          className="px-2 py-1 bg-white/5 border border-white/10 rounded-full text-xs flex items-center gap-1 hover:bg-white/10 transition-all"
-                        >
-                          <span>{reaction.emoji}</span>
-                          <span className="text-slate-400">{reaction.count}</span>
-                        </motion.button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Quick reactions on hover */}
-                  <AnimatePresence>
-                    {hoveredMessage === msg.id && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className={`flex gap-1 mt-2 ${isCurrentUser ? 'justify-end' : ''}`}
+                    <motion.div
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-semibold text-sm flex-shrink-0 shadow-lg overflow-hidden"
+                    >
+                      {msg.user?.avatar_url ? (
+                        <img src={msg.user.avatar_url} alt={displayName} className="h-full w-full object-cover" />
+                      ) : (
+                        initials
+                      )}
+                    </motion.div>
+                    <div className={`flex-1 flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                      <div
+                        className={`flex items-baseline gap-3 mb-1 ${
+                          isCurrentUser ? 'flex-row-reverse' : ''
+                        }`}
                       >
-                        {reactions.map((reaction, idx) => (
-                          <motion.button
-                            key={idx}
-                            whileHover={{ scale: 1.2 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => addReaction(msg.id, reaction.emoji)}
-                            className="p-1.5 bg-slate-800/80 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-slate-700/80 transition-all"
+                        <span className="font-semibold text-white">{displayName}</span>
+                        {msg.created_at && (
+                          <span className="text-xs text-slate-500">
+                            {formatTime(msg.created_at)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-slate-300 leading-relaxed mb-2 max-w-xl">
+                        {msg.content}
+                      </p>
+
+                      {/* Reactions */}
+                      {msg.reactions && msg.reactions.length > 0 && (
+                        <div className={`flex gap-2 mb-2 ${isCurrentUser ? 'justify-end' : ''}`}>
+                          {msg.reactions.map((reaction, idx) => (
+                            <motion.button
+                              key={idx}
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => addReaction(msg.id, reaction.emoji)}
+                              className="px-2 py-1 bg-white/5 border border-white/10 rounded-full text-xs flex items-center gap-1 hover:bg-white/10 transition-all"
+                            >
+                              <span>{reaction.emoji}</span>
+                              <span className="text-slate-400">{reaction.count}</span>
+                            </motion.button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Quick reactions on hover */}
+                      <AnimatePresence>
+                        {hoveredMessage === msg.id && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className={`flex gap-1 mt-2 ${isCurrentUser ? 'justify-end' : ''}`}
                           >
-                            <reaction.icon className="w-4 h-4 text-slate-400" />
-                          </motion.button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            );
+                            {reactions.map((reaction, idx) => (
+                              <motion.button
+                                key={idx}
+                                whileHover={{ scale: 1.2 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => addReaction(msg.id, reaction.emoji)}
+                                className="p-1.5 bg-slate-800/80 backdrop-blur-sm border border-white/10 rounded-lg hover:bg-slate-700/80 transition-all"
+                              >
+                                <reaction.icon className="w-4 h-4 text-slate-400" />
+                              </motion.button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                );
               })
             )}
           </AnimatePresence>
@@ -325,7 +281,7 @@ export function ChatView() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  handleSend();
+                  void handleSend();
                 }
               }}
             />
@@ -333,7 +289,7 @@ export function ChatView() {
               <motion.button
                 whileHover={{ scale: 1.1, rotate: 15 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => toast('😊 Эмодзи picker coming soon!')}
+                onClick={() => toast('Эмодзи picker coming soon!')}
                 className="p-2 rounded-lg hover:bg-white/10 transition-all"
               >
                 <Smile className="w-5 h-5 text-slate-400" />
@@ -341,7 +297,7 @@ export function ChatView() {
               <motion.button
                 whileHover={{ scale: 1.1, rotate: -15 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => toast.info('📎 Прикрепление файлов')}
+                onClick={() => toast.info('Прикрепление файлов')}
                 className="p-2 rounded-lg hover:bg-white/10 transition-all"
               >
                 <Paperclip className="w-5 h-5 text-slate-400" />
@@ -349,7 +305,7 @@ export function ChatView() {
               <motion.button
                 whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(59, 130, 246, 0.6)' }}
                 whileTap={{ scale: 0.95 }}
-                onClick={handleSend}
+                onClick={() => void handleSend()}
                 className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg"
               >
                 <Send className="w-5 h-5 text-white" />

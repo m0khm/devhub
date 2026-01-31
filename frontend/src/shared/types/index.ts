@@ -8,7 +8,6 @@ export interface User {
   company?: string;
   location?: string;
   phone?: string;
-  handle?: string;
   created_at: string;
   updated_at: string;
 }

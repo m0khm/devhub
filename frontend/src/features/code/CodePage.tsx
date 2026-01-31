@@ -18,6 +18,33 @@ interface Repo {
   files: CodeFile[];
 }
 
+interface RepoBranch {
+  name: string;
+  updatedAt: string;
+  lastCommit: string;
+}
+
+interface RepoCommit {
+  hash: string;
+  message: string;
+  author: string;
+  timestamp: string;
+}
+
+interface RepoChange {
+  id: string;
+  summary: string;
+  author: string;
+  timestamp: string;
+  files: string[];
+}
+
+const defaultActivity = {
+  branches: [] as RepoBranch[],
+  commits: [] as RepoCommit[],
+  changes: [] as RepoChange[],
+};
+
 export const CodePage: React.FC = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -36,9 +63,9 @@ export const CodePage: React.FC = () => {
 
   const activityLimit = 5;
 
-  const [branchList, setBranchList] = useState<any[]>([]);
-  const [commitList, setCommitList] = useState<any[]>([]);
-  const [changeList, setChangeList] = useState<any[]>([]);
+  const [branchList, setBranchList] = useState<RepoBranch[]>([]);
+  const [commitList, setCommitList] = useState<RepoCommit[]>([]);
+  const [changeList, setChangeList] = useState<RepoChange[]>([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
 
   const selectedRepo = repos.find((repo) => repo.id === selectedRepoId) ?? repos[0];
@@ -213,13 +240,10 @@ export const CodePage: React.FC = () => {
     let isMounted = true;
 
     const applyFallback = () => {
-      const fallback = defaultActivity;
-      if (!isMounted) {
-        return;
-      }
-      setBranchList(fallback.branches);
-      setCommitList(fallback.commits);
-      setChangeList(fallback.changes);
+      if (!isMounted) return;
+      setBranchList(defaultActivity.branches);
+      setCommitList(defaultActivity.commits);
+      setChangeList(defaultActivity.changes);
     };
 
     const loadActivity = async () => {
@@ -253,7 +277,7 @@ export const CodePage: React.FC = () => {
         setBranchList(branchesRes.data);
         setCommitList(commitsRes.data);
         setChangeList(changesRes.data);
-      } catch (error) {
+      } catch {
         applyFallback();
       } finally {
         if (isMounted) {
@@ -539,7 +563,7 @@ export const CodePage: React.FC = () => {
                       </p>
                       <p className="text-[11px] text-slate-500">
                         {change.files.slice(0, 2).join(', ')}
-                        {change.files.length > 2 ? '…' : ''}
+                        {change.files.length > 2 ? '...' : ''}
                       </p>
                     </div>
                   ))

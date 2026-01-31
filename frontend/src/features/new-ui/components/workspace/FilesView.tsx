@@ -5,9 +5,6 @@ import {
   Film,
   Music,
   Download,
-  Share2,
-  Trash2,
-  MoreVertical,
   Upload,
   FolderOpen,
 } from 'lucide-react';
@@ -18,14 +15,46 @@ import { apiClient, API_URL } from '../../../../api/client';
 import type { Message, FileMetadata } from '../../../../shared/types';
 import type { WorkspaceOutletContext } from '../../pages/WorkspaceLayout';
 
-const files = [
-  { id: 1, name: 'Project_Proposal.pdf', type: 'document', size: '2.4 MB', date: '26 янв', icon: FileText, color: 'from-red-500 to-orange-500' },
-  { id: 2, name: 'Design_Mockup.fig', type: 'design', size: '8.1 MB', date: '25 янв', icon: Image, color: 'from-purple-500 to-pink-500' },
-  { id: 3, name: 'Demo_Video.mp4', type: 'video', size: '45 MB', date: '24 янв', icon: Film, color: 'from-blue-500 to-cyan-500' },
-  { id: 4, name: 'Presentation.pptx', type: 'document', size: '5.2 MB', date: '23 янв', icon: FileText, color: 'from-orange-500 to-red-500' },
-  { id: 5, name: 'Soundtrack.mp3', type: 'audio', size: '3.8 MB', date: '22 янв', icon: Music, color: 'from-green-500 to-emerald-500' },
-  { id: 6, name: 'Screenshot_2026.png', type: 'image', size: '1.2 MB', date: '21 янв', icon: Image, color: 'from-cyan-500 to-blue-500' },
-];
+const fileIconMap = {
+  image: Image,
+  video: Film,
+  audio: Music,
+  document: FileText,
+} as const;
+
+const fileColorMap: Record<string, string> = {
+  image: 'from-cyan-500 to-blue-500',
+  video: 'from-blue-500 to-cyan-500',
+  audio: 'from-green-500 to-emerald-500',
+  document: 'from-red-500 to-orange-500',
+};
+
+const parseMetadata = (metadata?: Message['metadata']): FileMetadata => {
+  if (!metadata) return {};
+  if (typeof metadata === 'string') {
+    try {
+      return JSON.parse(metadata) as FileMetadata;
+    } catch {
+      return {};
+    }
+  }
+  return metadata as FileMetadata;
+};
+
+const getFileType = (mime?: string) => {
+  if (!mime) return 'document';
+  if (mime.startsWith('image/')) return 'image';
+  if (mime.startsWith('video/')) return 'video';
+  if (mime.startsWith('audio/')) return 'audio';
+  return 'document';
+};
+
+const formatFileSize = (bytes?: number) => {
+  if (!bytes) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 export function FilesView() {
   const { currentProject, currentTopic, topics, setSelectedTopicId } =
@@ -52,7 +81,7 @@ export function FilesView() {
         );
         const data = Array.isArray(response.data) ? response.data : [];
         setFiles(data);
-      } catch (error) {
+      } catch {
         toast.error('Не удалось загрузить файлы');
       } finally {
         setLoading(false);
@@ -63,9 +92,7 @@ export function FilesView() {
   }, [currentProject?.id]);
 
   useEffect(() => {
-    if (!currentTopic?.id) {
-      return;
-    }
+    if (!currentTopic?.id) return;
     setSelectedTopicIdState(currentTopic.id);
   }, [currentTopic?.id]);
 
@@ -74,10 +101,7 @@ export function FilesView() {
       const metadata = parseMetadata(item.metadata);
       return sum + (metadata.size ?? 0);
     }, 0);
-    return {
-      totalSize,
-      count: files.length,
-    };
+    return { totalSize, count: files.length };
   }, [files]);
 
   return (
@@ -125,15 +149,6 @@ export function FilesView() {
               Загрузить файл
             </motion.button>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)' }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => toast.success('Загрузка файла')}
-            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg"
-          >
-            <Upload className="w-5 h-5" />
-            Загрузить файл
-          </motion.button>
         </div>
 
         <input
@@ -146,9 +161,9 @@ export function FilesView() {
         {/* Storage Stats */}
         <div className="grid md:grid-cols-3 gap-4 mb-8">
           {[
-            { label: 'Использовано', value: '68 GB', total: '/ 100 GB', color: 'from-blue-500 to-cyan-500' },
-            { label: 'Файлов', value: '234', color: 'from-purple-500 to-pink-500' },
-            { label: 'Общий доступ', value: '12', color: 'from-green-500 to-emerald-500' },
+            { label: 'Использовано', value: formatFileSize(stats.totalSize), total: stats.totalSize > 0 ? `${stats.count} файлов` : undefined, color: 'from-blue-500 to-cyan-500' },
+            { label: 'Файлов', value: stats.count.toString(), color: 'from-purple-500 to-pink-500' },
+            { label: 'Тем', value: currentTopics.length.toString(), color: 'from-green-500 to-emerald-500' },
           ].map((stat, index) => (
             <motion.div
               key={index}
@@ -166,16 +181,6 @@ export function FilesView() {
                 </span>
                 {stat.total && <span className="text-sm text-slate-500">{stat.total}</span>}
               </div>
-              {stat.total && (
-                <div className="mt-3 h-2 bg-slate-800 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: '68%' }}
-                    transition={{ duration: 1, delay: 0.5 }}
-                    className={`h-full bg-gradient-to-r ${stat.color} rounded-full`}
-                  ></motion.div>
-                </div>
-              )}
             </motion.div>
           ))}
         </div>
@@ -198,21 +203,53 @@ export function FilesView() {
               const metadata = parseMetadata(file.metadata);
               const fileType = getFileType(metadata.mime_type);
               const Icon = fileIconMap[fileType as keyof typeof fileIconMap] ?? FileText;
-              const downloadUrl = `${API_URL}/files/${file.id}/download`;
+              const color = fileColorMap[fileType] ?? 'from-slate-500 to-slate-600';
+              const downloadUrl = metadata.url || `${API_URL}/files/${file.id}/download`;
 
               return (
                 <motion.div
-                  whileHover={{ rotate: 10, scale: 1.1 }}
-                  className={`w-12 h-12 rounded-xl bg-gradient-to-br ${file.color} flex items-center justify-center shadow-lg`}
+                  key={file.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ y: -5, scale: 1.02 }}
+                  className="p-5 bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl group hover:border-white/20 transition-all cursor-pointer"
                 >
-                  <file.icon className="w-6 h-6 text-white" />
+                  <div className="flex items-start gap-4">
+                    <motion.div
+                      whileHover={{ rotate: 10, scale: 1.1 }}
+                      className={`w-12 h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-lg flex-shrink-0`}
+                    >
+                      <Icon className="w-6 h-6 text-white" />
+                    </motion.div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-white truncate">
+                        {metadata.filename || file.content || 'Untitled'}
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {formatFileSize(metadata.size)}
+                        {metadata.mime_type && ` · ${metadata.mime_type}`}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {new Date(file.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
+                    <a
+                      href={downloadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Download className="w-4 h-4" />
+                    </a>
+                  </div>
                 </motion.div>
               );
             })}
           </div>
         )}
       </motion.div>
-
     </div>
   );
 }
