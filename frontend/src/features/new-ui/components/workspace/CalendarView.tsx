@@ -6,12 +6,22 @@ import { useOutletContext } from 'react-router-dom';
 import type { WorkspaceOutletContext } from '../../pages/WorkspaceLayout';
 import { safeStorage } from '../../../../shared/utils/storage';
 
+const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
 const events = [
   { id: 1, title: 'Стендап команды', time: '10:00', date: 27, color: 'from-blue-500 to-cyan-500' },
   { id: 2, title: 'Презентация проекта', time: '14:00', date: 27, color: 'from-purple-500 to-pink-500' },
   { id: 3, title: 'Code Review', time: '16:00', date: 28, color: 'from-orange-500 to-red-500' },
   { id: 4, title: 'Планирование спринта', time: '11:00', date: 29, color: 'from-green-500 to-emerald-500' },
 ];
+
+const formatMonth = (date: Date): string => {
+  const monthNames = [
+    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+  ];
+  return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+};
 
 type CalendarEvent = {
   id: number;
@@ -167,11 +177,12 @@ export function CalendarView() {
           <div className="lg:col-span-2">
             <div className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-white">{currentMonth}</h3>
+                <h3 className="text-xl font-semibold text-white">{formatMonth(currentMonthDate)}</h3>
                 <div className="flex gap-2">
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
+                    onClick={() => setMonthOffset((prev) => prev - 1)}
                     className="p-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all"
                     type="button"
                   >
@@ -180,6 +191,7 @@ export function CalendarView() {
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
+                    onClick={() => setMonthOffset((prev) => prev + 1)}
                     className="p-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all"
                     type="button"
                   >

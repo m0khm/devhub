@@ -202,7 +202,7 @@ export function ChatView() {
 
                       {hoveredMessage === String(msg.id) && (
                         <div className="mt-2 flex items-center gap-2">
-                          {reactionButtons.map((r, idx) => (
+                          {reactions.map((r, idx) => (
                             <button
                               key={idx}
                               onClick={() =>
