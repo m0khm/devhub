@@ -94,6 +94,7 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
       S3_BUCKET: devhub
       S3_USE_SSL: "false"
+      S3_PUBLIC_BASE_URL: /uploads
       CORS_ORIGIN: ${FRONTEND_URL:-https://dvhub.tech}
     depends_on:
       - postgres

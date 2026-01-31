@@ -15,8 +15,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user, onSaved }) => {
   const logout = useAuthStore((state) => state.logout);
 
   const normalizeAvatarUrl = (url: string) =>
-    (url = url.replace("http://minio:9000/devhub/uploads/", "/uploads/"));
-  url = url.replace("https://minio:9000/devhub/uploads/", "/uploads/");
+    url
+      .replace("http://minio:9000/devhub/uploads/", "/uploads/")
+      .replace("https://minio:9000/devhub/uploads/", "/uploads/");
 
   const [name, setName] = useState(user?.name ?? "");
   const [handle, setHandle] = useState(user?.handle ?? "");
