@@ -8,11 +8,11 @@ export const ProfilePage: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-6">
+      <div className="h-full flex items-center justify-center p-6">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>Please log in to view your profile.</CardDescription>
+            <CardTitle>Настройки</CardTitle>
+            <CardDescription>Пожалуйста, войдите в аккаунт.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -20,12 +20,14 @@ export const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-6">
-      <Card className="w-full max-w-3xl bg-slate-900/60 border-white/10">
-        <CardBody className="p-8">
-          <ProfileForm user={user} />
-        </CardBody>
-      </Card>
+    <div className="h-full overflow-y-auto p-6">
+      <div className="max-w-3xl mx-auto">
+        <Card className="bg-slate-900/60 border-white/10">
+          <CardBody className="p-8">
+            <ProfileForm user={user} />
+          </CardBody>
+        </Card>
+      </div>
     </div>
   );
 };
